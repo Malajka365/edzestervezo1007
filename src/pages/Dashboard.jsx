@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { TeamProvider } from '../context/TeamContext'
 import TeamSelector from '../components/TeamSelector'
@@ -8,10 +8,14 @@ import TrainingLoad from './TrainingLoad'
 import Leaderboard from './Leaderboard'
 import PlayerProgress from './PlayerProgress'
 import Profile from './Profile'
+import MacrocyclePlanner from './MacrocyclePlanner'
+import Calendar from './Calendar'
+import TrainingTemplates from './TrainingTemplates'
+import Matches from './Matches'
 import {
   Home,
   Users,
-  Calendar,
+  Calendar as CalendarIcon,
   BarChart3,
   Heart,
   LogOut,
@@ -22,11 +26,68 @@ import {
   Calculator,
   Trophy,
   TrendingUp,
+  CalendarDays,
+  Clipboard,
+  Medal,
 } from 'lucide-react'
 
 export default function Dashboard({ session }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeModule, setActiveModule] = useState('home')
+  const [userRole, setUserRole] = useState('coach')
+
+  useEffect(() => {
+    fetchUserProfile()
+    
+    // Listen for profile updates
+    const channel = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          if (payload.new.role) {
+            setUserRole(payload.new.role)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
+
+      if (error) throw error
+      if (data) {
+        setUserRole(data.role || 'coach')
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+    }
+  }
+
+  const getRoleLabel = (role) => {
+    const roleLabels = {
+      coach: 'Edző',
+      fitness_coach: 'Erőnléti edző',
+      physiotherapist: 'Fizioterapeuta',
+    }
+    return roleLabels[role] || 'Edző'
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -48,11 +109,32 @@ export default function Dashboard({ session }) {
       color: 'bg-green-500',
     },
     {
-      id: 'training',
-      name: 'Edzéstervek',
-      icon: Calendar,
-      description: 'Edzésprogramok tervezése',
+      id: 'macrocycle',
+      name: 'Makrociklus Tervező',
+      icon: CalendarIcon,
+      description: 'Éves edzésterv és periodizáció',
       color: 'bg-purple-500',
+    },
+    {
+      id: 'calendar',
+      name: 'Edzésnaptár',
+      icon: CalendarDays,
+      description: 'Interaktív naptár nézet',
+      color: 'bg-indigo-500',
+    },
+    {
+      id: 'templates',
+      name: 'Edzéssablonok',
+      icon: Clipboard,
+      description: 'Újrafelhasználható programok',
+      color: 'bg-teal-500',
+    },
+    {
+      id: 'matches',
+      name: 'Mérkőzések',
+      icon: Medal,
+      description: 'Mérkőzések és eredmények',
+      color: 'bg-pink-500',
     },
     {
       id: 'measurement',
@@ -175,7 +257,7 @@ export default function Dashboard({ session }) {
                 <p className="text-sm font-medium text-white truncate">
                   {session.user.email}
                 </p>
-                <p className="text-xs text-slate-400">Edző</p>
+                <p className="text-xs text-slate-400">{getRoleLabel(userRole)}</p>
               </div>
             </button>
             <button
@@ -288,6 +370,14 @@ export default function Dashboard({ session }) {
 
           {activeModule === 'teams' && <Teams />}
 
+          {activeModule === 'macrocycle' && <MacrocyclePlanner />}
+
+          {activeModule === 'calendar' && <Calendar />}
+
+          {activeModule === 'templates' && <TrainingTemplates />}
+
+          {activeModule === 'matches' && <Matches />}
+
           {activeModule === 'measurement' && <Measurements session={session} />}
 
           {activeModule === 'trainingload' && <TrainingLoad />}
@@ -298,7 +388,7 @@ export default function Dashboard({ session }) {
 
           {activeModule === 'profile' && <Profile session={session} />}
 
-          {activeModule !== 'home' && activeModule !== 'teams' && activeModule !== 'measurement' && activeModule !== 'trainingload' && activeModule !== 'leaderboard' && activeModule !== 'progress' && activeModule !== 'profile' && (
+          {activeModule !== 'home' && activeModule !== 'teams' && activeModule !== 'macrocycle' && activeModule !== 'calendar' && activeModule !== 'templates' && activeModule !== 'matches' && activeModule !== 'measurement' && activeModule !== 'trainingload' && activeModule !== 'leaderboard' && activeModule !== 'progress' && activeModule !== 'profile' && (
             <div className="card text-center py-12">
               <div
                 className={`w-16 h-16 ${activeModuleData?.color} rounded-2xl flex items-center justify-center mx-auto mb-4`}
