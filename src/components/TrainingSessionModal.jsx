@@ -10,9 +10,22 @@ export default function TrainingSessionModal({
   onSave 
 }) {
   const [templates, setTemplates] = useState([])
+  const [locations, setLocations] = useState([])
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [showNewLocationInput, setShowNewLocationInput] = useState(false)
+  const [newLocationName, setNewLocationName] = useState('')
+  
+  // Helper function to format date in local timezone
+  const formatDateLocal = (date) => {
+    if (!date) return new Date().toISOString().split('T')[0]
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
   const [formData, setFormData] = useState({
-    date: session?.date || (date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+    date: session?.date || formatDateLocal(date),
     start_time: session?.start_time || '',
     end_time: session?.end_time || '',
     location: session?.location || '',
@@ -25,6 +38,7 @@ export default function TrainingSessionModal({
 
   useEffect(() => {
     fetchTemplates()
+    fetchLocations()
   }, [])
 
   const fetchTemplates = async () => {
@@ -39,6 +53,54 @@ export default function TrainingSessionModal({
       setTemplates(data || [])
     } catch (error) {
       console.error('Error fetching templates:', error)
+    }
+  }
+
+  const fetchLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('training_locations')
+        .select('*')
+        .eq('team_id', selectedTeam.id)
+        .order('is_default', { ascending: false })
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      setLocations(data || [])
+      
+      // Set default location if no location is set
+      if (!formData.location && data && data.length > 0) {
+        const defaultLocation = data.find(loc => loc.is_default)
+        if (defaultLocation) {
+          setFormData({ ...formData, location: defaultLocation.name })
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching locations:', error)
+    }
+  }
+
+  const handleAddNewLocation = async () => {
+    if (!newLocationName.trim()) return
+
+    try {
+      const { data, error } = await supabase
+        .from('training_locations')
+        .insert([{
+          team_id: selectedTeam.id,
+          name: newLocationName.trim(),
+        }])
+        .select()
+
+      if (error) throw error
+      
+      setFormData({ ...formData, location: newLocationName.trim() })
+      setNewLocationName('')
+      setShowNewLocationInput(false)
+      fetchLocations()
+    } catch (error) {
+      console.error('Error adding location:', error)
+      alert('Hiba történt a helyszín hozzáadása során!')
     }
   }
 
@@ -228,13 +290,63 @@ export default function TrainingSessionModal({
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Helyszín
               </label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="input-field w-full"
-                placeholder="pl. Sportcsarnok"
-              />
+              {!showNewLocationInput ? (
+                <div className="flex gap-2">
+                  <select
+                    value={formData.location}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setShowNewLocationInput(true)
+                      } else {
+                        setFormData({ ...formData, location: e.target.value })
+                      }
+                    }}
+                    className="input-field flex-1"
+                  >
+                    <option value="">Válassz helyszínt...</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.name}>
+                        {loc.name} {loc.is_default ? '⭐' : ''}
+                      </option>
+                    ))}
+                    <option value="__new__">+ Új helyszín hozzáadása</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newLocationName}
+                    onChange={(e) => setNewLocationName(e.target.value)}
+                    className="input-field flex-1"
+                    placeholder="Új helyszín neve..."
+                    autoFocus
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddNewLocation()
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewLocation}
+                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewLocationInput(false)
+                      setNewLocationName('')
+                    }}
+                    className="px-3 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

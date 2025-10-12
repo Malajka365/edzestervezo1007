@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
 import PlayerProfile from './PlayerProfile'
+import TrainingLocations from '../components/TrainingLocations'
 import {
   Users,
   Plus,
@@ -15,6 +16,7 @@ import {
   Hash,
   FileText,
   Search,
+  MapPin,
 } from 'lucide-react'
 
 export default function Teams() {
@@ -23,6 +25,7 @@ export default function Teams() {
   const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [showTeamModal, setShowTeamModal] = useState(false)
   const [showPlayerModal, setShowPlayerModal] = useState(false)
+  const [showLocationsModal, setShowLocationsModal] = useState(false)
   const [editingTeam, setEditingTeam] = useState(null)
   const [editingPlayer, setEditingPlayer] = useState(null)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
@@ -232,13 +235,24 @@ export default function Teams() {
             {teams.length} csapat • {selectedTeam ? players.length + ' játékos' : 'Válassz csapatot'}
           </p>
         </div>
-        <button
-          onClick={() => setShowTeamModal(true)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Új Csapat</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedTeam && (
+            <button
+              onClick={() => setShowLocationsModal(true)}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <MapPin className="w-5 h-5" />
+              <span>Edzés Helyszínek</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowTeamModal(true)}
+            className="btn-primary flex items-center space-x-2"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Új Csapat</span>
+          </button>
+        </div>
       </div>
 
       {/* Teams Grid */}
@@ -602,6 +616,24 @@ export default function Teams() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Locations Modal */}
+      {showLocationsModal && selectedTeam && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">Edzés Helyszínek - {selectedTeam.name}</h3>
+              <button
+                onClick={() => setShowLocationsModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <TrainingLocations teamId={selectedTeam.id} />
           </div>
         </div>
       )}

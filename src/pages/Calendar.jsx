@@ -10,8 +10,12 @@ import {
   Plus,
   Edit,
   Trash2,
+  Zap,
+  Home,
+  Plane,
 } from 'lucide-react'
 import TrainingSessionModal from '../components/TrainingSessionModal'
+import QuickAddTrainingModal from '../components/QuickAddTrainingModal'
 
 export default function Calendar() {
   const { selectedTeam } = useTeams()
@@ -26,6 +30,7 @@ export default function Calendar() {
   const [showSessionModal, setShowSessionModal] = useState(false)
   const [editingSession, setEditingSession] = useState(null)
   const [selectedDateForSession, setSelectedDateForSession] = useState(null)
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false)
 
   const daysOfWeek = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
   const daysOfWeekShort = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V']
@@ -324,26 +329,42 @@ export default function Calendar() {
       {/* Season Selector */}
       {seasons.length > 0 && (
         <div className="card">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Szezon
-          </label>
-          <select
-            value={currentSeason?.id || ''}
-            onChange={(e) => {
-              const season = seasons.find(s => s.id === e.target.value)
-              if (season) {
-                setCurrentSeason(season)
-                setCurrentDate(new Date(season.start_date))
-              }
-            }}
-            className="input-field w-full max-w-md"
-          >
-            {seasons.map(season => (
-              <option key={season.id} value={season.id}>
-                {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU')} - {new Date(season.end_date).toLocaleDateString('hu-HU')})
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Szezon
+              </label>
+              <select
+                value={currentSeason?.id || ''}
+                onChange={(e) => {
+                  const season = seasons.find(s => s.id === e.target.value)
+                  if (season) {
+                    setCurrentSeason(season)
+                    setCurrentDate(new Date(season.start_date))
+                  }
+                }}
+                className="input-field w-full"
+              >
+                {seasons.map(season => (
+                  <option key={season.id} value={season.id}>
+                    {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU')} - {new Date(season.end_date).toLocaleDateString('hu-HU')})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {view === 'month' && (
+              <div className="flex items-end">
+                <button
+                  onClick={() => setShowQuickAddModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-teal-600 hover:from-purple-700 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl whitespace-nowrap"
+                >
+                  <Zap className="w-5 h-5" />
+                  <span className="font-semibold">Gyors Hozzáadás</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -441,23 +462,51 @@ export default function Calendar() {
                       
                       {/* Training sessions */}
                       {daySessions.length > 0 && (
-                        <div className="space-y-1">
-                          {daySessions.map((session, idx) => (
-                            <div key={idx} className="text-[10px] px-1 rounded bg-teal-600 text-white">
-                              🏋️ {session.start_time ? session.start_time.substring(0, 5) : ''}
-                            </div>
-                          ))}
+                        <div className="space-y-1 mb-1">
+                          {daySessions.map((session, idx) => {
+                            const isGym = session.type === 'gym'
+                            const isBall = session.type === 'ball'
+                            const bgColor = isGym ? 'bg-purple-600' : isBall ? 'bg-teal-600' : 'bg-blue-600'
+                            const icon = isGym ? '🏋️' : isBall ? '⚽' : '📝'
+                            
+                            return (
+                              <div key={idx} className={`text-[10px] px-1 py-0.5 rounded ${bgColor} text-white flex items-center gap-1`}>
+                                <span className="flex-shrink-0">{icon}</span>
+                                {session.start_time && (
+                                  <span className="flex-shrink-0">{session.start_time.substring(0, 5)}</span>
+                                )}
+                                {session.location && (
+                                  <span className="truncate text-[9px] opacity-90">
+                                    {session.location}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                       
                       {/* Matches */}
                       {dayMatches.length > 0 && (
-                        <div className="space-y-1">
-                          {dayMatches.map((match, idx) => (
-                            <div key={idx} className="text-[10px] px-1 rounded bg-pink-600 text-white">
-                              🏆 {match.time ? match.time.substring(0, 5) : ''}
-                            </div>
-                          ))}
+                        <div className="space-y-1 mt-1">
+                          {dayMatches.map((match, idx) => {
+                            const isHome = match.home_away === 'home'
+                            const LocationIcon = isHome ? Home : Plane
+                            
+                            return (
+                              <div key={idx} className="text-[10px] px-1 py-1 rounded bg-pink-600 text-white flex items-center gap-1">
+                                <LocationIcon className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate flex-1">
+                                  {match.opponent}
+                                </span>
+                                {match.time && (
+                                  <span className="text-[9px] opacity-80 flex-shrink-0">
+                                    {match.time.substring(0, 5)}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -693,6 +742,20 @@ export default function Calendar() {
             setShowSessionModal(false)
             setEditingSession(null)
             setSelectedDateForSession(null)
+            loadTrainingSessions()
+          }}
+        />
+      )}
+
+      {/* Quick Add Training Modal */}
+      {showQuickAddModal && (
+        <QuickAddTrainingModal
+          currentDate={currentDate}
+          selectedTeam={selectedTeam}
+          existingSessions={trainingSessions}
+          onClose={() => setShowQuickAddModal(false)}
+          onSave={() => {
+            setShowQuickAddModal(false)
             loadTrainingSessions()
           }}
         />
