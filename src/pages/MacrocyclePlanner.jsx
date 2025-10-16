@@ -938,7 +938,7 @@ export default function MacrocyclePlanner() {
       {/* Macrocycle Table */}
       {currentSeason && macrocycleData.weeks.length > 0 && (
         <div className="card" ref={tableRef}>
-          <div className="flex overflow-hidden">
+          <div className="flex overflow-visible">
             {/* Vertical Section Labels */}
             <div className="flex flex-col border-r-2 border-slate-600 bg-slate-900 sticky left-0 z-10 w-16">
               {/* Empty space for header rows */}
@@ -1128,7 +1128,7 @@ export default function MacrocyclePlanner() {
                     const cellValue = getCellValue(weekIdx, categoryKey)
 
                     return (
-                      <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className="relative border-r border-slate-600">
+                      <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className={`relative border-r border-slate-600 ${isActive ? 'z-[101]' : ''}`}>
                         <button
                           data-week={weekIdx}
                           data-category={categoryKey}
@@ -1187,7 +1187,7 @@ export default function MacrocyclePlanner() {
                       }
 
                       return (
-                        <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className="relative border-r border-slate-600">
+                        <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className={`relative border-r border-slate-600 ${isActive ? 'z-[101]' : ''}`}>
                           <button
                             onClick={() => setActiveDropdown({ weekIndex: weekIdx, category: `daily_${dayIdx}` })}
                             className={`w-full h-full px-1 py-1.5 text-[10px] font-bold text-white hover:opacity-80 transition-opacity border-0 ${getCellBgColor()}`}
@@ -1202,6 +1202,30 @@ export default function MacrocyclePlanner() {
                           {isActive && (
                             <div className="absolute bottom-full left-0 z-[100] mb-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl">
                               <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+                                {/* Clear/Empty option - Always visible */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const newData = JSON.parse(JSON.stringify(macrocycleData))
+                                    if (!newData.planning[weekIdx]) {
+                                      newData.planning[weekIdx] = {}
+                                    }
+                                    if (!newData.planning[weekIdx].daily) {
+                                      newData.planning[weekIdx].daily = {}
+                                    }
+                                    newData.planning[weekIdx].daily[dayIdx] = []
+                                    setMacrocycleData(newData)
+                                    setActiveDropdown(null)
+                                  }}
+                                  className={`w-full px-3 py-2 text-left text-sm rounded hover:bg-slate-700 transition-colors flex items-center gap-2 border-b border-slate-600 mb-1 ${
+                                    dailyData.length === 0 ? 'text-slate-400 bg-slate-700' : 'text-red-400'
+                                  }`}
+                                >
+                                  <span className="w-5 h-5 rounded bg-slate-700 flex items-center justify-center text-xs">
+                                    ✕
+                                  </span>
+                                  Üres
+                                </button>
                                 {Object.entries(dailyCategories).map(([key, cat]) => (
                                   <button
                                     key={key}

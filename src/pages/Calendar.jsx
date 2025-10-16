@@ -13,6 +13,7 @@ import {
   Zap,
   Home,
   Plane,
+  Star,
 } from 'lucide-react'
 import TrainingSessionModal from '../components/TrainingSessionModal'
 import QuickAddTrainingModal from '../components/QuickAddTrainingModal'
@@ -31,6 +32,13 @@ export default function Calendar() {
   const [editingSession, setEditingSession] = useState(null)
   const [selectedDateForSession, setSelectedDateForSession] = useState(null)
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+  
+  // Load factors state for week view
+  const [weekLoadFactors, setWeekLoadFactors] = useState({})
+  const [saveTimeouts, setSaveTimeouts] = useState({})
+  
+  // Tactics & Technique state for week view
+  const [weekTacticsTechnique, setWeekTacticsTechnique] = useState({})
 
   const daysOfWeek = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
   const daysOfWeekShort = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V']
@@ -60,8 +68,10 @@ export default function Calendar() {
       loadPlanningData()
       loadTrainingSessions()
       loadMatches()
+      loadWeekLoadFactors()
+      loadWeekTacticsTechnique()
     }
-  }, [currentSeason, selectedTeam])
+  }, [currentSeason, selectedTeam, currentDate])
 
   const fetchSeasons = async () => {
     try {
@@ -144,6 +154,94 @@ export default function Calendar() {
     } catch (error) {
       console.error('Error loading matches:', error)
       setMatches([])
+    }
+  }
+
+  const loadWeekLoadFactors = async () => {
+    if (!currentSeason || !selectedTeam) return
+    
+    try {
+      // Get the current week's date range
+      const weekDays = getWeekDays(currentDate)
+      const startDate = getDateKey(weekDays[0])
+      const endDate = getDateKey(weekDays[6])
+
+      const { data, error } = await supabase
+        .from('training_load_factors')
+        .select('*')
+        .eq('team_id', selectedTeam.id)
+        .gte('date', startDate)
+        .lte('date', endDate)
+
+      if (error) throw error
+
+      // Convert array to object keyed by date
+      const factorsMap = {}
+      if (data) {
+        data.forEach(item => {
+          factorsMap[item.date] = {
+            circulation: item.circulation_load,
+            mechanical: item.mechanical_load,
+            energy: item.energy_system || '',
+            duration: item.duration || '',
+            ratio: item.work_rest_ratio || '',
+            type: item.training_type || ''
+          }
+        })
+      }
+      
+      setWeekLoadFactors(factorsMap)
+    } catch (error) {
+      console.error('Error loading load factors:', error)
+      setWeekLoadFactors({})
+    }
+  }
+
+  const saveLoadFactorToDatabase = async (date, factorType, value) => {
+    if (!selectedTeam) return
+
+    const dateKey = getDateKey(date)
+    
+    try {
+      // Prepare the data object
+      const updateData = {
+        team_id: selectedTeam.id,
+        date: dateKey
+      }
+
+      // Map factor types to database columns
+      switch (factorType) {
+        case 'circulation':
+          updateData.circulation_load = value
+          break
+        case 'mechanical':
+          updateData.mechanical_load = value
+          break
+        case 'energy':
+          updateData.energy_system = value
+          break
+        case 'duration':
+          updateData.duration = value
+          break
+        case 'ratio':
+          updateData.work_rest_ratio = value
+          break
+        case 'type':
+          updateData.training_type = value
+          break
+      }
+
+      // Use upsert to insert or update
+      const { error } = await supabase
+        .from('training_load_factors')
+        .upsert(updateData, {
+          onConflict: 'team_id,date'
+        })
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error saving load factor:', error)
+      alert('Hiba történt a mentés során!')
     }
   }
 
@@ -267,6 +365,176 @@ export default function Calendar() {
 
   const isCurrentMonth = (date) => {
     return date.getMonth() === currentDate.getMonth()
+  }
+
+  // Load factors helper functions
+  const getDateKey = (date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const updateLoadFactor = (date, factorType, value, immediate = false) => {
+    const dateKey = getDateKey(date)
+    const timeoutKey = `${dateKey}-${factorType}`
+    
+    // Update local state immediately for responsive UI
+    setWeekLoadFactors(prev => ({
+      ...prev,
+      [dateKey]: {
+        ...prev[dateKey],
+        [factorType]: value
+      }
+    }))
+
+    // Clear existing timeout for this field
+    if (saveTimeouts[timeoutKey]) {
+      clearTimeout(saveTimeouts[timeoutKey])
+    }
+
+    // For star ratings and dropdowns, save immediately
+    // For text inputs, debounce by 1 second
+    const delay = immediate ? 0 : 1000
+
+    const timeoutId = setTimeout(() => {
+      saveLoadFactorToDatabase(date, factorType, value)
+      
+      // Clean up timeout reference
+      setSaveTimeouts(prev => {
+        const newTimeouts = { ...prev }
+        delete newTimeouts[timeoutKey]
+        return newTimeouts
+      })
+    }, delay)
+
+    setSaveTimeouts(prev => ({
+      ...prev,
+      [timeoutKey]: timeoutId
+    }))
+  }
+
+  const getLoadFactor = (date, factorType) => {
+    const dateKey = getDateKey(date)
+    return weekLoadFactors[dateKey]?.[factorType] || ''
+  }
+
+  const hasBallTraining = (date) => {
+    const sessions = getTrainingSessionsForDate(date)
+    return sessions.some(session => session.type === 'ball')
+  }
+
+  // Tactics & Technique functions
+  const loadWeekTacticsTechnique = async () => {
+    if (!currentSeason || !selectedTeam) return
+    
+    try {
+      const weekDays = getWeekDays(currentDate)
+      const startDate = getDateKey(weekDays[0])
+      const endDate = getDateKey(weekDays[6])
+
+      const { data, error } = await supabase
+        .from('tactics_technique')
+        .select('*')
+        .eq('team_id', selectedTeam.id)
+        .gte('date', startDate)
+        .lte('date', endDate)
+
+      if (error) throw error
+
+      const tacticsMap = {}
+      if (data) {
+        data.forEach(item => {
+          tacticsMap[item.date] = {
+            tactical_support: item.tactical_support || '',
+            tactical_defense: item.tactical_defense || '',
+            technical_support: item.technical_support || '',
+            technical_defense: item.technical_defense || '',
+            video_url: item.video_url || '',
+            practice_support_common: item.practice_support_common || '',
+            practice_support_wide: item.practice_support_wide || '',
+            practice_support_inside: item.practice_support_inside || '',
+            practice_support_main_direction: item.practice_support_main_direction || '',
+            practice_defense_common: item.practice_defense_common || '',
+            practice_defense_wide: item.practice_defense_wide || '',
+            practice_defense_inside: item.practice_defense_inside || '',
+            practice_defense_main_direction: item.practice_defense_main_direction || '',
+            practice_game: item.practice_game || ''
+          }
+        })
+      }
+      
+      setWeekTacticsTechnique(tacticsMap)
+    } catch (error) {
+      console.error('Error loading tactics technique:', error)
+      setWeekTacticsTechnique({})
+    }
+  }
+
+  const saveTacticsTechniqueToDatabase = async (date, fieldName, value) => {
+    if (!selectedTeam) return
+
+    const dateKey = getDateKey(date)
+    
+    try {
+      const updateData = {
+        team_id: selectedTeam.id,
+        date: dateKey,
+        [fieldName]: value
+      }
+
+      const { error } = await supabase
+        .from('tactics_technique')
+        .upsert(updateData, {
+          onConflict: 'team_id,date'
+        })
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error saving tactics technique:', error)
+      alert('Hiba történt a mentés során!')
+    }
+  }
+
+  const updateTacticsTechnique = (date, fieldName, value) => {
+    const dateKey = getDateKey(date)
+    const timeoutKey = `tactics-${dateKey}-${fieldName}`
+    
+    setWeekTacticsTechnique(prev => ({
+      ...prev,
+      [dateKey]: {
+        ...prev[dateKey],
+        [fieldName]: value
+      }
+    }))
+
+    if (saveTimeouts[timeoutKey]) {
+      clearTimeout(saveTimeouts[timeoutKey])
+    }
+
+    // Dropdown mezők (video_url, practice_game) azonnal mentődnek
+    const isDropdown = fieldName === 'video_url' || fieldName === 'practice_game'
+    const delay = isDropdown ? 0 : 1000
+
+    const timeoutId = setTimeout(() => {
+      saveTacticsTechniqueToDatabase(date, fieldName, value)
+      
+      setSaveTimeouts(prev => {
+        const newTimeouts = { ...prev }
+        delete newTimeouts[timeoutKey]
+        return newTimeouts
+      })
+    }, delay)
+
+    setSaveTimeouts(prev => ({
+      ...prev,
+      [timeoutKey]: timeoutId
+    }))
+  }
+
+  const getTacticsTechnique = (date, fieldName) => {
+    const dateKey = getDateKey(date)
+    return weekTacticsTechnique[dateKey]?.[fieldName] || ''
   }
 
   if (!selectedTeam) {
@@ -519,42 +787,515 @@ export default function Calendar() {
 
         {/* Week View */}
         {view === 'week' && (
-          <div className="space-y-2">
-            {getWeekDays(currentDate).map((date, index) => {
-              const dayData = getDayData(date)
-              const dayConfig = dayData ? trainingDayOptions[dayData] : null
+          <div>
+            {/* Day headers - horizontal */}
+            <div className="grid grid-cols-7 gap-2 mb-4">
+              {getWeekDays(currentDate).map((date, index) => {
+                const dayData = getDayData(date)
+                const dayConfig = dayData ? trainingDayOptions[dayData] : null
 
-              return (
-                <div
-                  key={date.toISOString()}
-                  className={`border rounded-lg p-4 transition-all cursor-pointer ${
-                    isToday(date)
-                      ? 'border-primary-500 bg-primary-500/10'
-                      : 'border-slate-600 hover:border-slate-500 bg-slate-800'
-                  }`}
-                  onClick={() => {
-                    setCurrentDate(date)
-                    setView('day')
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-lg font-semibold text-white">
-                        {daysOfWeek[index]}
-                      </div>
-                      <div className="text-sm text-slate-400">
-                        {date.toLocaleDateString('hu-HU', { month: 'long', day: 'numeric' })}
-                      </div>
+                return (
+                  <div
+                    key={`header-${date.toISOString()}`}
+                    className={`text-center p-3 rounded-lg border ${
+                      isToday(date)
+                        ? 'border-primary-500 bg-primary-500/10'
+                        : 'border-slate-600 bg-slate-800'
+                    }`}
+                  >
+                    <div className={`text-sm font-medium mb-1 ${
+                      isToday(date) ? 'text-primary-400' : 'text-slate-400'
+                    }`}>
+                      {daysOfWeek[index]}
                     </div>
-                    {dayConfig && (
-                      <div className={`px-4 py-2 rounded-lg ${dayConfig.color} ${dayConfig.textColor} font-medium`}>
-                        {dayData}
+                    <div className={`text-lg font-bold mb-2 ${
+                      isToday(date) ? 'text-primary-300' : 'text-white'
+                    }`}>
+                      {date.getDate()}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {date.toLocaleDateString('hu-HU', { month: 'short' })}
+                    </div>
+                    {dayConfig && dayConfig.shortLabel !== '-' && (
+                      <div className={`mt-2 text-xs px-2 py-1 rounded ${dayConfig.color} ${dayConfig.textColor}`}>
+                        {dayConfig.shortLabel}
                       </div>
                     )}
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+
+            {/* Day content - horizontal */}
+            <div className="grid grid-cols-7 gap-2 mb-4">
+              {getWeekDays(currentDate).map((date, index) => {
+                const daySessions = getTrainingSessionsForDate(date)
+                const dayMatches = getMatchesForDate(date)
+
+                return (
+                  <div
+                    key={`content-${date.toISOString()}`}
+                    className={`border rounded-lg p-3 min-h-[300px] transition-all cursor-pointer ${
+                      isToday(date)
+                        ? 'border-primary-500 bg-primary-500/5'
+                        : 'border-slate-600 hover:border-slate-500 bg-slate-800'
+                    }`}
+                    onClick={() => {
+                      setCurrentDate(date)
+                      setView('day')
+                    }}
+                  >
+                    <div className="space-y-2">
+                      {/* Training sessions */}
+                      {daySessions.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-slate-400 mb-2">
+                            Edzések ({daySessions.length})
+                          </div>
+                          {daySessions.map((session, idx) => {
+                            const isGym = session.type === 'gym'
+                            const isBall = session.type === 'ball'
+                            const bgColor = isGym ? 'bg-purple-600' : isBall ? 'bg-teal-600' : 'bg-blue-600'
+                            const icon = isGym ? '🏋️' : isBall ? '⚽' : '📝'
+                            
+                            return (
+                              <div key={idx} className={`text-xs px-2 py-2 rounded ${bgColor} text-white`}>
+                                <div className="font-semibold mb-1">{icon} {session.start_time ? session.start_time.substring(0, 5) : ''}</div>
+                                {session.location && (
+                                  <div className="text-[10px] opacity-90 truncate">
+                                    📍 {session.location}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                      
+                      {/* Matches */}
+                      {dayMatches.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-slate-400 mb-2">
+                            Mérkőzések ({dayMatches.length})
+                          </div>
+                          {dayMatches.map((match, idx) => {
+                            const isHome = match.home_away === 'home'
+                            const LocationIcon = isHome ? Home : Plane
+                            
+                            return (
+                              <div key={idx} className="text-xs px-2 py-2 rounded bg-pink-600 text-white">
+                                <div className="flex items-center gap-1 mb-1">
+                                  <LocationIcon className="w-3 h-3 flex-shrink-0" />
+                                  <span className="font-semibold truncate">
+                                    {match.opponent}
+                                  </span>
+                                </div>
+                                {match.time && (
+                                  <div className="text-[10px] opacity-90">
+                                    🕐 {match.time.substring(0, 5)}
+                                  </div>
+                                )}
+                                {match.location && (
+                                  <div className="text-[10px] opacity-90 truncate">
+                                    📍 {match.location}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* Empty state */}
+                      {daySessions.length === 0 && dayMatches.length === 0 && (
+                        <div className="text-center py-8 text-slate-600">
+                          <div className="text-2xl mb-2">📅</div>
+                          <div className="text-xs">Nincs esemény</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Load Factors Table */}
+            <div className="grid grid-cols-7 gap-2 mb-4">
+              {getWeekDays(currentDate).map((date) => {
+                const hasBall = hasBallTraining(date)
+                
+                return (
+                  <div
+                    key={`load-factors-${date.toISOString()}`}
+                    className={`border rounded-lg overflow-hidden ${
+                      isToday(date)
+                        ? 'border-primary-500 bg-primary-500/5'
+                        : 'border-slate-600 bg-slate-800'
+                    } ${!hasBall ? 'opacity-50' : ''}`}
+                  >
+                    {/* Keringési terhelés - Star Rating */}
+                    <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                      <div className="text-[10px] text-slate-400 mb-1 text-center">Keringési</div>
+                      <div className="flex justify-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={`circ-star-${star}`}
+                            disabled={!hasBall}
+                            onClick={() => updateLoadFactor(date, 'circulation', star, true)}
+                            className={`p-0.5 transition-colors ${
+                              !hasBall ? 'cursor-not-allowed' : 'hover:scale-110'
+                            }`}
+                          >
+                            <Star
+                              className={`w-3 h-3 ${
+                                star <= (getLoadFactor(date, 'circulation') || 0)
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-slate-600'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mechanikai terhelés - Star Rating */}
+                    <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                      <div className="text-[10px] text-slate-400 mb-1 text-center">Mechanikai</div>
+                      <div className="flex justify-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={`mech-star-${star}`}
+                            disabled={!hasBall}
+                            onClick={() => updateLoadFactor(date, 'mechanical', star, true)}
+                            className={`p-0.5 transition-colors ${
+                              !hasBall ? 'cursor-not-allowed' : 'hover:scale-110'
+                            }`}
+                          >
+                            <Star
+                              className={`w-3 h-3 ${
+                                star <= (getLoadFactor(date, 'mechanical') || 0)
+                                  ? 'fill-orange-400 text-orange-400'
+                                  : 'text-slate-600'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Energiarendszer - Dropdown */}
+                    <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                      <div className="text-[10px] text-slate-400 mb-1 text-center">Energiarendszer</div>
+                      <select
+                        disabled={!hasBall}
+                        value={getLoadFactor(date, 'energy')}
+                        onChange={(e) => updateLoadFactor(date, 'energy', e.target.value, true)}
+                        className={`w-full px-1 py-1 text-[10px] text-center bg-slate-700 text-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                          !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                        }`}
+                      >
+                        <option value="">-</option>
+                        <option value="aerob">Aerob</option>
+                        <option value="anaerob_laktat">Anaerob laktát</option>
+                        <option value="anaerob_alaktat">Anaerob alaktát</option>
+                        <option value="vegyes">Vegyes</option>
+                      </select>
+                    </div>
+
+                    {/* Időtartam - Text Input */}
+                    <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                      <div className="text-[10px] text-slate-400 mb-1 text-center">Időtartam</div>
+                      <input
+                        type="text"
+                        disabled={!hasBall}
+                        value={getLoadFactor(date, 'duration')}
+                        onChange={(e) => updateLoadFactor(date, 'duration', e.target.value)}
+                        placeholder={hasBall ? 'pl. 90p' : ''}
+                        className={`w-full px-1 py-1 text-[10px] text-center bg-slate-700 text-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                          !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                        }`}
+                      />
+                    </div>
+
+                    {/* Terhelés:Pihenő - Dropdown */}
+                    <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                      <div className="text-[10px] text-slate-400 mb-1 text-center">Terhelés:Pihenő</div>
+                      <select
+                        disabled={!hasBall}
+                        value={getLoadFactor(date, 'ratio')}
+                        onChange={(e) => updateLoadFactor(date, 'ratio', e.target.value, true)}
+                        className={`w-full px-1 py-1 text-[10px] text-center bg-slate-700 text-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                          !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                        }`}
+                      >
+                        <option value="">-</option>
+                        <option value="1:1">1:1</option>
+                        <option value="1:2">1:2</option>
+                        <option value="1:3">1:3</option>
+                        <option value="1:4">1:4</option>
+                        <option value="1:5">1:5</option>
+                        <option value="2:1">2:1</option>
+                        <option value="3:1">3:1</option>
+                        <option value="4:1">4:1</option>
+                      </select>
+                    </div>
+
+                    {/* Típus - Text Input */}
+                    <div className={`px-2 py-2 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                      <div className="text-[10px] text-slate-400 mb-1 text-center">Típus</div>
+                      <input
+                        type="text"
+                        disabled={!hasBall}
+                        value={getLoadFactor(date, 'type')}
+                        onChange={(e) => updateLoadFactor(date, 'type', e.target.value)}
+                        placeholder={hasBall ? 'pl. HIIT' : ''}
+                        className={`w-full px-1 py-1 text-[10px] text-center bg-slate-700 text-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                          !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Tactics & Technique Table */}
+            <div className="mb-4">
+              <div className="bg-slate-700 px-4 py-2 text-center rounded-t-lg border border-slate-600">
+                <h3 className="text-sm font-semibold text-white">Taktika & Technika</h3>
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {getWeekDays(currentDate).map((date) => {
+                  const hasBall = hasBallTraining(date)
+                  
+                  return (
+                    <div
+                      key={`tactics-${date.toISOString()}`}
+                      className={`border rounded-lg overflow-hidden ${
+                        isToday(date)
+                          ? 'border-primary-500 bg-primary-500/5'
+                          : 'border-slate-600 bg-slate-800'
+                      } ${!hasBall ? 'opacity-50' : ''}`}
+                    >
+                      {/* Taktikai cél - Támadás */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Taktikai - Támadás</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'tactical_support')}
+                          onChange={(e) => updateTacticsTechnique(date, 'tactical_support', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Taktikai cél - Védekezés */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Taktikai - Védekezés</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'tactical_defense')}
+                          onChange={(e) => updateTacticsTechnique(date, 'tactical_defense', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Technikai cél - Támadás */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Technikai - Támadás</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'technical_support')}
+                          onChange={(e) => updateTacticsTechnique(date, 'technical_support', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Technikai cél - Védekezés */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Technikai - Védekezés</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'technical_defense')}
+                          onChange={(e) => updateTacticsTechnique(date, 'technical_defense', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Videó */}
+                      <div className={`px-2 py-2 border-t-[3px] border-b-[3px] border-slate-400 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Videó</div>
+                        <select
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'video_url') || ''}
+                          onChange={(e) => updateTacticsTechnique(date, 'video_url', e.target.value)}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        >
+                          <option value="">-</option>
+                          <option value="Igen">Igen</option>
+                          <option value="Nem">Nem</option>
+                        </select>
+                      </div>
+
+                      {/* Gyakorlat - Támadás Közös */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Közös</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_support_common')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_support_common', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Gyakorlat - Támadás Szélső */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Szélső</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_support_wide')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_support_wide', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Gyakorlat - Támadás Beálló */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Beálló</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_support_inside')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_support_inside', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Gyakorlat - Támadás Átlövő-Irány */}
+                      <div className={`px-2 py-2 border-b-[3px] border-slate-400 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Átlövő</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_support_main_direction')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_support_main_direction', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Gyakorlat - Védekezés Közös */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Közös</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_defense_common')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_defense_common', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Gyakorlat - Védekezés Szélső */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Szélső</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_defense_wide')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_defense_wide', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Gyakorlat - Védekezés Beálló */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Beálló</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_defense_inside')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_defense_inside', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Gyakorlat - Védekezés Átlövő-Irány */}
+                      <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Átlövő</div>
+                        <input
+                          type="text"
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_defense_main_direction')}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_defense_main_direction', e.target.value)}
+                          placeholder={hasBall ? '-' : ''}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        />
+                      </div>
+
+                      {/* Kapus edzés */}
+                      <div className={`px-2 py-2 border-t-[3px] border-slate-400 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
+                        <div className="text-[10px] text-slate-400 mb-1 text-center">Kapus edzés</div>
+                        <select
+                          disabled={!hasBall}
+                          value={getTacticsTechnique(date, 'practice_game') || ''}
+                          onChange={(e) => updateTacticsTechnique(date, 'practice_game', e.target.value)}
+                          className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
+                            !hasBall ? 'cursor-not-allowed opacity-50' : ''
+                          }`}
+                        >
+                          <option value="">-</option>
+                          <option value="Igen">Igen</option>
+                          <option value="Nem">Nem</option>
+                        </select>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
           </div>
         )}
 
