@@ -10,6 +10,7 @@ import {
   User,
   Download,
 } from 'lucide-react'
+import TeamSelector from '../components/TeamSelector'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -237,67 +238,86 @@ export default function Leaderboard() {
 
   if (!selectedTeam) {
     return (
-      <div className="card text-center py-12">
-        <Trophy className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-white mb-2">Válassz csapatot</h3>
-        <p className="text-slate-400">Válassz egy csapatot a fejlécben a ranglista megtekintéséhez</p>
+      <div className="h-screen flex flex-col">
+        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white flex items-center space-x-3">
+                <Trophy className="w-6 h-6 text-yellow-400" />
+                <span>Ranglista</span>
+              </h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Relatív megerősödés alapján - 1RM / Teststúly</p>
+            </div>
+            <div className="flex-shrink-0">
+              <TeamSelector />
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-            <Trophy className="w-8 h-8 text-yellow-400" />
-            <span>Ranglista</span>
-          </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Testsúly arányos erő (Relatív erő = 1RM / Testsúly)
-          </p>
-        </div>
-      </div>
+    <div className="h-screen flex flex-col">
+      {/* Sticky Header - Dashboard stílusban */}
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
+          {/* Bal oldal: Cím */}
+          <div className="flex items-center space-x-4 flex-1 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white flex items-center space-x-3">
+                <Trophy className="w-6 h-6 text-yellow-400" />
+                <span>Ranglista</span>
+              </h1>
+              <p className="text-sm text-slate-400 hidden sm:block">
+                Relatív megerősödés alapján - 1RM / Teststúly
+              </p>
+            </div>
 
-      {/* Exercise Selection */}
-      <div className="card">
-        <div className="flex items-center space-x-3 mb-4">
-          <Filter className="w-5 h-5 text-primary-400" />
-          <h3 className="text-lg font-semibold text-white">Gyakorlat Kiválasztása</h3>
-        </div>
-        <div className="flex items-center space-x-4 flex-wrap">
-          <div className="flex-1 min-w-[250px]">
-            <label className="block text-sm font-medium text-slate-300 mb-2">Gyakorlat</label>
-            <select
-              value={selectedExercise}
-              onChange={(e) => setSelectedExercise(e.target.value)}
-              className="input-field"
-            >
-              {exercises.length === 0 ? (
-                <option value="">Nincs kg-os gyakorlat</option>
-              ) : (
-                exercises.map((exercise) => (
-                  <option key={exercise.id} value={exercise.id}>
-                    {exercise.name}
-                  </option>
-                ))
-              )}
-            </select>
+            {/* Gyakorlat selector */}
+            {exercises.length > 0 && (
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedExercise}
+                  onChange={(e) => setSelectedExercise(e.target.value)}
+                  className="input-field text-sm"
+                >
+                  {exercises.map((exercise) => (
+                    <option key={exercise.id} value={exercise.id}>
+                      {exercise.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-          {selectedExercise && leaderboardData.length > 0 && (
-            <div className="flex items-end">
+
+          {/* Középső gombok */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {selectedExercise && leaderboardData.length > 0 && (
               <button
                 onClick={exportToPDF}
-                className="btn-primary flex items-center space-x-2"
+                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+                title="PDF Exportálás"
               >
-                <Download className="w-5 h-5" />
-                <span>PDF Exportálás</span>
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">PDF Exportálás</span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Jobb oldal: TeamSelector */}
+          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
+            <TeamSelector />
+          </div>
         </div>
-      </div>
+      </header>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
       {/* Leaderboard */}
       {loading ? (
@@ -394,6 +414,8 @@ export default function Leaderboard() {
           </div>
         </div>
       )}
+
+      </div>
     </div>
   )
 }

@@ -13,6 +13,7 @@ import {
   Copy,
   X,
 } from 'lucide-react'
+import TeamSelector from '../components/TeamSelector'
 import GymTemplateEditor from '../components/GymTemplateEditor'
 import BallTemplateEditor from '../components/BallTemplateEditor'
 import TacticTemplateEditor from '../components/TacticTemplateEditor'
@@ -123,34 +124,64 @@ export default function TrainingTemplates() {
 
   if (!selectedTeam) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+      <div className="h-screen flex flex-col">
+        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Edzéssablonok</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Újrafelhasználható edzésprogramok</p>
+            </div>
+            <div className="flex-shrink-0">
+              <TeamSelector />
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Edzéssablonok</h1>
-          <p className="text-slate-400 mt-1">
-            {selectedTeam.name} - Újrafelhasználható edzésprogramok
-          </p>
-        </div>
+    <div className="h-screen flex flex-col">
+      {/* Sticky Header - Dashboard stílusban */}
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
+          {/* Bal oldal: Cím */}
+          <div className="flex items-center space-x-4 flex-1 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Edzéssablonok</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">
+                {templates.length}/{filteredTemplates.length} - Újrafelhasználható edzésprogramok
+              </p>
+            </div>
+          </div>
 
-        <button
-          onClick={() => {
-            setEditingTemplate(null)
-            setShowModal(true)
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Új sablon</span>
-        </button>
-      </div>
+          {/* Középső gombok */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                setEditingTemplate(null)
+                setShowModal(true)
+              }}
+              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+              title="Új sablon"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Új sablon</span>
+            </button>
+          </div>
+
+          {/* Jobb oldal: TeamSelector */}
+          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
+            <TeamSelector />
+          </div>
+        </div>
+      </header>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
       {/* Filters */}
       <div className="card">
@@ -284,6 +315,8 @@ export default function TrainingTemplates() {
           })}
         </div>
       )}
+
+      </div>
 
       {/* Create/Edit Modal */}
       {showModal && (

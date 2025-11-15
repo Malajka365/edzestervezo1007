@@ -12,6 +12,8 @@ import MacrocyclePlanner from './MacrocyclePlanner'
 import Calendar from './Calendar'
 import TrainingTemplates from './TrainingTemplates'
 import Matches from './Matches'
+import ExerciseLibrary from './ExerciseLibrary'
+import Rehabilitation from './Rehabilitation'
 import {
   Home,
   Users,
@@ -29,6 +31,7 @@ import {
   CalendarDays,
   Clipboard,
   Medal,
+  Dumbbell,
 } from 'lucide-react'
 
 export default function Dashboard({ session }) {
@@ -123,6 +126,13 @@ export default function Dashboard({ session }) {
       color: 'bg-indigo-500',
     },
     {
+      id: 'exercises',
+      name: 'Gyakorlat Könyvtár',
+      icon: Dumbbell,
+      description: 'Kondicionális gyakorlatok',
+      color: 'bg-purple-600',
+    },
+    {
       id: 'templates',
       name: 'Edzéssablonok',
       icon: Clipboard,
@@ -194,14 +204,14 @@ export default function Dashboard({ session }) {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 border-b border-slate-700">
+          <div className="p-4 border-b border-slate-700">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-                  <span className="text-xl font-bold text-white">TF</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-base font-bold text-white">TF</span>
                 </div>
                 <div>
-                  <h2 className="text-white font-bold">TeamFlow</h2>
+                  <h2 className="text-white font-bold text-sm">TeamFlow</h2>
                   <p className="text-xs text-slate-400">Edzés Menedzsment</p>
                 </div>
               </div>
@@ -209,14 +219,14 @@ export default function Dashboard({ session }) {
                 onClick={() => setSidebarOpen(false)}
                 className="lg:hidden text-slate-400 hover:text-white"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            <ul className="space-y-2">
+          <nav className="flex-1 min-h-0 overflow-y-auto p-3">
+            <ul className="space-y-1">
               {modules.map((module) => {
                 const Icon = module.icon
                 return (
@@ -226,14 +236,14 @@ export default function Dashboard({ session }) {
                         setActiveModule(module.id)
                         setSidebarOpen(false)
                       }}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                      className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
                         activeModule === module.id
                           ? 'bg-primary-600 text-white shadow-lg'
                           : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                       }`}
                     >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{module.name}</span>
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm">{module.name}</span>
                     </button>
                   </li>
                 )
@@ -242,19 +252,19 @@ export default function Dashboard({ session }) {
           </nav>
 
           {/* User Profile */}
-          <div className="p-4 border-t border-slate-700">
+          <div className="p-3 border-t border-slate-700">
             <button
               onClick={() => {
                 setActiveModule('profile')
                 setSidebarOpen(false)
               }}
-              className="w-full flex items-center space-x-3 mb-3 p-2 rounded-lg hover:bg-slate-700 transition-colors"
+              className="w-full flex items-center space-x-2 mb-2 p-1.5 rounded-lg hover:bg-slate-700 transition-colors"
             >
-              <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-slate-300" />
+              <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 text-slate-300" />
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-white truncate">
+                <p className="text-xs font-medium text-white truncate">
                   {session.user.email}
                 </p>
                 <p className="text-xs text-slate-400">{getRoleLabel(userRole)}</p>
@@ -262,10 +272,10 @@ export default function Dashboard({ session }) {
             </button>
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+              className="w-full flex items-center justify-center space-x-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Kijelentkezés</span>
+              <span className="text-xs font-medium">Kijelentkezés</span>
             </button>
           </div>
         </div>
@@ -273,33 +283,57 @@ export default function Dashboard({ session }) {
 
       {/* Main Content */}
       <div className="lg:ml-72">
-        {/* Top Bar */}
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
-          <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-            <div className="flex items-center space-x-4 flex-1 min-w-0">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-slate-300 hover:text-white flex-shrink-0"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-              <div className="min-w-0">
-                <h1 className="text-xl font-bold text-white">
-                  {activeModuleData?.name}
-                </h1>
-                <p className="text-sm text-slate-400 hidden sm:block">{activeModuleData?.description}</p>
+        {activeModule === 'rehab' ? (
+          <Rehabilitation />
+        ) : activeModule === 'macrocycle' ? (
+          <MacrocyclePlanner />
+        ) : activeModule === 'teams' ? (
+          <Teams />
+        ) : activeModule === 'calendar' ? (
+          <Calendar />
+        ) : activeModule === 'measurement' ? (
+          <Measurements session={session} />
+        ) : activeModule === 'leaderboard' ? (
+          <Leaderboard />
+        ) : activeModule === 'exercises' ? (
+          <ExerciseLibrary />
+        ) : activeModule === 'templates' ? (
+          <TrainingTemplates />
+        ) : activeModule === 'matches' ? (
+          <Matches />
+        ) : activeModule === 'trainingload' ? (
+          <TrainingLoad />
+        ) : activeModule === 'progress' ? (
+          <PlayerProgress />
+        ) : (
+          <>
+            {/* Top Bar */}
+            <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
+              <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
+                <div className="flex items-center space-x-4 flex-1 min-w-0">
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden text-slate-300 hover:text-white flex-shrink-0"
+                  >
+                    <Menu className="w-6 h-6" />
+                  </button>
+                  <div className="min-w-0">
+                    <h1 className="text-xl font-bold text-white">
+                      {activeModuleData?.name}
+                    </h1>
+                    <p className="text-sm text-slate-400 hidden sm:block">{activeModuleData?.description}</p>
+                  </div>
+                </div>
+                
+                {/* Team Selector - visible on all pages */}
+                <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
+                  <TeamSelector />
+                </div>
               </div>
-            </div>
-            
-            {/* Team Selector - visible on all pages */}
-            <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
+            </header>
 
-        {/* Content Area */}
-        <main className="p-6">
+            {/* Content Area */}
+            <main className="p-6">
           {activeModule === 'home' && (
             <div className="space-y-6">
               {/* Welcome Card */}
@@ -374,6 +408,8 @@ export default function Dashboard({ session }) {
 
           {activeModule === 'calendar' && <Calendar />}
 
+          {activeModule === 'exercises' && <ExerciseLibrary />}
+
           {activeModule === 'templates' && <TrainingTemplates />}
 
           {activeModule === 'matches' && <Matches />}
@@ -388,7 +424,7 @@ export default function Dashboard({ session }) {
 
           {activeModule === 'profile' && <Profile session={session} />}
 
-          {activeModule !== 'home' && activeModule !== 'teams' && activeModule !== 'macrocycle' && activeModule !== 'calendar' && activeModule !== 'templates' && activeModule !== 'matches' && activeModule !== 'measurement' && activeModule !== 'trainingload' && activeModule !== 'leaderboard' && activeModule !== 'progress' && activeModule !== 'profile' && (
+          {activeModule !== 'home' && activeModule !== 'teams' && activeModule !== 'macrocycle' && activeModule !== 'calendar' && activeModule !== 'exercises' && activeModule !== 'templates' && activeModule !== 'matches' && activeModule !== 'measurement' && activeModule !== 'trainingload' && activeModule !== 'leaderboard' && activeModule !== 'progress' && activeModule !== 'profile' && activeModule !== 'rehab' && (
             <div className="card text-center py-12">
               <div
                 className={`w-16 h-16 ${activeModuleData?.color} rounded-2xl flex items-center justify-center mx-auto mb-4`}
@@ -407,7 +443,9 @@ export default function Dashboard({ session }) {
               </div>
             </div>
           )}
-        </main>
+            </main>
+          </>
+        )}
       </div>
     </div>
     </TeamProvider>

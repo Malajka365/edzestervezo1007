@@ -18,6 +18,7 @@ import {
   Search,
   MapPin,
 } from 'lucide-react'
+import TeamSelector from '../components/TeamSelector'
 
 export default function Teams() {
   const { teams, selectedTeam, createTeam, updateTeam, deleteTeam } = useTeams()
@@ -226,34 +227,51 @@ export default function Teams() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Csapatok Kezelése</h2>
-          <p className="text-slate-400 text-sm mt-1">
-            {teams.length} csapat • {selectedTeam ? players.length + ' játékos' : 'Válassz csapatot'}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {selectedTeam && (
+    <div className="h-screen flex flex-col">
+      {/* Sticky Header - Dashboard stílusban */}
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
+          {/* Bal oldal: Cím */}
+          <div className="flex items-center space-x-4 flex-1 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Csapatok</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">
+                {teams.length} csapat • {selectedTeam ? players.length + ' játékos' : 'Játékosok kezelése'}
+              </p>
+            </div>
+          </div>
+
+          {/* Középső gombok */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {selectedTeam && (
+              <button
+                onClick={() => setShowLocationsModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+                title="Edzés Helyszínek"
+              >
+                <MapPin className="w-4 h-4" />
+                <span className="hidden sm:inline">Edzés Helyszínek</span>
+              </button>
+            )}
             <button
-              onClick={() => setShowLocationsModal(true)}
-              className="btn-secondary flex items-center space-x-2"
+              onClick={() => setShowTeamModal(true)}
+              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+              title="Új Csapat"
             >
-              <MapPin className="w-5 h-5" />
-              <span>Edzés Helyszínek</span>
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Új Csapat</span>
             </button>
-          )}
-          <button
-            onClick={() => setShowTeamModal(true)}
-            className="btn-primary flex items-center space-x-2"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Új Csapat</span>
-          </button>
+          </div>
+
+          {/* Jobb oldal: TeamSelector */}
+          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
+            <TeamSelector />
+          </div>
         </div>
-      </div>
+      </header>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
       {/* Teams Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -619,6 +637,8 @@ export default function Teams() {
           </div>
         </div>
       )}
+
+      </div>
 
       {/* Locations Modal */}
       {showLocationsModal && selectedTeam && (

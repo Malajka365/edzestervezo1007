@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import TrainingSessionModal from '../components/TrainingSessionModal'
 import QuickAddTrainingModal from '../components/QuickAddTrainingModal'
+import TeamSelector from '../components/TeamSelector'
 
 export default function Calendar() {
   const { selectedTeam } = useTeams()
@@ -539,102 +540,117 @@ export default function Calendar() {
 
   if (!selectedTeam) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+      <div className="h-screen flex flex-col">
+        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Edzésnaptár</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Interaktív naptár nézet</p>
+            </div>
+            <div className="flex-shrink-0">
+              <TeamSelector />
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Edzésnaptár</h1>
-          <p className="text-slate-400 mt-1">
-            {selectedTeam.name} - Interaktív naptár nézet
-          </p>
-        </div>
-
-        {/* View Switcher */}
-        <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1">
-          <button
-            onClick={() => setView('month')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              view === 'month'
-                ? 'bg-primary-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Grid className="w-4 h-4" />
-            <span>Hónap</span>
-          </button>
-          <button
-            onClick={() => setView('week')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              view === 'week'
-                ? 'bg-primary-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <List className="w-4 h-4" />
-            <span>Hét</span>
-          </button>
-          <button
-            onClick={() => setView('day')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              view === 'day'
-                ? 'bg-primary-600 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <CalendarIcon className="w-4 h-4" />
-            <span>Nap</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Season Selector */}
-      {seasons.length > 0 && (
-        <div className="card">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Szezon
-              </label>
-              <select
-                value={currentSeason?.id || ''}
-                onChange={(e) => {
-                  const season = seasons.find(s => s.id === e.target.value)
-                  if (season) {
-                    setCurrentSeason(season)
-                    setCurrentDate(new Date(season.start_date))
-                  }
-                }}
-                className="input-field w-full"
-              >
-                {seasons.map(season => (
-                  <option key={season.id} value={season.id}>
-                    {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU')} - {new Date(season.end_date).toLocaleDateString('hu-HU')})
-                  </option>
-                ))}
-              </select>
+    <div className="h-screen flex flex-col">
+      {/* Sticky Header - Dashboard stílusban */}
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
+          {/* Bal oldal: Cím + Szezon + Gyors Hozzáadás */}
+          <div className="flex items-center space-x-4 flex-1 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Edzésnaptár</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Interaktív naptár nézet</p>
             </div>
             
-            {view === 'month' && (
-              <div className="flex items-end">
-                <button
-                  onClick={() => setShowQuickAddModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-teal-600 hover:from-purple-700 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl whitespace-nowrap"
+            {seasons.length > 0 && currentSeason && (
+              <div className="flex items-center gap-3">
+                <select
+                  value={currentSeason?.id || ''}
+                  onChange={(e) => {
+                    const season = seasons.find(s => s.id === e.target.value)
+                    if (season) {
+                      setCurrentSeason(season)
+                      setCurrentDate(new Date(season.start_date))
+                    }
+                  }}
+                  className="input-field text-sm"
                 >
-                  <Zap className="w-5 h-5" />
-                  <span className="font-semibold">Gyors Hozzáadás</span>
-                </button>
+                  {seasons.map(season => (
+                    <option key={season.id} value={season.id}>
+                      {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })} - {new Date(season.end_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })})
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
+
+            {view === 'month' && (
+              <button
+                onClick={() => setShowQuickAddModal(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-teal-600 hover:from-purple-700 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl text-sm whitespace-nowrap"
+                title="Gyors Hozzáadás"
+              >
+                <Zap className="w-4 h-4" />
+                <span className="hidden sm:inline font-semibold">Gyors Hozzáadás</span>
+              </button>
+            )}
+          </div>
+
+          {/* Közép: Nézet váltó tab menü */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setView('month')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+                view === 'month'
+                  ? 'text-primary-400 border-primary-400'
+                  : 'text-slate-400 border-transparent hover:text-white'
+              }`}
+            >
+              <Grid className="w-5 h-5" />
+              <span>Hónap</span>
+            </button>
+            <button
+              onClick={() => setView('week')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+                view === 'week'
+                  ? 'text-primary-400 border-primary-400'
+                  : 'text-slate-400 border-transparent hover:text-white'
+              }`}
+            >
+              <List className="w-5 h-5" />
+              <span>Hét</span>
+            </button>
+            <button
+              onClick={() => setView('day')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+                view === 'day'
+                  ? 'text-primary-400 border-primary-400'
+                  : 'text-slate-400 border-transparent hover:text-white'
+              }`}
+            >
+              <CalendarIcon className="w-5 h-5" />
+              <span>Nap</span>
+            </button>
+          </div>
+
+          {/* Jobb oldal: TeamSelector */}
+          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
+            <TeamSelector />
           </div>
         </div>
-      )}
+      </header>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
       {/* Calendar Navigation */}
       <div className="card">
@@ -1487,6 +1503,8 @@ export default function Calendar() {
           }}
         />
       )}
+
+      </div>
 
       {/* Quick Add Training Modal */}
       {showQuickAddModal && (

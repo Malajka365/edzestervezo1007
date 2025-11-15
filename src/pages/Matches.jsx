@@ -13,6 +13,7 @@ import {
   X,
   Clock,
 } from 'lucide-react'
+import TeamSelector from '../components/TeamSelector'
 
 export default function Matches() {
   const { selectedTeam } = useTeams()
@@ -66,8 +67,14 @@ export default function Matches() {
     setFilteredMatches(filtered)
   }
 
-  const deleteMatch = async (id) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a mérkőzést?')) return
+  const deleteMatch = async (id, match) => {
+    let confirmMessage = 'Biztosan törölni szeretnéd ezt a mérkőzést?'
+    
+    if (match?.created_from_macrocycle) {
+      confirmMessage += '\n\n⚠️ Figyelem: Ez a mérkőzés a makrociklusból lett létrehozva.\nA törlés NEM érinti a makrociklust, csak ezt a mérkőzés rekordot törli.'
+    }
+    
+    if (!confirm(confirmMessage)) return
 
     try {
       const { error } = await supabase
@@ -105,70 +112,97 @@ export default function Matches() {
 
   if (!selectedTeam) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+      <div className="h-screen flex flex-col">
+        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Mérkőzések</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Mérkőzések, elemzések és eredmények</p>
+            </div>
+            <div className="flex-shrink-0">
+              <TeamSelector />
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Mérkőzések</h1>
-          <p className="text-slate-400 mt-1">
-            {selectedTeam.name} - Mérkőzések ütemezése és eredmények
-          </p>
-        </div>
+    <div className="h-screen flex flex-col">
+      {/* Sticky Header - Dashboard stílusban */}
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
+          {/* Bal oldal: Cím */}
+          <div className="flex items-center space-x-4 flex-1 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Mérkőzések</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">
+                {selectedTeam.name} - Mérkőzések, elemzések és eredmények
+              </p>
+            </div>
+          </div>
 
-        <button
-          onClick={() => {
-            setEditingMatch(null)
-            setShowModal(true)
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Új mérkőzés</span>
-        </button>
-      </div>
+          {/* Közép: Tab menü */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedFilter('all')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+                selectedFilter === 'all'
+                  ? 'text-primary-400 border-primary-400'
+                  : 'text-slate-400 border-transparent hover:text-white'
+              }`}
+            >
+              <Trophy className="w-5 h-5" />
+              <span>Összes</span>
+            </button>
+            <button
+              onClick={() => setSelectedFilter('upcoming')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+                selectedFilter === 'upcoming'
+                  ? 'text-primary-400 border-primary-400'
+                  : 'text-slate-400 border-transparent hover:text-white'
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              <span>Közelgő</span>
+            </button>
+            <button
+              onClick={() => setSelectedFilter('past')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
+                selectedFilter === 'past'
+                  ? 'text-primary-400 border-primary-400'
+                  : 'text-slate-400 border-transparent hover:text-white'
+              }`}
+            >
+              <Clock className="w-5 h-5" />
+              <span>Lejátszott</span>
+            </button>
+          </div>
 
-      {/* Filters */}
-      <div className="card">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSelectedFilter('all')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              selectedFilter === 'all'
-                ? 'bg-primary-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
-          >
-            Összes
-          </button>
-          <button
-            onClick={() => setSelectedFilter('upcoming')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              selectedFilter === 'upcoming'
-                ? 'bg-primary-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
-          >
-            Közelgő
-          </button>
-          <button
-            onClick={() => setSelectedFilter('past')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              selectedFilter === 'past'
-                ? 'bg-primary-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
-          >
-            Lejátszott
-          </button>
+          {/* Jobb oldal: Új mérkőzés + TeamSelector */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => {
+                setEditingMatch(null)
+                setShowModal(true)
+              }}
+              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+              title="Új mérkőzés"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Új mérkőzés</span>
+            </button>
+            <TeamSelector />
+          </div>
         </div>
-      </div>
+      </header>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
       {/* Matches List */}
       {loading ? (
@@ -248,7 +282,7 @@ export default function Matches() {
                       <span className="text-2xl font-bold text-slate-500">vs</span>
 
                       <span className={`text-lg font-semibold ${match.home_away === 'away' ? 'text-white' : 'text-slate-300'}`}>
-                        {match.opponent}
+                        {match.opponent || '(Ellenfél nincs megadva)'}
                       </span>
                     </div>
 
@@ -281,6 +315,17 @@ export default function Matches() {
                           {getMatchTypeLabel(match.match_type)}
                         </span>
                       )}
+                      {/* Macrocycle indicator */}
+                      {match.created_from_macrocycle && (
+                        <div className="flex items-center gap-1 text-xs text-teal-400 bg-teal-500/10 px-2 py-1 rounded">
+                          <Calendar className="w-3 h-3" />
+                          <span>
+                            Makrociklus: Hét {(match.macrocycle_week_index || 0) + 1}, 
+                            {' '}
+                            {['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'][match.macrocycle_day_index || 0]}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -297,7 +342,7 @@ export default function Matches() {
                       <Edit className="w-4 h-4 text-slate-400" />
                     </button>
                     <button
-                      onClick={() => deleteMatch(match.id)}
+                      onClick={() => deleteMatch(match.id, match)}
                       className="p-2 hover:bg-red-600 rounded-lg transition-colors"
                       title="Törlés"
                     >
@@ -317,6 +362,8 @@ export default function Matches() {
           })}
         </div>
       )}
+
+      </div>
 
       {/* Create/Edit Modal */}
       {showModal && (

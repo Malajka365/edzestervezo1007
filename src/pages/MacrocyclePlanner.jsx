@@ -12,7 +12,9 @@ import {
   FileDown,
   Upload,
   Copy,
+  Edit,
 } from 'lucide-react'
+import TeamSelector from '../components/TeamSelector'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -613,7 +615,113 @@ export default function MacrocyclePlanner() {
     }
   }
 
-  const handleDailyClick = (weekIndex, dayIndex, dailyKey) => {
+  // Helper function: Calculate exact date from week and day index
+  const getDateFromWeekAndDay = (weekIdx, dayIdx) => {
+    if (!macrocycleData.weeks[weekIdx]) return null
+    
+    const week = macrocycleData.weeks[weekIdx]
+    const startDate = new Date(week.startDate)
+    startDate.setDate(startDate.getDate() + dayIdx)
+    return startDate.toISOString().split('T')[0] // YYYY-MM-DD
+  }
+
+  // Sync match with macrocycle planning
+  const syncMatchWithMacrocycle = async (weekIdx, dayIdx, dailyKeys) => {
+    console.log('🔄 syncMatchWithMacrocycle called:', { weekIdx, dayIdx, dailyKeys, currentSeason: currentSeason?.id, selectedTeam: selectedTeam?.id })
+    
+    if (!currentSeason || !selectedTeam) {
+      console.warn('⚠️ Missing currentSeason or selectedTeam')
+      return
+    }
+    
+    const matchDate = getDateFromWeekAndDay(weekIdx, dayIdx)
+    console.log('📅 Calculated date:', matchDate)
+    
+    if (!matchDate) {
+      console.warn('⚠️ No match date calculated')
+      return
+    }
+    
+    // Check if home or away is selected
+    const hasHome = dailyKeys.includes('home')
+    const hasAway = dailyKeys.includes('away')
+    console.log('🏠 Home/Away check:', { hasHome, hasAway })
+    
+    if (!hasHome && !hasAway) {
+      // Delete match if no home/away selected
+      try {
+        await supabase
+          .from('matches')
+          .delete()
+          .eq('season_id', currentSeason.id)
+          .eq('macrocycle_week_index', weekIdx)
+          .eq('macrocycle_day_index', dayIdx)
+      } catch (error) {
+        console.error('Error deleting match:', error)
+      }
+      return
+    }
+    
+    const homeAway = hasHome ? 'home' : 'away'
+    
+    try {
+      // Check if match already exists at this position
+      const { data: existing, error: fetchError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('season_id', currentSeason.id)
+        .eq('macrocycle_week_index', weekIdx)
+        .eq('macrocycle_day_index', dayIdx)
+        .maybeSingle()
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+      
+      if (existing) {
+        // Update existing match
+        const { error: updateError } = await supabase
+          .from('matches')
+          .update({
+            date: matchDate,
+            home_away: homeAway,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+        
+        if (updateError) throw updateError
+      } else {
+        // Create new match
+        const { data: newMatch, error: insertError } = await supabase
+          .from('matches')
+          .insert({
+            team_id: selectedTeam.id,
+            season_id: currentSeason.id,
+            date: matchDate,
+            home_away: homeAway,
+            created_from_macrocycle: true,
+            macrocycle_week_index: weekIdx,
+            macrocycle_day_index: dayIdx,
+            opponent: null, // To be filled in Matches page
+            time: '18:00', // Default time
+            type: 'league' // Default type (column name is 'type', not 'match_type')
+          })
+          .select()
+        
+        if (insertError) {
+          console.error('Error inserting match:', insertError)
+          throw insertError
+        }
+        
+        console.log('✅ Match created successfully:', newMatch)
+      }
+    } catch (error) {
+      console.error('Error syncing match with macrocycle:', error)
+      // Don't show error to user - silent fail for better UX
+    }
+  }
+
+  const handleDailyClick = async (weekIndex, dayIndex, dailyKey) => {
     const newPlanning = { ...macrocycleData.planning }
     if (!newPlanning[weekIndex]) {
       newPlanning[weekIndex] = {}
@@ -636,7 +744,10 @@ export default function MacrocyclePlanner() {
     }
 
     setMacrocycleData({ ...macrocycleData, planning: newPlanning })
-    savePlanning(newPlanning)
+    await savePlanning(newPlanning)
+    
+    // Sync match with macrocycle (if home or away selected)
+    await syncMatchWithMacrocycle(weekIndex, dayIndex, dailyArray)
     
     // Close dropdown after selection
     setActiveDropdown(null)
@@ -818,124 +929,142 @@ export default function MacrocyclePlanner() {
 
   if (!selectedTeam) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+      <div className="h-screen flex flex-col">
+        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Makrociklus Tervező</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Éves edzésterv és periodizáció</p>
+            </div>
+            <div className="flex-shrink-0">
+              <TeamSelector />
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-            <Calendar className="w-8 h-8 text-primary-400" />
-            <span>Makrociklus Tervező</span>
-          </h2>
-          <p className="text-slate-400 mt-1">
-            {selectedTeam.name} - Éves edzésterv
-          </p>
-        </div>
-        
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Új Szezon</span>
-        </button>
-      </div>
-
-      {/* Season Selector */}
-      {seasons.length > 0 && (
-        <div className="card">
-          <div className="flex items-end justify-between gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Aktív Szezon
-              </label>
-              <select
-                value={currentSeason?.id || ''}
-                onChange={(e) => {
-                  const season = seasons.find(s => s.id === e.target.value)
-                  if (season) loadSeason(season)
-                }}
-                className="input-field w-full"
-              >
-                {seasons.map(season => (
-                  <option key={season.id} value={season.id}>
-                    {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU')} - {new Date(season.end_date).toLocaleDateString('hu-HU')})
-                  </option>
-                ))}
-              </select>
+    <div className="h-screen flex flex-col">
+      {/* Sticky Header - Dashboard stílusban */}
+      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
+          {/* Bal oldal: Cím + Aktív Szezon */}
+          <div className="flex items-center space-x-4 flex-1 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold text-white">Makrociklus Tervező</h1>
+              <p className="text-sm text-slate-400 hidden sm:block">Éves edzésterv és periodizáció</p>
             </div>
             
-            {currentSeason && (
+            {seasons.length > 0 && currentSeason && (
               <div className="flex items-center gap-3">
+                <select
+                  value={currentSeason?.id || ''}
+                  onChange={(e) => {
+                    const season = seasons.find(s => s.id === e.target.value)
+                    if (season) loadSeason(season)
+                  }}
+                  className="input-field text-sm"
+                >
+                  {seasons.map(season => (
+                    <option key={season.id} value={season.id}>
+                      {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })} - {new Date(season.end_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Középső gombok */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+              title="Új Szezon"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Új Szezon</span>
+            </button>
+            
+            {currentSeason && (
+              <>
+                <button
+                  onClick={() => openEditModal(currentSeason)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                  title="Szerkesztés"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span className="hidden sm:inline">Szerkesztés</span>
+                </button>
+                <button
+                  onClick={() => openDeleteModal(currentSeason)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
+                  title="Törlés"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Törlés</span>
+                </button>
+                <button
+                  onClick={() => setShowTemplateModal(true)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                  title="Sablon"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sablon</span>
+                </button>
+                <button
+                  onClick={() => setShowLoadTemplateModal(true)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+                  title="Betöltés"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span className="hidden sm:inline">Betöltés</span>
+                </button>
+                <button
+                  onClick={exportToPDF}
+                  disabled={exporting}
+                  className="flex items-center space-x-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                  title="PDF"
+                >
+                  <FileDown className="w-4 h-4" />
+                  <span className="hidden sm:inline">{exporting ? 'Exportálás...' : 'PDF'}</span>
+                </button>
+                <button
+                  onClick={handleManualSave}
+                  disabled={isSaving}
+                  className="flex items-center space-x-2 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                  title="Mentés"
+                >
+                  <Save className="w-4 h-4" />
+                  <span className="hidden sm:inline">{isSaving ? 'Mentés...' : 'Mentés'}</span>
+                </button>
                 {saveMessage && (
-                  <span className={`text-sm font-medium ${
+                  <span className={`text-sm font-medium whitespace-nowrap ${
                     saveMessage.includes('✅') ? 'text-green-400' : 'text-red-400'
                   }`}>
                     {saveMessage}
                   </span>
                 )}
-                <button
-                  onClick={() => openEditModal(currentSeason)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                  title="Szezon szerkesztése"
-                >
-                  <Calendar className="w-5 h-5" />
-                  <span>Szerkesztés</span>
-                </button>
-                <button
-                  onClick={() => openDeleteModal(currentSeason)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                  title="Szezon törlése"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  <span>Törlés</span>
-                </button>
-                <button
-                  onClick={() => setShowTemplateModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                  title="Sablon mentése"
-                >
-                  <Copy className="w-5 h-5" />
-                  <span>Sablon</span>
-                </button>
-                <button
-                  onClick={() => setShowLoadTemplateModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-                  title="Sablon betöltése"
-                >
-                  <Upload className="w-5 h-5" />
-                  <span>Betöltés</span>
-                </button>
-                <button
-                  onClick={exportToPDF}
-                  disabled={exporting}
-                  className="flex items-center space-x-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                  title="PDF exportálás"
-                >
-                  <FileDown className="w-5 h-5" />
-                  <span>{exporting ? 'Exportálás...' : 'PDF'}</span>
-                </button>
-                <button
-                  onClick={handleManualSave}
-                  disabled={isSaving}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                >
-                  <Save className="w-5 h-5" />
-                  <span>{isSaving ? 'Mentés...' : 'Mentés'}</span>
-                </button>
-              </div>
+              </>
             )}
           </div>
-        </div>
-      )}
 
-      {/* Macrocycle Table */}
+          {/* Jobb oldal: TeamSelector */}
+          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
+            <TeamSelector />
+          </div>
+        </div>
+      </header>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+        {/* Macrocycle Table */}
       {currentSeason && macrocycleData.weeks.length > 0 && (
         <div className="card" ref={tableRef}>
           <div className="flex overflow-visible">
@@ -1204,7 +1333,7 @@ export default function MacrocyclePlanner() {
                               <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
                                 {/* Clear/Empty option - Always visible */}
                                 <button
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation()
                                     const newData = JSON.parse(JSON.stringify(macrocycleData))
                                     if (!newData.planning[weekIdx]) {
@@ -1215,6 +1344,10 @@ export default function MacrocyclePlanner() {
                                     }
                                     newData.planning[weekIdx].daily[dayIdx] = []
                                     setMacrocycleData(newData)
+                                    
+                                    // Sync match deletion
+                                    await syncMatchWithMacrocycle(weekIdx, dayIdx, [])
+                                    
                                     setActiveDropdown(null)
                                   }}
                                   className={`w-full px-3 py-2 text-left text-sm rounded hover:bg-slate-700 transition-colors flex items-center gap-2 border-b border-slate-600 mb-1 ${
@@ -1596,6 +1729,7 @@ export default function MacrocyclePlanner() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
