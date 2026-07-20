@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ROLES } from '../lib/permissions'
+import { ROLES, MODULES, ACCESS_LEVELS } from '../lib/permissions'
 import { UserPlus, Trash2, Copy, X } from 'lucide-react'
 
 export default function TeamMembersPanel({ team, isOwner }) {
@@ -12,6 +12,8 @@ export default function TeamMembersPanel({ team, isOwner }) {
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [inviteRole, setInviteRole] = useState('fitness_coach')
   const [generatedLink, setGeneratedLink] = useState(null)
+  const [permissions, setPermissions] = useState({}) // { [role]: { [module_key]: access_level } }
+  const [savingPermissions, setSavingPermissions] = useState(false)
 
   useEffect(() => {
     if (team?.id) {
@@ -41,6 +43,20 @@ export default function TeamMembersPanel({ team, isOwner }) {
 
         if (inviteError) throw inviteError
         setPendingInvites(inviteData || [])
+
+        const { data: permData, error: permError } = await supabase
+          .from('team_module_permissions')
+          .select('role, module_key, access_level')
+          .eq('team_id', team.id)
+
+        if (permError) throw permError
+
+        const permMap = {}
+        for (const row of permData || []) {
+          if (!permMap[row.role]) permMap[row.role] = {}
+          permMap[row.role][row.module_key] = row.access_level
+        }
+        setPermissions(permMap)
       }
     } catch (error) {
       console.error('Error fetching team members:', error)
@@ -90,6 +106,42 @@ export default function TeamMembersPanel({ team, isOwner }) {
     }
   }
 
+  const handlePermissionChange = (role, moduleKey, accessLevel) => {
+    setPermissions((prev) => ({
+      ...prev,
+      [role]: { ...prev[role], [moduleKey]: accessLevel },
+    }))
+  }
+
+  const handleSavePermissions = async () => {
+    setSavingPermissions(true)
+    try {
+      const rows = []
+      for (const role of ROLES.map((r) => r.key)) {
+        for (const mod of MODULES.map((m) => m.key)) {
+          rows.push({
+            team_id: team.id,
+            role,
+            module_key: mod,
+            access_level: permissions[role]?.[mod] || 'none',
+          })
+        }
+      }
+
+      const { error } = await supabase
+        .from('team_module_permissions')
+        .upsert(rows, { onConflict: 'team_id,role,module_key' })
+
+      if (error) throw error
+      alert('Jogosultságok elmentve!')
+    } catch (error) {
+      console.error('Error saving permissions:', error)
+      alert('Hiba történt a mentés során')
+    } finally {
+      setSavingPermissions(false)
+    }
+  }
+
   const roleLabel = (roleKey) => ROLES.find((r) => r.key === roleKey)?.name || roleKey
 
   if (loading) return <div className="text-slate-400 text-sm">Betöltés...</div>
@@ -128,6 +180,55 @@ export default function TeamMembersPanel({ team, isOwner }) {
           ))}
         </div>
       </div>
+
+      {isOwner && (
+        <div className="card">
+          <h3 className="text-lg font-bold text-white mb-4">Jogosultságok</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left text-slate-400 p-2">Modul</th>
+                  {ROLES.map((r) => (
+                    <th key={r.key} className="text-left text-slate-400 p-2">
+                      {r.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {MODULES.map((mod) => (
+                  <tr key={mod.key} className="border-t border-slate-700">
+                    <td className="p-2 text-white">{mod.name}</td>
+                    {ROLES.map((r) => (
+                      <td key={r.key} className="p-2">
+                        <select
+                          value={permissions[r.key]?.[mod.key] || 'none'}
+                          onChange={(e) => handlePermissionChange(r.key, mod.key, e.target.value)}
+                          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                        >
+                          {ACCESS_LEVELS.map((lvl) => (
+                            <option key={lvl.key} value={lvl.key}>
+                              {lvl.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button
+            onClick={handleSavePermissions}
+            disabled={savingPermissions}
+            className="btn btn-primary mt-4 disabled:opacity-50"
+          >
+            {savingPermissions ? 'Mentés...' : 'Jogosultságok mentése'}
+          </button>
+        </div>
+      )}
 
       {isOwner && pendingInvites.length > 0 && (
         <div className="card">
