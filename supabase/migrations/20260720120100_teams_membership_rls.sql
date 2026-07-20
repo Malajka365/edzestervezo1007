@@ -6,12 +6,16 @@ RETURNS BOOLEAN
 LANGUAGE SQL
 SECURITY DEFINER
 STABLE
+SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.team_members
     WHERE team_id = p_team_id AND user_id = auth.uid()
   );
 $$;
+
+REVOKE ALL ON FUNCTION public.is_team_member(uuid) FROM public;
+GRANT EXECUTE ON FUNCTION public.is_team_member(uuid) TO anon, authenticated;
 
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.team_invites ENABLE ROW LEVEL SECURITY;
@@ -23,6 +27,13 @@ ALTER TABLE public.team_module_permissions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "members can view team_members of their teams" ON public.team_members
   FOR SELECT USING (
     public.is_team_member(team_id)
+  );
+
+CREATE POLICY "owner can manage team_members" ON public.team_members
+  FOR ALL USING (
+    team_id IN (SELECT id FROM public.teams WHERE created_by = auth.uid())
+  ) WITH CHECK (
+    team_id IN (SELECT id FROM public.teams WHERE created_by = auth.uid())
   );
 
 -- team_invites: csak a csapat tulajdonosa látja/kezeli
