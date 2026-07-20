@@ -21,12 +21,17 @@ export function TeamProvider({ children, session }) {
     if (selectedTeam?.id && session?.user?.id) {
       setPermissionsLoading(true)
       fetchRoleAndPermissions(selectedTeam.id)
-    } else {
+    } else if (!loading) {
+      // Only resolve to "no permissions" once the initial teams fetch has
+      // actually finished — otherwise we're just seeing the transient null
+      // selectedTeam that exists before fetchTeams() has had a chance to
+      // populate it, and flipping permissionsLoading to false here would
+      // cause the sidebar to briefly render as if the user has no access.
       setCurrentUserRole(null)
       setCurrentUserPermissions({})
       setPermissionsLoading(false)
     }
-  }, [selectedTeam, session])
+  }, [selectedTeam, session, loading])
 
   const fetchTeams = async () => {
     try {
