@@ -32,3 +32,6 @@ dist-ssr
 
 # Subagent-driven-development scratch (task briefs/reports contain DB credentials)
 .superpowers/
+
+# Supabase backup letöltések (játékos egészségügyi adatok - SOHA nem kerülhet gitbe)
+sb_letoltes/
