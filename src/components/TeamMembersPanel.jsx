@@ -26,12 +26,35 @@ export default function TeamMembersPanel({ team, isOwner }) {
       setLoading(true)
       const { data: memberData, error: memberError } = await supabase
         .from('team_members')
-        .select('id, user_id, role, joined_at, profiles(email, full_name)')
+        .select('id, user_id, role, joined_at')
         .eq('team_id', team.id)
         .order('joined_at', { ascending: true })
 
       if (memberError) throw memberError
-      setMembers(memberData || [])
+
+      let membersWithProfiles = memberData || []
+      if (membersWithProfiles.length > 0) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, full_name')
+          .in('id', membersWithProfiles.map((m) => m.user_id))
+
+        if (profileError) throw profileError
+
+        const profileMap = {}
+        for (const p of profileData || []) {
+          profileMap[p.id] = p
+        }
+
+        membersWithProfiles = membersWithProfiles.map((m) => ({
+          ...m,
+          profiles: profileMap[m.user_id]
+            ? { email: profileMap[m.user_id].email, full_name: profileMap[m.user_id].full_name }
+            : null,
+        }))
+      }
+
+      setMembers(membersWithProfiles)
 
       if (isOwner) {
         const { data: inviteData, error: inviteError } = await supabase
