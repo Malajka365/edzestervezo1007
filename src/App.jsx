@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { supabase } from './lib/supabase'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
+import JoinTeam from './pages/JoinTeam'
 import LoadingSpinner from './components/LoadingSpinner'
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
           path="/auth"
           element={!session ? <Auth /> : <Navigate to="/dashboard" replace />}
         />
+        <Route path="/join/:token" element={<JoinTeam session={session} />} />
         <Route
           path="/dashboard"
           element={session ? <Dashboard session={session} /> : <Navigate to="/auth" replace />}

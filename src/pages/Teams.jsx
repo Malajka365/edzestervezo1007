@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
+import { canEditModule } from '../lib/permissions'
 import PlayerProfile from './PlayerProfile'
 import TrainingLocations from '../components/TrainingLocations'
+import TeamMembersPanel from '../components/TeamMembersPanel'
 import {
   Users,
   Plus,
@@ -21,7 +23,8 @@ import {
 import TeamSelector from '../components/TeamSelector'
 
 export default function Teams() {
-  const { teams, selectedTeam, createTeam, updateTeam, deleteTeam } = useTeams()
+  const { teams, selectedTeam, createTeam, updateTeam, deleteTeam, isTeamOwner, currentUserPermissions } = useTeams()
+  const canEditPlayers = canEditModule(currentUserPermissions, 'players')
   const [players, setPlayers] = useState([])
   const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [showTeamModal, setShowTeamModal] = useState(false)
@@ -337,13 +340,15 @@ export default function Teams() {
               </h3>
               <p className="text-sm text-slate-400 mt-1">{players.length} játékos</p>
             </div>
-            <button
-              onClick={() => setShowPlayerModal(true)}
-              className="btn-primary flex items-center space-x-2"
-            >
-              <UserPlus className="w-5 h-5" />
-              <span>Új Játékos</span>
-            </button>
+            {canEditPlayers && (
+              <button
+                onClick={() => setShowPlayerModal(true)}
+                className="btn-primary flex items-center space-x-2"
+              >
+                <UserPlus className="w-5 h-5" />
+                <span>Új Játékos</span>
+              </button>
+            )}
           </div>
 
           {/* Search Bar */}
@@ -381,12 +386,14 @@ export default function Teams() {
             <div className="text-center py-12">
               <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
               <p className="text-slate-400">Még nincs játékos ebben a csapatban</p>
-              <button
-                onClick={() => setShowPlayerModal(true)}
-                className="mt-4 text-primary-400 hover:text-primary-300 text-sm font-medium"
-              >
-                Adj hozzá egyet most
-              </button>
+              {canEditPlayers && (
+                <button
+                  onClick={() => setShowPlayerModal(true)}
+                  className="mt-4 text-primary-400 hover:text-primary-300 text-sm font-medium"
+                >
+                  Adj hozzá egyet most
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -419,32 +426,38 @@ export default function Teams() {
                     )}
                   </div>
 
-                  <div className="flex items-center space-x-2 pt-3 border-t border-slate-600">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openEditPlayer(player)
-                      }}
-                      className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-slate-300 rounded text-sm transition-colors flex items-center justify-center space-x-1"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                      <span>Szerkeszt</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeletePlayer(player.id)
-                      }}
-                      className="py-2 px-3 bg-slate-800 hover:bg-red-900 text-slate-300 hover:text-red-300 rounded text-sm transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {canEditPlayers && (
+                    <div className="flex items-center space-x-2 pt-3 border-t border-slate-600">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEditPlayer(player)
+                        }}
+                        className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-slate-300 rounded text-sm transition-colors flex items-center justify-center space-x-1"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Szerkeszt</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeletePlayer(player.id)
+                        }}
+                        className="py-2 px-3 bg-slate-800 hover:bg-red-900 text-slate-300 hover:text-red-300 rounded text-sm transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
+      )}
+
+      {selectedTeam && (
+        <TeamMembersPanel team={selectedTeam} isOwner={isTeamOwner} />
       )}
 
       {!selectedTeam && teams.length > 0 && (

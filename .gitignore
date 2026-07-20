@@ -29,3 +29,6 @@ dist-ssr
 .env.*.local
 
 .vercel
+
+# Subagent-driven-development scratch (task briefs/reports contain DB credentials)
+.superpowers/
