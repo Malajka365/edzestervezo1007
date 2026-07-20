@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { TeamProvider } from '../context/TeamContext'
+import { TeamProvider, useTeams } from '../context/TeamContext'
+import { DASHBOARD_MODULE_TO_PERMISSION_KEY, isModuleVisible } from '../lib/permissions'
 import TeamSelector from '../components/TeamSelector'
 import Teams from './Teams'
 import Measurements from './Measurements'
@@ -96,6 +97,34 @@ export default function Dashboard({ session }) {
     await supabase.auth.signOut()
   }
 
+  return (
+    <TeamProvider session={session}>
+      <DashboardContent
+        session={session}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        activeModule={activeModule}
+        setActiveModule={setActiveModule}
+        userRole={userRole}
+        getRoleLabel={getRoleLabel}
+        handleSignOut={handleSignOut}
+      />
+    </TeamProvider>
+  )
+}
+
+function DashboardContent({
+  session,
+  sidebarOpen,
+  setSidebarOpen,
+  activeModule,
+  setActiveModule,
+  userRole,
+  getRoleLabel,
+  handleSignOut,
+}) {
+  const { currentUserPermissions } = useTeams()
+
   const modules = [
     {
       id: 'home',
@@ -183,10 +212,14 @@ export default function Dashboard({ session }) {
     },
   ]
 
+  const visibleModules = modules.filter((module) => {
+    const permissionKey = DASHBOARD_MODULE_TO_PERMISSION_KEY[module.id]
+    return isModuleVisible(currentUserPermissions, permissionKey)
+  })
+
   const activeModuleData = modules.find((m) => m.id === activeModule)
 
   return (
-    <TeamProvider session={session}>
     <div className="min-h-screen bg-slate-900">
       {/* Sidebar - Mobile */}
       {sidebarOpen && (
@@ -227,7 +260,7 @@ export default function Dashboard({ session }) {
           {/* Navigation */}
           <nav className="flex-1 min-h-0 overflow-y-auto p-3">
             <ul className="space-y-1">
-              {modules.map((module) => {
+              {visibleModules.map((module) => {
                 const Icon = module.icon
                 return (
                   <li key={module.id}>
@@ -353,7 +386,7 @@ export default function Dashboard({ session }) {
 
               {/* Quick Access Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {modules.slice(1).map((module) => {
+                {visibleModules.slice(1).map((module) => {
                   const Icon = module.icon
                   return (
                     <button
@@ -448,6 +481,5 @@ export default function Dashboard({ session }) {
         )}
       </div>
     </div>
-    </TeamProvider>
   )
 }
