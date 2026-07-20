@@ -7,35 +7,81 @@ export function TeamProvider({ children, session }) {
   const [teams, setTeams] = useState([])
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [currentUserRole, setCurrentUserRole] = useState(null)
+  const [currentUserPermissions, setCurrentUserPermissions] = useState({})
 
-  // Fetch teams on mount
   useEffect(() => {
     if (session?.user?.id) {
       fetchTeams()
     }
   }, [session])
 
+  useEffect(() => {
+    if (selectedTeam?.id && session?.user?.id) {
+      fetchRoleAndPermissions(selectedTeam.id)
+    } else {
+      setCurrentUserRole(null)
+      setCurrentUserPermissions({})
+    }
+  }, [selectedTeam, session])
+
   const fetchTeams = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('created_by', session.user.id)
-        .order('created_at', { ascending: false })
+      const { data: memberships, error: memberError } = await supabase
+        .from('team_members')
+        .select('team_id, role, teams(*)')
+        .eq('user_id', session.user.id)
 
-      if (error) throw error
+      if (memberError) throw memberError
 
-      setTeams(data || [])
-      
-      // Auto-select first team if none selected
-      if (!selectedTeam && data && data.length > 0) {
-        setSelectedTeam(data[0])
+      const teamList = (memberships || [])
+        .map((m) => m.teams)
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+      setTeams(teamList)
+
+      if (!selectedTeam && teamList.length > 0) {
+        setSelectedTeam(teamList[0])
       }
     } catch (error) {
       console.error('Error fetching teams:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchRoleAndPermissions = async (teamId) => {
+    try {
+      const { data: memberRow, error: memberError } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('team_id', teamId)
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (memberError) throw memberError
+
+      setCurrentUserRole(memberRow.role)
+
+      const { data: permRows, error: permError } = await supabase
+        .from('team_module_permissions')
+        .select('module_key, access_level')
+        .eq('team_id', teamId)
+        .eq('role', memberRow.role)
+
+      if (permError) throw permError
+
+      const permMap = {}
+      for (const row of permRows || []) {
+        permMap[row.module_key] = row.access_level
+      }
+      setCurrentUserPermissions(permMap)
+    } catch (error) {
+      console.error('Error fetching role/permissions:', error)
+      setCurrentUserRole(null)
+      setCurrentUserPermissions({})
     }
   }
 
@@ -69,7 +115,7 @@ export function TeamProvider({ children, session }) {
 
       if (error) throw error
 
-      setTeams(teams.map(t => t.id === teamId ? data : t))
+      setTeams(teams.map((t) => (t.id === teamId ? data : t)))
       if (selectedTeam?.id === teamId) {
         setSelectedTeam(data)
       }
@@ -82,16 +128,13 @@ export function TeamProvider({ children, session }) {
 
   const deleteTeam = async (teamId) => {
     try {
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId)
+      const { error } = await supabase.from('teams').delete().eq('id', teamId)
 
       if (error) throw error
 
-      const newTeams = teams.filter(t => t.id !== teamId)
+      const newTeams = teams.filter((t) => t.id !== teamId)
       setTeams(newTeams)
-      
+
       if (selectedTeam?.id === teamId) {
         setSelectedTeam(newTeams.length > 0 ? newTeams[0] : null)
       }
@@ -111,6 +154,9 @@ export function TeamProvider({ children, session }) {
     createTeam,
     updateTeam,
     deleteTeam,
+    currentUserRole,
+    currentUserPermissions,
+    isTeamOwner: selectedTeam?.created_by === session?.user?.id,
   }
 
   return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>
