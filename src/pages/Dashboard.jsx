@@ -123,7 +123,7 @@ function DashboardContent({
   getRoleLabel,
   handleSignOut,
 }) {
-  const { currentUserPermissions } = useTeams()
+  const { currentUserPermissions, permissionsLoading } = useTeams()
 
   const modules = [
     {
@@ -212,10 +212,12 @@ function DashboardContent({
     },
   ]
 
-  const visibleModules = modules.filter((module) => {
-    const permissionKey = DASHBOARD_MODULE_TO_PERMISSION_KEY[module.id]
-    return isModuleVisible(currentUserPermissions, permissionKey)
-  })
+  const visibleModules = permissionsLoading
+    ? modules
+    : modules.filter((module) => {
+        const permissionKey = DASHBOARD_MODULE_TO_PERMISSION_KEY[module.id]
+        return isModuleVisible(currentUserPermissions, permissionKey)
+      })
 
   const activeModuleData = modules.find((m) => m.id === activeModule)
 

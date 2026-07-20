@@ -9,6 +9,7 @@ export function TeamProvider({ children, session }) {
   const [loading, setLoading] = useState(true)
   const [currentUserRole, setCurrentUserRole] = useState(null)
   const [currentUserPermissions, setCurrentUserPermissions] = useState({})
+  const [permissionsLoading, setPermissionsLoading] = useState(true)
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -18,10 +19,12 @@ export function TeamProvider({ children, session }) {
 
   useEffect(() => {
     if (selectedTeam?.id && session?.user?.id) {
+      setPermissionsLoading(true)
       fetchRoleAndPermissions(selectedTeam.id)
     } else {
       setCurrentUserRole(null)
       setCurrentUserPermissions({})
+      setPermissionsLoading(false)
     }
   }, [selectedTeam, session])
 
@@ -82,6 +85,8 @@ export function TeamProvider({ children, session }) {
       console.error('Error fetching role/permissions:', error)
       setCurrentUserRole(null)
       setCurrentUserPermissions({})
+    } finally {
+      setPermissionsLoading(false)
     }
   }
 
@@ -156,6 +161,7 @@ export function TeamProvider({ children, session }) {
     deleteTeam,
     currentUserRole,
     currentUserPermissions,
+    permissionsLoading,
     isTeamOwner: selectedTeam?.created_by === session?.user?.id,
   }
 
