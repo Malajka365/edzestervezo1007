@@ -3,6 +3,7 @@ import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
 import PlayerProfile from './PlayerProfile'
 import TrainingLocations from '../components/TrainingLocations'
+import TeamMembersPanel from '../components/TeamMembersPanel'
 import {
   Users,
   Plus,
@@ -21,7 +22,7 @@ import {
 import TeamSelector from '../components/TeamSelector'
 
 export default function Teams() {
-  const { teams, selectedTeam, createTeam, updateTeam, deleteTeam } = useTeams()
+  const { teams, selectedTeam, createTeam, updateTeam, deleteTeam, isTeamOwner } = useTeams()
   const [players, setPlayers] = useState([])
   const [loadingPlayers, setLoadingPlayers] = useState(false)
   const [showTeamModal, setShowTeamModal] = useState(false)
@@ -445,6 +446,10 @@ export default function Teams() {
             </div>
           )}
         </div>
+      )}
+
+      {selectedTeam && (
+        <TeamMembersPanel team={selectedTeam} isOwner={isTeamOwner} />
       )}
 
       {!selectedTeam && teams.length > 0 && (
