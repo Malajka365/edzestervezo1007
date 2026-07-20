@@ -23,29 +23,26 @@ export default function JoinTeam({ session }) {
 
   const fetchInvite = async () => {
     try {
-      const { data, error } = await supabase
-        .from('team_invites')
-        .select('id, team_id, role, expires_at, used_at, teams(name)')
-        .eq('token', token)
-        .single()
+      const { data, error } = await supabase.rpc('get_invite_by_token', { p_token: token })
+      const row = data?.[0]
 
-      if (error || !data) {
+      if (error || !row) {
         setStatus('error')
         setErrorMessage('A meghívó link érvénytelen.')
         return
       }
-      if (data.used_at) {
+      if (row.used_at) {
         setStatus('error')
         setErrorMessage('Ezt a meghívót már felhasználták.')
         return
       }
-      if (new Date(data.expires_at) < new Date()) {
+      if (new Date(row.expires_at) < new Date()) {
         setStatus('error')
         setErrorMessage('A meghívó link lejárt.')
         return
       }
 
-      setInvite(data)
+      setInvite(row)
       setStatus('confirm')
     } catch (error) {
       console.error('Error fetching invite:', error)
@@ -57,25 +54,25 @@ export default function JoinTeam({ session }) {
   const handleAccept = async () => {
     setStatus('joining')
     try {
-      const { error: memberError } = await supabase
-        .from('team_members')
-        .insert({ team_id: invite.team_id, user_id: session.user.id, role: invite.role })
+      const { error } = await supabase.rpc('redeem_team_invite', { p_token: token })
 
-      if (memberError) throw memberError
-
-      const { error: inviteError } = await supabase
-        .from('team_invites')
-        .update({ used_at: new Date().toISOString(), used_by: session.user.id })
-        .eq('id', invite.id)
-
-      if (inviteError) throw inviteError
+      if (error) throw error
 
       setStatus('success')
       setTimeout(() => navigate('/dashboard'), 1500)
     } catch (error) {
       console.error('Error accepting invite:', error)
       setStatus('error')
-      setErrorMessage('Hiba történt a csatlakozás során. Lehet, hogy már tagja vagy ennek a csapatnak.')
+      const message = error?.message || ''
+      if (message.includes('invite_already_used')) {
+        setErrorMessage('Ezt a meghívót már felhasználták.')
+      } else if (message.includes('invite_expired')) {
+        setErrorMessage('A meghívó link lejárt.')
+      } else if (message.includes('invalid_invite')) {
+        setErrorMessage('A meghívó link érvénytelen.')
+      } else {
+        setErrorMessage('Hiba történt a csatlakozás során. Lehet, hogy már tagja vagy ennek a csapatnak.')
+      }
     }
   }
 
@@ -90,7 +87,7 @@ export default function JoinTeam({ session }) {
           <>
             <h2 className="text-xl font-bold text-white mb-2">Csapat meghívó</h2>
             <p className="text-slate-300 mb-6">
-              Csatlakozol a(z) <strong>{invite.teams.name}</strong> csapathoz mint{' '}
+              Csatlakozol a(z) <strong>{invite.team_name}</strong> csapathoz mint{' '}
               <strong>{roleLabel(invite.role)}</strong>?
             </p>
             <button onClick={handleAccept} className="btn btn-primary w-full">
