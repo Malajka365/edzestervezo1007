@@ -1,15 +1,30 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Mail, Lock, UserPlus, LogIn, Loader2, Database } from 'lucide-react'
 import SupabaseConnectionTest from '../components/SupabaseConnectionTest'
 
 export default function Auth() {
+  const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
   const [showConnectionTest, setShowConnectionTest] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
+
+  // Ha a felhasználó egy meghívó linken keresztül (`/join/:token`) érkezett
+  // ide bejelentkezés/regisztráció végett, a JoinTeam oldal a tokent
+  // sessionStorage-ban hagyta. Sikeres auth után egyből oda irányítjuk,
+  // ahelyett hogy a App.jsx alapértelmezett /dashboard átirányítására
+  // bíznánk (ami elveszítené a pending tokent).
+  const redirectToPendingInviteIfAny = (session) => {
+    const pendingToken = sessionStorage.getItem('pendingInviteToken')
+    if (pendingToken && session) {
+      sessionStorage.removeItem('pendingInviteToken')
+      navigate(`/join/${pendingToken}`)
+    }
+  }
 
   const handleAuth = async (e) => {
     e.preventDefault()
@@ -27,6 +42,7 @@ export default function Auth() {
         if (error) throw error
 
         setMessage({ type: 'success', text: 'Sikeres bejelentkezés!' })
+        redirectToPendingInviteIfAny(data.session)
       } else {
         // Regisztráció
         const { data, error } = await supabase.auth.signUp({
@@ -43,6 +59,10 @@ export default function Auth() {
           type: 'success',
           text: 'Regisztráció sikeres! Ellenőrizd az email fiókodat a megerősítéshez.',
         })
+        // Ha a Supabase projektben ki van kapcsolva az email megerősítés,
+        // a signUp azonnal aktív session-t ad vissza - ilyenkor is
+        // irányítsuk a felhasználót a függőben lévő meghívóra.
+        redirectToPendingInviteIfAny(data.session)
       }
     } catch (error) {
       setMessage({
