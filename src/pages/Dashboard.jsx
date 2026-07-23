@@ -3,7 +3,6 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { TeamProvider, useTeams } from '../context/TeamContext'
 import { DASHBOARD_MODULE_TO_PERMISSION_KEY, isModuleVisible } from '../lib/permissions'
-import TeamSelector from '../components/TeamSelector'
 import LoadingSpinner from '../components/LoadingSpinner'
 import {
   Home,
@@ -331,28 +330,20 @@ function DashboardContent({
 
       {/* Main Content */}
       <div className="lg:ml-72">
-        {/* Top Bar - always rendered so the mobile hamburger button is available on every module */}
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
-          <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-            <div className="flex items-center space-x-4 flex-1 min-w-0">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-slate-300 hover:text-white flex-shrink-0"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-              <div className="min-w-0">
-                <h1 className="text-xl font-bold text-white">
-                  {currentModule?.name}
-                </h1>
-                <p className="text-sm text-slate-400 hidden sm:block">{currentModule?.description}</p>
-              </div>
-            </div>
-
-            {/* Team Selector - visible on all pages */}
-            <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-              <TeamSelector />
-            </div>
+        {/* Mobile-only top bar: hamburger + module name. On desktop (lg+) each
+            module renders its own header (title + team selector + actions), so
+            this bar is hidden there to avoid a duplicated header row. */}
+        <header className="lg:hidden bg-slate-800 border-b border-slate-700 sticky top-0 z-30">
+          <div className="flex items-center gap-4 px-4 py-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="text-slate-300 hover:text-white flex-shrink-0"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-xl font-bold text-white truncate">
+              {currentModule?.name}
+            </h1>
           </div>
         </header>
 
