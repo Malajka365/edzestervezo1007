@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTeams } from '../context/TeamContext'
-import { supabase } from '../lib/supabase'
 import { usePlayers } from '../hooks/usePlayers'
 import { useExercises } from '../hooks/useExercises'
 import { canEditModule } from '../lib/permissions'
+import useMeasurementsData, { calculate1RM } from './measurements/useMeasurementsData'
 import {
   BarChart3,
   Plus,
@@ -31,14 +30,22 @@ import toast from 'react-hot-toast'
 export default function Measurements({ session }) {
   const { selectedTeam, currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'measurement')
-  const queryClient = useQueryClient()
-  const [measurements, setMeasurements] = useState([])
   // Players come from the shared, cached usePlayers query (was a local fetch).
   const { data: players = [] } = usePlayers(selectedTeam?.id)
   // Exercises come from the shared, cached useExercises query (was a local
-  // fetch). Mutations below invalidate ['exercises'] to refresh every screen.
+  // fetch). The data-layer hook's mutations invalidate ['exercises'] to refresh
+  // every screen.
   const { data: exercises = [] } = useExercises()
-  const [loading, setLoading] = useState(false)
+  // Data layer: measurements list + all create/delete ops live in the hook.
+  const {
+    measurements,
+    loading,
+    fetchMeasurements,
+    createMeasurement,
+    createTeamMeasurement,
+    createExercise,
+    deleteExercise,
+  } = useMeasurementsData(selectedTeam, session)
   const [confirmState, setConfirmState] = useState(null)
   
   const [filters, setFilters] = useState({
@@ -82,84 +89,25 @@ export default function Measurements({ session }) {
 
   useEffect(() => {
     if (selectedTeam) {
-      fetchMeasurements()
+      fetchMeasurements(filters, sortField, sortDirection)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeam])
 
   useEffect(() => {
     if (selectedTeam) {
-      fetchMeasurements()
+      fetchMeasurements(filters, sortField, sortDirection)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, sortField, sortDirection])
-
-  const fetchMeasurements = async () => {
-    if (!selectedTeam) return
-    try {
-      setLoading(true)
-      let query = supabase
-        .from('measurements')
-        .select(`
-          *,
-          player:players(id, name, jersey_number),
-          exercise:exercises(id, name, unit)
-        `)
-        .eq('team_id', selectedTeam.id)
-
-      if (filters.playerId) query = query.eq('player_id', filters.playerId)
-      if (filters.exerciseId) query = query.eq('exercise_id', filters.exerciseId)
-      if (filters.dateFrom) query = query.gte('measured_at', filters.dateFrom)
-      if (filters.dateTo) query = query.lte('measured_at', filters.dateTo)
-
-      query = query.order(sortField, { ascending: sortDirection === 'asc' })
-
-      const { data, error } = await query
-      if (error) throw error
-      setMeasurements(data || [])
-    } catch (error) {
-      console.error('Error fetching measurements:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const calculate1RM = (weight, reps) => {
-    if (!weight || reps <= 0) return null
-    if (reps === 1) return weight
-    return (weight * (1 + reps / 30)).toFixed(2)
-  }
 
   const handleCreateExercise = async (e) => {
     e.preventDefault()
-    try {
-      if (editingExercise) {
-        // Update existing exercise
-        const { data, error } = await supabase
-          .from('exercises')
-          .update({ ...exerciseForm })
-          .eq('id', editingExercise.id)
-          .select()
-          .single()
-        if (error) throw error
-        queryClient.invalidateQueries({ queryKey: ['exercises'] })
-        toast.success('Gyakorlat sikeresen frissítve!')
-      } else {
-        // Create new exercise
-        const { data, error } = await supabase
-          .from('exercises')
-          .insert([{ ...exerciseForm, created_by: session.user.id }])
-          .select()
-          .single()
-        if (error) throw error
-        queryClient.invalidateQueries({ queryKey: ['exercises'] })
-        toast.success('Gyakorlat sikeresen létrehozva!')
-      }
+    const ok = await createExercise(exerciseForm, editingExercise)
+    if (ok) {
       setShowExerciseModal(false)
       setEditingExercise(null)
       setExerciseForm({ name: '', category: 'strength', unit: 'kg', description: '' })
-    } catch (error) {
-      console.error('Error saving exercise:', error)
-      toast.error('Hiba történt')
     }
   }
 
@@ -167,18 +115,7 @@ export default function Measurements({ session }) {
     setConfirmState({
       message: 'Biztosan törölni szeretnéd ezt a gyakorlatot? Ez törli az összes hozzá tartozó mérést is!',
       action: async () => {
-        try {
-          const { error } = await supabase
-            .from('exercises')
-            .delete()
-            .eq('id', exerciseId)
-          if (error) throw error
-          queryClient.invalidateQueries({ queryKey: ['exercises'] })
-          toast.success('Gyakorlat sikeresen törölve!')
-        } catch (error) {
-          console.error('Error deleting exercise:', error)
-          toast.error('Hiba történt a törlés során')
-        }
+        await deleteExercise(exerciseId)
       },
     })
   }
@@ -196,24 +133,8 @@ export default function Measurements({ session }) {
 
   const handleCreateMeasurement = async (e) => {
     e.preventDefault()
-    if (!selectedTeam) return
-    try {
-      const oneRM = calculate1RM(
-        parseFloat(measurementForm.value),
-        parseInt(measurementForm.reps)
-      )
-      const { data, error } = await supabase
-        .from('measurements')
-        .insert([{
-          ...measurementForm,
-          team_id: selectedTeam.id,
-          one_rm: oneRM,
-          created_by: session.user.id,
-        }])
-        .select(`*, player:players(id, name, jersey_number), exercise:exercises(id, name, unit)`)
-        .single()
-      if (error) throw error
-      setMeasurements([data, ...measurements])
+    const ok = await createMeasurement(measurementForm)
+    if (ok) {
       setShowMeasurementModal(false)
       setMeasurementForm({
         player_id: '',
@@ -223,61 +144,19 @@ export default function Measurements({ session }) {
         measured_at: new Date().toISOString().split('T')[0],
         notes: '',
       })
-      toast.success('Mérés sikeresen rögzítve!')
-    } catch (error) {
-      console.error('Error creating measurement:', error)
-      toast.error('Hiba történt')
     }
   }
 
   const handleCreateTeamMeasurement = async (e) => {
     e.preventDefault()
-    if (!selectedTeam) return
-
-    try {
-      const measurementsToInsert = []
-      
-      // Prepare measurements for all players with data
-      Object.entries(teamMeasurementForm.playerData).forEach(([playerId, data]) => {
-        if (data.value && parseFloat(data.value) > 0) {
-          const oneRM = calculate1RM(parseFloat(data.value), parseInt(data.reps || 1))
-          measurementsToInsert.push({
-            team_id: selectedTeam.id,
-            player_id: playerId,
-            exercise_id: teamMeasurementForm.exercise_id,
-            value: parseFloat(data.value),
-            reps: parseInt(data.reps || 1),
-            one_rm: oneRM,
-            measured_at: teamMeasurementForm.measured_at,
-            notes: data.notes || '',
-            created_by: session.user.id,
-          })
-        }
-      })
-
-      if (measurementsToInsert.length === 0) {
-        toast.error('Add meg legalább egy játékos mérési adatát!')
-        return
-      }
-
-      const { data, error } = await supabase
-        .from('measurements')
-        .insert(measurementsToInsert)
-        .select(`*, player:players(id, name, jersey_number), exercise:exercises(id, name, unit)`)
-
-      if (error) throw error
-
-      setMeasurements([...data, ...measurements])
+    const ok = await createTeamMeasurement(teamMeasurementForm)
+    if (ok) {
       setShowTeamMeasurementModal(false)
       setTeamMeasurementForm({
         exercise_id: '',
         measured_at: new Date().toISOString().split('T')[0],
         playerData: {},
       })
-      toast.success(`${measurementsToInsert.length} mérés sikeresen rögzítve!`)
-    } catch (error) {
-      console.error('Error creating team measurements:', error)
-      toast.error('Hiba történt a mérések rögzítésekor')
     }
   }
 
