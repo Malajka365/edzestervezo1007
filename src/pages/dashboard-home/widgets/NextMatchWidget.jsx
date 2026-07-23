@@ -12,7 +12,10 @@ function useNextMatch(teamId) {
   return useQuery({
     queryKey: ['widget', 'next_match', teamId],
     queryFn: async () => {
-      const todayKey = new Date().toISOString().split('T')[0]
+      // Lokális dátum-részek — a toISOString() hajnalban (UTC+ zónában) még az
+      // előző napot adná, és a tegnapi meccs jelenne meg "következőként".
+      const now = new Date()
+      const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
       const { data, error } = await supabase
         .from('matches')

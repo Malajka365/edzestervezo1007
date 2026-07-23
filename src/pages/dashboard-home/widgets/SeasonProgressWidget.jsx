@@ -64,7 +64,7 @@ export default function SeasonProgressWidget() {
         <div className="space-y-3">
           <p className="text-white font-medium text-sm truncate">{season.name}</p>
           <p className="text-sm text-slate-300">
-            {currentWeek}. hét / {totalWeeks}
+            {currentWeek === 0 ? 'Még nem kezdődött el' : `${currentWeek}. hét / ${totalWeeks}`}
           </p>
           <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
             <div

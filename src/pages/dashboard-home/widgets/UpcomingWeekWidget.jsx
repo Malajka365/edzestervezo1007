@@ -22,14 +22,16 @@ function useUpcomingWeek(teamId) {
   return useQuery({
     queryKey: ['widget', 'upcoming_week', teamId],
     queryFn: async () => {
+      // Lokális dátum-részekből képezzük a kulcsot — a toISOString() UTC-re vált,
+      // ami UTC+ zónában (Magyarország) az előző napra csúsztatná az ablakot.
+      const toKey = (d) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const start = new Date(today)
       const end = new Date(today)
       end.setDate(end.getDate() + 7)
 
-      const startKey = start.toISOString().split('T')[0]
-      const endKey = end.toISOString().split('T')[0]
+      const startKey = toKey(today)
+      const endKey = toKey(end)
 
       const [sessionsRes, matchesRes] = await Promise.all([
         supabase
