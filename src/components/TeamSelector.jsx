@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTeams } from '../context/TeamContext'
 import { ChevronDown, Users, Plus, Check } from 'lucide-react'
+import LoadingSpinner from './LoadingSpinner'
 
 export default function TeamSelector() {
   const { teams, selectedTeam, setSelectedTeam, loading } = useTeams()
@@ -9,8 +10,7 @@ export default function TeamSelector() {
   if (loading) {
     return (
       <div className="flex items-center space-x-2 px-4 py-2 bg-slate-700 rounded-lg">
-        <Users className="w-5 h-5 text-slate-400 animate-pulse" />
-        <span className="text-sm text-slate-400">Betöltés...</span>
+        <LoadingSpinner size="xs" />
       </div>
     )
   }

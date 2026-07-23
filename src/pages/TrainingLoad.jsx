@@ -10,6 +10,7 @@ import {
   Dumbbell,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
 
 export default function TrainingLoad() {
@@ -279,9 +280,8 @@ export default function TrainingLoad() {
 
       {/* Results Table */}
       {loading ? (
-        <div className="card text-center py-12">
-          <div className="animate-spin w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-400">Betöltés...</p>
+        <div className="card">
+          <LoadingSpinner size="inline" />
         </div>
       ) : selectedExercise && calculations.length > 0 ? (
         <div className="card">

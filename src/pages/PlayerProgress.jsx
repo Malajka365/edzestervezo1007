@@ -11,6 +11,7 @@ import {
   Download,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import LoadingSpinner from '../components/LoadingSpinner'
 import {
   LineChart,
   Line,
@@ -486,9 +487,8 @@ export default function PlayerProgress() {
 
       {/* Chart */}
       {loading ? (
-        <div className="card text-center py-12">
-          <div className="animate-spin w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-slate-400">Betöltés...</p>
+        <div className="card">
+          <LoadingSpinner size="inline" />
         </div>
       ) : !selectedPlayer || !selectedExercise ? (
         <div className="card text-center py-12">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import LoadingSpinner from '../components/LoadingSpinner'
 import {
   User,
   Calendar,
@@ -284,9 +285,8 @@ export default function PlayerProfile({ player, onBack }) {
 
   if (loading) {
     return (
-      <div className="card text-center py-12">
-        <div className="animate-spin w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-slate-400">Betöltés...</p>
+      <div className="card">
+        <LoadingSpinner size="inline" />
       </div>
     )
   }

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
+import LoadingSpinner from './LoadingSpinner'
 
 export default function AttendanceCalendar({ player, teamId }) {
   const [attendance, setAttendance] = useState([])
@@ -222,10 +223,7 @@ export default function AttendanceCalendar({ player, teamId }) {
       {/* Attendance List */}
       <div className="flex-1 overflow-y-auto space-y-2">
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
-            <p className="text-slate-400 mt-4">Betöltés...</p>
-          </div>
+          <LoadingSpinner size="inline" />
         ) : attendance.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <p>Még nincs jelenlét rögzítve</p>

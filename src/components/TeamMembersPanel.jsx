@@ -6,6 +6,7 @@ import { ROLES, MODULES, ACCESS_LEVELS } from '../lib/permissions'
 import { UserPlus, Trash2, Copy, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
+import LoadingSpinner from './LoadingSpinner'
 
 export default function TeamMembersPanel({ team, isOwner }) {
   const [members, setMembers] = useState([])
@@ -179,7 +180,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
 
   const roleLabel = (roleKey) => ROLES.find((r) => r.key === roleKey)?.name || roleKey
 
-  if (loading) return <div className="text-slate-400 text-sm">Betöltés...</div>
+  if (loading) return <LoadingSpinner size="xs" />
 
   return (
     <div className="space-y-6">

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { MapPin, Plus, Edit2, Trash2, X, Check, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
+import LoadingSpinner from './LoadingSpinner'
 
 export default function TrainingLocations({ teamId }) {
   const [locations, setLocations] = useState([])
@@ -154,9 +155,7 @@ export default function TrainingLocations({ teamId }) {
 
       {/* Locations List */}
       {loading && locations.length === 0 ? (
-        <div className="text-center py-8 text-slate-400">
-          <p>Betöltés...</p>
-        </div>
+        <LoadingSpinner size="inline" />
       ) : locations.length === 0 ? (
         <div className="text-center py-8 text-slate-400">
           <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
