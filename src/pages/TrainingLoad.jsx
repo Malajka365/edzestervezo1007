@@ -12,6 +12,7 @@ import {
 import TeamSelector from '../components/TeamSelector'
 import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
+import { exportTablePdf } from '../lib/pdfExport'
 
 export default function TrainingLoad() {
   const { selectedTeam } = useTeams()
@@ -122,81 +123,47 @@ export default function TrainingLoad() {
   }
 
   const exportToPDF = async () => {
-    try {
-      const { jsPDF } = await import('jspdf')
-      const { default: autoTable } = await import('jspdf-autotable')
-      const doc = new jsPDF('landscape')
-      const exercise = exercises.find((e) => e.id === selectedExercise)
+    const exercise = exercises.find((e) => e.id === selectedExercise)
 
-      if (!exercise) {
-        console.error('Exercise not found')
-        return
-      }
-
-      // Title
-      doc.setFontSize(18)
-      doc.text(`${selectedTeam.name} - ${exercise.name} - 1RM Százalék Kalkulátor`, 14, 15)
-
-      // Date
-      doc.setFontSize(10)
-      doc.text(`Generálva: ${new Date().toLocaleDateString('hu-HU')}`, 14, 22)
-
-      // Table headers - 1RM is now 100%
-      const headers = [
-        'Játékos',
-        'Mérés dátuma',
-        '1RM (100%)',
-        ...percentages.map((p) => `${p}%`),
-      ]
-
-      // Table data
-      const rows = calculations
-        .filter((calc) => calc.oneRM)
-        .map((calc) => [
-          calc.player.name,
-          calc.lastMeasured ? new Date(calc.lastMeasured).toLocaleDateString('hu-HU') : '-',
-          calc.oneRM,
-          ...percentages.map((pct) => calc.percentages[pct] || '-'),
-        ])
-
-      if (rows.length === 0) {
-        console.error('No data to export')
-        toast.error('Nincs exportálható adat!')
-        return
-      }
-
-      autoTable(doc, {
-        head: [headers],
-        body: rows,
-        startY: 28,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [59, 130, 246],
-          fontSize: 8,
-          fontStyle: 'bold',
-        },
-        bodyStyles: {
-          fontSize: 7,
-        },
-        columnStyles: {
-          0: { cellWidth: 35 }, // Name
-          1: { cellWidth: 22 }, // Date
-          2: { cellWidth: 20, fontStyle: 'bold', fillColor: [219, 234, 254] }, // 1RM highlighted
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-      })
-
-      // Save PDF
-      const fileName = `${selectedTeam.name}_${exercise.name.replace(/\s+/g, '_')}_1RM_${new Date().toISOString().split('T')[0]}.pdf`
-      doc.save(fileName)
-      
-      console.log('PDF exported successfully:', fileName)
-    } catch (error) {
-      console.error('Error exporting PDF:', error)
-      toast.error('Hiba történt a PDF exportálás során!')
+    if (!exercise) {
+      console.error('Exercise not found')
+      return
     }
+
+    // Table headers - 1RM is now 100%
+    const headers = [
+      'Játékos',
+      'Mérés dátuma',
+      '1RM (100%)',
+      ...percentages.map((p) => `${p}%`),
+    ]
+
+    // Table data
+    const rows = calculations
+      .filter((calc) => calc.oneRM)
+      .map((calc) => [
+        calc.player.name,
+        calc.lastMeasured ? new Date(calc.lastMeasured).toLocaleDateString('hu-HU') : '-',
+        calc.oneRM,
+        ...percentages.map((pct) => calc.percentages[pct] || '-'),
+      ])
+
+    await exportTablePdf({
+      orientation: 'landscape',
+      title: `${selectedTeam.name} - ${exercise.name} - 1RM Százalék Kalkulátor`,
+      subtitles: [`Generálva: ${new Date().toLocaleDateString('hu-HU')}`],
+      columns: headers,
+      rows,
+      startY: 28,
+      headStyles: { fontSize: 8 },
+      bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 35 }, // Name
+        1: { cellWidth: 22 }, // Date
+        2: { cellWidth: 20, fontStyle: 'bold', fillColor: [219, 234, 254] }, // 1RM highlighted
+      },
+      filename: `${selectedTeam.name}_${exercise.name.replace(/\s+/g, '_')}_1RM_${new Date().toISOString().split('T')[0]}.pdf`,
+    })
   }
 
   if (!selectedTeam) {

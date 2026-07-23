@@ -13,6 +13,7 @@ import {
 import TeamSelector from '../components/TeamSelector'
 import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
+import { exportTablePdf } from '../lib/pdfExport'
 
 export default function Leaderboard() {
   const { selectedTeam } = useTeams()
@@ -140,103 +141,70 @@ export default function Leaderboard() {
   }
 
   const exportToPDF = async () => {
-    try {
-      const { jsPDF } = await import('jspdf')
-      const { default: autoTable } = await import('jspdf-autotable')
-      const doc = new jsPDF()
-      const exercise = exercises.find((e) => e.id === selectedExercise)
+    const exercise = exercises.find((e) => e.id === selectedExercise)
 
-      if (!exercise) {
-        console.error('Exercise not found')
-        return
-      }
-
-      // Title
-      doc.setFontSize(18)
-      doc.text(`${selectedTeam.name} - ${exercise.name} - Ranglista`, 14, 15)
-
-      // Subtitle
-      doc.setFontSize(10)
-      doc.text(`Testsúly arányos erő (Relatív erő = 1RM / Testsúly)`, 14, 22)
-      doc.text(`Generálva: ${new Date().toLocaleDateString('hu-HU')}`, 14, 28)
-
-      // Table headers
-      const headers = [
-        'Helyezés',
-        'Játékos',
-        '1RM (kg)',
-        'Testsúly (kg)',
-        'Mérés dátuma',
-        'Relatív\nErő',
-      ]
-
-      // Table data
-      const rows = leaderboardData.map((entry, index) => [
-        index + 1,
-        entry.player.name,
-        entry.oneRM,
-        entry.bodyWeight,
-        new Date(entry.measuredAt).toLocaleDateString('hu-HU'),
-        entry.relativeStrength,
-      ])
-
-      if (rows.length === 0) {
-        console.error('No data to export')
-        toast.error('Nincs exportálható adat!')
-        return
-      }
-
-      autoTable(doc, {
-        head: [headers],
-        body: rows,
-        startY: 35,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [59, 130, 246],
-          fontSize: 9,
-          fontStyle: 'bold',
-        },
-        bodyStyles: {
-          fontSize: 8,
-        },
-        columnStyles: {
-          0: { cellWidth: 22, halign: 'center' }, // Helyezés
-          1: { cellWidth: 50 }, // Játékos
-          2: { cellWidth: 24, halign: 'center' }, // 1RM
-          3: { cellWidth: 28, halign: 'center' }, // Testsúly
-          4: { cellWidth: 30, halign: 'center' }, // Dátum
-          5: { cellWidth: 26, halign: 'center', fontStyle: 'bold', fillColor: [219, 234, 254] }, // Relatív Erő
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-        didParseCell: function(data) {
-          // Highlight top 3
-          if (data.section === 'body' && data.column.index === 0) {
-            const rank = data.cell.raw
-            if (rank === 1) {
-              data.cell.styles.fillColor = [255, 215, 0, 0.3] // Gold
-              data.cell.styles.fontStyle = 'bold'
-            } else if (rank === 2) {
-              data.cell.styles.fillColor = [192, 192, 192, 0.3] // Silver
-              data.cell.styles.fontStyle = 'bold'
-            } else if (rank === 3) {
-              data.cell.styles.fillColor = [205, 127, 50, 0.3] // Bronze
-              data.cell.styles.fontStyle = 'bold'
-            }
-          }
-        },
-      })
-
-      // Save PDF
-      const fileName = `${selectedTeam.name}_${exercise.name.replace(/\s+/g, '_')}_Ranglista_${new Date().toISOString().split('T')[0]}.pdf`
-      doc.save(fileName)
-      
-      console.log('PDF exported successfully:', fileName)
-    } catch (error) {
-      console.error('Error exporting PDF:', error)
-      toast.error('Hiba történt a PDF exportálás során!')
+    if (!exercise) {
+      console.error('Exercise not found')
+      return
     }
+
+    // Table headers
+    const headers = [
+      'Helyezés',
+      'Játékos',
+      '1RM (kg)',
+      'Testsúly (kg)',
+      'Mérés dátuma',
+      'Relatív\nErő',
+    ]
+
+    // Table data
+    const rows = leaderboardData.map((entry, index) => [
+      index + 1,
+      entry.player.name,
+      entry.oneRM,
+      entry.bodyWeight,
+      new Date(entry.measuredAt).toLocaleDateString('hu-HU'),
+      entry.relativeStrength,
+    ])
+
+    await exportTablePdf({
+      title: `${selectedTeam.name} - ${exercise.name} - Ranglista`,
+      subtitles: [
+        `Testsúly arányos erő (Relatív erő = 1RM / Testsúly)`,
+        `Generálva: ${new Date().toLocaleDateString('hu-HU')}`,
+      ],
+      columns: headers,
+      rows,
+      startY: 35,
+      headStyles: { fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 22, halign: 'center' }, // Helyezés
+        1: { cellWidth: 50 }, // Játékos
+        2: { cellWidth: 24, halign: 'center' }, // 1RM
+        3: { cellWidth: 28, halign: 'center' }, // Testsúly
+        4: { cellWidth: 30, halign: 'center' }, // Dátum
+        5: { cellWidth: 26, halign: 'center', fontStyle: 'bold', fillColor: [219, 234, 254] }, // Relatív Erő
+      },
+      didParseCell: function(data) {
+        // Highlight top 3
+        if (data.section === 'body' && data.column.index === 0) {
+          const rank = data.cell.raw
+          if (rank === 1) {
+            data.cell.styles.fillColor = [255, 215, 0, 0.3] // Gold
+            data.cell.styles.fontStyle = 'bold'
+          } else if (rank === 2) {
+            data.cell.styles.fillColor = [192, 192, 192, 0.3] // Silver
+            data.cell.styles.fontStyle = 'bold'
+          } else if (rank === 3) {
+            data.cell.styles.fillColor = [205, 127, 50, 0.3] // Bronze
+            data.cell.styles.fontStyle = 'bold'
+          }
+        }
+      },
+      filename: `${selectedTeam.name}_${exercise.name.replace(/\s+/g, '_')}_Ranglista_${new Date().toISOString().split('T')[0]}.pdf`,
+    })
   }
 
   if (!selectedTeam) {

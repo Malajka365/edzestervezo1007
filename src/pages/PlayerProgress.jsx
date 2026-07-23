@@ -25,6 +25,7 @@ import {
   ReferenceArea,
 } from 'recharts'
 import toast from 'react-hot-toast'
+import { exportTablePdf } from '../lib/pdfExport'
 
 export default function PlayerProgress() {
   const { selectedTeam } = useTeams()
@@ -197,110 +198,86 @@ export default function PlayerProgress() {
   }
 
   const exportToPDF = async () => {
-    try {
-      const { jsPDF } = await import('jspdf')
-      const { default: autoTable } = await import('jspdf-autotable')
-      const { default: html2canvas } = await import('html2canvas')
-      const doc = new jsPDF()
-      const player = getSelectedPlayer()
-      const exercise = getSelectedExercise()
+    const player = getSelectedPlayer()
+    const exercise = getSelectedExercise()
 
-      if (!player || !exercise) return
+    if (!player || !exercise) return
 
-      // Title
-      doc.setFontSize(18)
-      doc.text(`${player.name} - ${exercise.name} - Progresszió`, 14, 15)
+    const dateRange = dateFrom && dateTo
+      ? `${new Date(dateFrom).toLocaleDateString('hu-HU')} - ${new Date(dateTo).toLocaleDateString('hu-HU')}`
+      : dateFrom
+      ? `${new Date(dateFrom).toLocaleDateString('hu-HU')} -tól`
+      : dateTo
+      ? `${new Date(dateTo).toLocaleDateString('hu-HU')} -ig`
+      : `${chartData[0]?.fullDate} - ${chartData[chartData.length - 1]?.fullDate}`
 
-      // Subtitle
-      doc.setFontSize(10)
-      const dateRange = dateFrom && dateTo
-        ? `${new Date(dateFrom).toLocaleDateString('hu-HU')} - ${new Date(dateTo).toLocaleDateString('hu-HU')}`
-        : dateFrom
-        ? `${new Date(dateFrom).toLocaleDateString('hu-HU')} -tól`
-        : dateTo
-        ? `${new Date(dateTo).toLocaleDateString('hu-HU')} -ig`
-        : `${chartData[0]?.fullDate} - ${chartData[chartData.length - 1]?.fullDate}`
-      
-      doc.text(`Időszak: ${dateRange}`, 14, 22)
-      doc.text(`Generálva: ${new Date().toLocaleDateString('hu-HU')}`, 14, 28)
+    const headers = ['Dátum', 'Érték', 'Ismétlések', '1RM', 'Jegyzetek']
+    const rows = measurements.map((m) => [
+      new Date(m.measured_at).toLocaleDateString('hu-HU'),
+      `${m.value} ${exercise.unit}`,
+      m.reps || '-',
+      m.one_rm && exercise.unit !== 'cm' ? `${m.one_rm} ${exercise.unit}` : '-',
+      m.notes || '-',
+    ])
 
-      // Capture chart as image
-      if (chartRef.current) {
-        const canvas = await html2canvas(chartRef.current, {
-          backgroundColor: '#1e293b',
-          scale: 2,
-        })
-        const imgData = canvas.toDataURL('image/png')
-        doc.addImage(imgData, 'PNG', 14, 35, 180, 90)
-      }
+    await exportTablePdf({
+      title: `${player.name} - ${exercise.name} - Progresszió`,
+      subtitles: [
+        `Időszak: ${dateRange}`,
+        `Generálva: ${new Date().toLocaleDateString('hu-HU')}`,
+      ],
+      columns: headers,
+      rows,
+      startY: 25,
+      checkEmpty: false,
+      headStyles: { fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 30, halign: 'center' },
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 30, halign: 'center', fontStyle: 'bold', textColor: [16, 185, 129] },
+        4: { cellWidth: 65 },
+      },
+      filename: `${player.name.replace(/\s+/g, '_')}_${exercise.name.replace(/\s+/g, '_')}_Progresszio_${new Date().toISOString().split('T')[0]}.pdf`,
+      // Chart image + stats on page 1, then a fresh page for the table.
+      beforeTable: async (doc) => {
+        // Capture chart as image
+        if (chartRef.current) {
+          const { default: html2canvas } = await import('html2canvas')
+          const canvas = await html2canvas(chartRef.current, {
+            backgroundColor: '#1e293b',
+            scale: 2,
+          })
+          const imgData = canvas.toDataURL('image/png')
+          doc.addImage(imgData, 'PNG', 14, 35, 180, 90)
+        }
 
-      // Stats
-      doc.setFontSize(12)
-      doc.setFont(undefined, 'bold')
-      doc.text('Statisztikák:', 14, 135)
-      
-      doc.setFontSize(10)
-      doc.setFont(undefined, 'normal')
-      doc.text(`Első mérés: ${chartData[0]?.value} ${exercise.unit} (${chartData[0]?.fullDate})`, 14, 142)
-      doc.text(`Legutóbbi mérés: ${chartData[chartData.length - 1]?.value} ${exercise.unit} (${chartData[chartData.length - 1]?.fullDate})`, 14, 149)
-      
-      const progress = (chartData[chartData.length - 1]?.value - chartData[0]?.value).toFixed(1)
-      const progressPercent = (((chartData[chartData.length - 1]?.value - chartData[0]?.value) / chartData[0]?.value) * 100).toFixed(1)
-      doc.text(`Fejlődés: ${progress > 0 ? '+' : ''}${progress} ${exercise.unit} (${progressPercent}%)`, 14, 156)
-      
-      const bestValue = Math.max(...chartData.map((d) => d.value))
-      const bestDate = chartData.find((d) => d.value === bestValue)?.fullDate
-      doc.text(`Legjobb eredmény: ${bestValue} ${exercise.unit} (${bestDate})`, 14, 163)
+        // Stats
+        doc.setFontSize(12)
+        doc.setFont(undefined, 'bold')
+        doc.text('Statisztikák:', 14, 135)
 
-      // Measurements table
-      doc.addPage()
-      doc.setFontSize(14)
-      doc.setFont(undefined, 'bold')
-      doc.text('Mérések Részletesen', 14, 15)
+        doc.setFontSize(10)
+        doc.setFont(undefined, 'normal')
+        doc.text(`Első mérés: ${chartData[0]?.value} ${exercise.unit} (${chartData[0]?.fullDate})`, 14, 142)
+        doc.text(`Legutóbbi mérés: ${chartData[chartData.length - 1]?.value} ${exercise.unit} (${chartData[chartData.length - 1]?.fullDate})`, 14, 149)
 
-      const headers = ['Dátum', 'Érték', 'Ismétlések', '1RM', 'Jegyzetek']
-      const rows = measurements.map((m) => [
-        new Date(m.measured_at).toLocaleDateString('hu-HU'),
-        `${m.value} ${exercise.unit}`,
-        m.reps || '-',
-        m.one_rm && exercise.unit !== 'cm' ? `${m.one_rm} ${exercise.unit}` : '-',
-        m.notes || '-',
-      ])
+        const progress = (chartData[chartData.length - 1]?.value - chartData[0]?.value).toFixed(1)
+        const progressPercent = (((chartData[chartData.length - 1]?.value - chartData[0]?.value) / chartData[0]?.value) * 100).toFixed(1)
+        doc.text(`Fejlődés: ${progress > 0 ? '+' : ''}${progress} ${exercise.unit} (${progressPercent}%)`, 14, 156)
 
-      autoTable(doc, {
-        head: [headers],
-        body: rows,
-        startY: 25,
-        theme: 'grid',
-        headStyles: {
-          fillColor: [59, 130, 246],
-          fontSize: 9,
-          fontStyle: 'bold',
-        },
-        bodyStyles: {
-          fontSize: 8,
-        },
-        columnStyles: {
-          0: { cellWidth: 30 },
-          1: { cellWidth: 30, halign: 'center' },
-          2: { cellWidth: 25, halign: 'center' },
-          3: { cellWidth: 30, halign: 'center', fontStyle: 'bold', textColor: [16, 185, 129] },
-          4: { cellWidth: 65 },
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-      })
+        const bestValue = Math.max(...chartData.map((d) => d.value))
+        const bestDate = chartData.find((d) => d.value === bestValue)?.fullDate
+        doc.text(`Legjobb eredmény: ${bestValue} ${exercise.unit} (${bestDate})`, 14, 163)
 
-      // Save PDF
-      const fileName = `${player.name.replace(/\s+/g, '_')}_${exercise.name.replace(/\s+/g, '_')}_Progresszio_${new Date().toISOString().split('T')[0]}.pdf`
-      doc.save(fileName)
-
-      console.log('PDF exported successfully:', fileName)
-    } catch (error) {
-      console.error('Error exporting PDF:', error)
-      toast.error('Hiba történt a PDF exportálás során!')
-    }
+        // Measurements table header on a fresh page
+        doc.addPage()
+        doc.setFontSize(14)
+        doc.setFont(undefined, 'bold')
+        doc.text('Mérések Részletesen', 14, 15)
+      },
+    })
   }
 
   const CustomTooltip = ({ active, payload }) => {
