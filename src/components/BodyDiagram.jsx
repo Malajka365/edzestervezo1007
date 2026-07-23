@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
-import bodyDiagram from '../assets/body-diagram.png'
+import bodyDiagram from '../assets/body-diagram.webp'
 
 export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly = false }) {
   const [selectedColor, setSelectedColor] = useState('#ef4444') // red-500
