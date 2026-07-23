@@ -1,81 +1,86 @@
-import { useNavigate, useOutletContext } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { useOutletContext } from 'react-router-dom'
+import { Settings } from 'lucide-react'
+import { useTeams } from '../context/TeamContext'
+import { useDashboardPrefs } from '../hooks/useDashboardPrefs'
+import {
+  getDefaultWidgets,
+  filterAllowedWidgets,
+  WIDGETS_BY_KEY,
+} from '../lib/dashboardWidgets'
+import LoadingSpinner from '../components/LoadingSpinner'
+import EmptyState from '../components/ui/EmptyState'
 
-// Index route content for /dashboard: welcome card, quick-access grid, next steps.
-// Receives `session` and the permission-filtered `visibleModules` (each carrying
-// its route `path`) from the Dashboard layout via <Outlet context>.
+// Index route content for /dashboard: slim welcome line + a customizable grid
+// of live-data widgets. The old module quick-access grid and next-steps card
+// were removed (navigation lives in the sidebar) — ld. a widget-dashboard spec.
+//
+// Widget-feloldás sorrendje:
+//   1. mentett prefs (useDashboardPrefs) — ha van sor;
+//   2. ha nincs => szerepkör-alapú default (getDefaultWidgets);
+//   3. láthatóság (visible:true) + jogosultság-szűrés (filterAllowedWidgets);
+//   4. registry-komponensek renderelése a lista sorrendjében.
 export default function DashboardHome() {
-  const { session, visibleModules } = useOutletContext()
-  const navigate = useNavigate()
+  const { session } = useOutletContext()
+  const { selectedTeam, currentUserRole, currentUserPermissions, permissionsLoading } = useTeams()
+
+  const { prefs, loading: prefsLoading } = useDashboardPrefs(
+    session?.user?.id,
+    selectedTeam?.id
+  )
+
+  const loading = permissionsLoading || prefsLoading
+
+  // A forráslista: mentett prefs, vagy szerepkör-alapú default.
+  const sourceList =
+    prefs ?? getDefaultWidgets(currentUserRole, currentUserPermissions)
+
+  // Amit a felhasználó egyáltalán láthat (jogosultság szerint).
+  const allowedKeys = new Set(
+    filterAllowedWidgets(currentUserPermissions).map((w) => w.key)
+  )
+
+  // Látható + engedélyezett + a registryben létező widgetek, sorrendben.
+  const widgetsToRender = sourceList.filter(
+    (item) => item.visible && allowedKeys.has(item.key) && WIDGETS_BY_KEY[item.key]
+  )
 
   return (
     <main className="p-6">
       <div className="space-y-6">
-        {/* Welcome Card */}
-        <div className="card">
-          <h2 className="text-2xl font-bold text-white mb-2">
-            Üdvözöllek a TeamFlow-ban! 👋
-          </h2>
-          <p className="text-slate-300 mb-4">
-            Kezdj el dolgozni a csapatod menedzselésével. Válassz egy modult a bal oldali menüből.
+        {/* Slim welcome + Testreszabás gomb */}
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-slate-300">
+            Üdvözöllek a TeamFlow-ban!{' '}
+            <span className="text-primary-400 font-medium">{session.user.email}</span>
           </p>
-          <div className="flex items-center space-x-2 text-primary-400">
-            <span className="text-sm font-medium">
-              Bejelentkezve: {session.user.email}
-            </span>
-          </div>
+          <button
+            type="button"
+            disabled
+            title="Hamarosan"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-400 bg-slate-800 border border-slate-700 rounded-lg cursor-not-allowed flex-shrink-0"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Testreszabás</span>
+          </button>
         </div>
 
-        {/* Quick Access Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {visibleModules
-            .filter((module) => module.id !== 'home')
-            .map((module) => {
-              const Icon = module.icon
-              return (
-                <button
-                  key={module.id}
-                  onClick={() => navigate(module.path)}
-                  className="card hover:border-primary-500 transition-all duration-200 group text-left"
-                >
-                  <div
-                    className={`w-12 h-12 ${module.color} rounded-lg flex items-center justify-center mb-4`}
-                  >
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-primary-400 transition-colors">
-                    {module.name}
-                  </h3>
-                  <p className="text-sm text-slate-400 mb-3">{module.description}</p>
-                  <div className="flex items-center text-primary-400 text-sm font-medium">
-                    Megnyitás
-                    <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </button>
-              )
+        {/* Widget grid / loading / empty */}
+        {loading ? (
+          <LoadingSpinner size="inline" />
+        ) : widgetsToRender.length === 0 ? (
+          <EmptyState
+            icon={Settings}
+            title="Nincs megjeleníthető widget"
+            description="A csapat-szerepköröd jogosultságai alapján jelenleg nincs megjeleníthető widget."
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {widgetsToRender.map((item) => {
+              const Widget = WIDGETS_BY_KEY[item.key].component
+              return <Widget key={item.key} />
             })}
-        </div>
-
-        {/* Info Card */}
-        <div className="card bg-gradient-to-r from-primary-900/30 to-purple-900/30 border-primary-700">
-          <h3 className="text-lg font-bold text-white mb-2">
-            🚀 Következő lépések
-          </h3>
-          <ul className="space-y-2 text-slate-300">
-            <li className="flex items-start">
-              <ChevronRight className="w-5 h-5 text-primary-400 mr-2 flex-shrink-0 mt-0.5" />
-              <span>Hozd létre az első csapatodat és add hozzá a játékosokat</span>
-            </li>
-            <li className="flex items-start">
-              <ChevronRight className="w-5 h-5 text-primary-400 mr-2 flex-shrink-0 mt-0.5" />
-              <span>Készíts edzéstervet és oszd meg a csapattal</span>
-            </li>
-            <li className="flex items-start">
-              <ChevronRight className="w-5 h-5 text-primary-400 mr-2 flex-shrink-0 mt-0.5" />
-              <span>Rögzítsd a játékosok mérési eredményeit</span>
-            </li>
-          </ul>
-        </div>
+          </div>
+        )}
       </div>
     </main>
   )
