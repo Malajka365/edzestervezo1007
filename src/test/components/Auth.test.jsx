@@ -30,18 +30,18 @@ describe('Auth form', () => {
     vi.clearAllMocks()
   })
 
-  it('shows the min-6-chars password hint after switching to the Regisztráció tab', async () => {
+  it('shows the min-10-chars password hint after switching to the Regisztráció tab', async () => {
     const user = userEvent.setup()
     renderAuth()
 
     // Not visible on the default (login) tab.
-    expect(screen.queryByText(/Minimum 6 karakter/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Minimum 10 karakter/)).not.toBeInTheDocument()
 
     // The Regisztráció tab button (there are two matches: tab + footer link).
     const registerTab = screen.getAllByRole('button', { name: /Regisztráció/ })[0]
     await user.click(registerTab)
 
-    expect(screen.getByText(/Minimum 6 karakter hosszú jelszó szükséges/)).toBeInTheDocument()
+    expect(screen.getByText(/Minimum 10 karakter hosszú jelszó szükséges/)).toBeInTheDocument()
   })
 
   it('calls signInWithPassword with the typed email and password on login submit', async () => {
@@ -93,7 +93,7 @@ describe('Auth form', () => {
     await user.click(registerTab)
 
     await user.type(screen.getByLabelText(/Email cím/), 'uj@teamflow.hu')
-    await user.type(screen.getByLabelText(/Jelszó/), 'titkos123')
+    await user.type(screen.getByLabelText(/Jelszó/), 'titkos12345')
 
     const submitButton = screen
       .getAllByRole('button', { name: /Regisztráció/ })
@@ -104,7 +104,28 @@ describe('Auth form', () => {
     expect(supabase.auth.signInWithPassword).not.toHaveBeenCalled()
     expect(supabase.auth.signUp.mock.calls[0][0]).toMatchObject({
       email: 'uj@teamflow.hu',
-      password: 'titkos123',
+      password: 'titkos12345',
     })
+  })
+
+  it('shows the Hungarian too-short error and does not call signUp when the register password is under 10 characters', async () => {
+    const user = userEvent.setup()
+    renderAuth()
+
+    const registerTab = screen.getAllByRole('button', { name: /Regisztráció/ })[0]
+    await user.click(registerTab)
+
+    await user.type(screen.getByLabelText(/Email cím/), 'rovid@teamflow.hu')
+    await user.type(screen.getByLabelText(/Jelszó/), 'rovid12')
+
+    const submitButton = screen
+      .getAllByRole('button', { name: /Regisztráció/ })
+      .find((btn) => btn.getAttribute('type') === 'submit')
+    await user.click(submitButton)
+
+    expect(
+      await screen.findByText('A jelszónak legalább 10 karakter hosszúnak kell lennie')
+    ).toBeInTheDocument()
+    expect(supabase.auth.signUp).not.toHaveBeenCalled()
   })
 })

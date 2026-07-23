@@ -13,6 +13,27 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
 
+  const MIN_REGISTER_PASSWORD_LENGTH = 10
+
+  // Egyszerű, kliens-oldali jelszó-erősség heurisztika (csak a regisztrációs
+  // fülön jelenik meg). Pontszám: hossz >= 10, kis- és nagybetű keveréke,
+  // számjegy vagy szimbólum jelenléte - mindegyik 1 pontot ér.
+  const getPasswordStrength = (value) => {
+    let score = 0
+    if (value.length >= MIN_REGISTER_PASSWORD_LENGTH) score += 1
+    if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1
+    if (/[0-9]/.test(value) || /[^a-zA-Z0-9]/.test(value)) score += 1
+    return score
+  }
+
+  const passwordStrength = getPasswordStrength(password)
+  const strengthConfig = {
+    0: { label: '', color: 'bg-slate-600' },
+    1: { label: 'Gyenge', color: 'bg-red-500' },
+    2: { label: 'Közepes', color: 'bg-yellow-500' },
+    3: { label: 'Erős', color: 'bg-green-500' },
+  }[passwordStrength]
+
   // Ha a felhasználó egy meghívó linken keresztül (`/join/:token`) érkezett
   // ide bejelentkezés/regisztráció végett, a JoinTeam oldal a tokent
   // sessionStorage-ban hagyta. Sikeres auth után egyből oda irányítjuk,
@@ -44,7 +65,18 @@ export default function Auth() {
         setMessage({ type: 'success', text: 'Sikeres bejelentkezés!' })
         redirectToPendingInviteIfAny(data.session)
       } else {
-        // Regisztráció
+        // Regisztráció - a szerver-oldali (Supabase) minimum ettől
+        // függetlenül is érvényesítve van, de kliens-oldalon is
+        // kikényszerítjük, hogy korai visszajelzést adjunk.
+        if (password.length < MIN_REGISTER_PASSWORD_LENGTH) {
+          setMessage({
+            type: 'error',
+            text: 'A jelszónak legalább 10 karakter hosszúnak kell lennie',
+          })
+          setLoading(false)
+          return
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -161,13 +193,42 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                minLength={6}
+                minLength={isLogin ? undefined : MIN_REGISTER_PASSWORD_LENGTH}
                 className="input-field"
               />
               {!isLogin && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Minimum 6 karakter hosszú jelszó szükséges
-                </p>
+                <>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Minimum 10 karakter hosszú jelszó szükséges
+                  </p>
+                  {password && (
+                    <div className="mt-2">
+                      <div className="flex gap-1">
+                        {[1, 2, 3].map((segment) => (
+                          <div
+                            key={segment}
+                            className={`h-1.5 flex-1 rounded-full transition-colors ${
+                              segment <= passwordStrength ? strengthConfig.color : 'bg-slate-600'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      {strengthConfig.label && (
+                        <p
+                          className={`text-xs mt-1 ${
+                            passwordStrength === 1
+                              ? 'text-red-400'
+                              : passwordStrength === 2
+                              ? 'text-yellow-400'
+                              : 'text-green-400'
+                          }`}
+                        >
+                          {strengthConfig.label}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
