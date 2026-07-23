@@ -26,8 +26,8 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 |---|---------|---------|--------|------------|
 | F1a | GY4 — Code splitting (React.lazy + lazy PDF libek) | ✅ KÉSZ | `34d928f` | Fő chunk 1,65 MB → 366 KB (39 chunk); élőben tesztelve |
 | F1b | D1 — Reszponzivitás (Auth/JoinTeam/Profile/TeamMembersPanel) | ✅ KÉSZ | `7acd4fc` | Mátrix mobil-kártyanézettel; 375px-en élőben tesztelve |
-| F2a | KT1/2 — ConfirmDialog + 15 confirm() csere | ⏳ | — | |
-| F2b | D2 — Dashboard kártyaszínek 10→4 kategória | ⏳ | — | |
+| F2a | KT1/2 — ConfirmDialog + 15 confirm() csere | ✅ KÉSZ | `8c4a051` | 15 hely, 13 fájl; élőben tesztelve (modál nyit/zár) |
+| F2b | D2 — Dashboard kártyaszínek 10→4 kategória | ✅ KÉSZ | `23bfd84` | kék=csapat, lila=tervezés, zöld=mérés, piros=rehab |
 | F3 | D3+D4 — Loading egységesítés + üres állapotok | ⏳ | — | |
 | F4 | KT5 — canEditModule a maradék 8 modulba | ⏳ | — | |
 | F5 | KT4 — Duplikációk (naptárak, PDF util) | ⏳ | — | |
