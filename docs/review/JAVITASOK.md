@@ -43,3 +43,10 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | Feladat | Státusz | Commit | Megjegyzés |
 |---|---|---|---|
 | GY3 — üres születési dátum/mezszám → játékos-létrehozás elhasal | ✅ KÉSZ | (Teams.jsx sanitizePlayerForm) | Élőben izoláltan igazolva: üres string date → hiba, null → siker |
+
+## Ráadás 2 — stabilitás + architektúra
+
+| Feladat | Státusz | Commit | Megjegyzés |
+|---|---|---|---|
+| Error boundary — komponens-hiba barátságos fallback-kel (nem fehér képernyő) | ✅ KÉSZ | `b0fdba2` | ErrorBoundary komponens az App route-ok körül |
+| F8 — URL-alapú routing minden modulra (linkelhető, működő Vissza gomb) | ✅ KÉSZ | `91c8107` | nested react-router route-ok + Outlet layout; Opus review CLEAN (NavLink end + TeamProvider-Outlet igazolva) + élő teszt (direct URL, Vissza, mobil) |
