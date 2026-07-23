@@ -36,4 +36,4 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | F6-3 | KT2 — Measurements darabolás | ✅ KÉSZ | `78cfe4b` | 1224→683 sor, 5 modál; Opus review CLEAN (33 prop) + élő teszt |
 | F6-4 | KT2 — ExerciseLibrary darabolás | ✅ KÉSZ | `001dd0d` | 1350→742 sor, create+edit modál; Opus review CLEAN (nincs swap) + élő teszt |
 | F7a | KT3 — React Query infra + usePlayers | ✅ KÉSZ | `dd9f154`+`5156073` | 7 fájl, cache-invalidáció mind a 3 mutációnál; Opus review CLEAN (numerikus jersey-sort, success-path invalidáció) |
-| F7b | KT3 — useExercises hook | ⏳ | — | |
+| F7b | KT3 — useExercises hook | ✅ KÉSZ | `a28e76e` | 5 fájl, globális exercises cache, 3 invalidáció; Opus review CLEAN (nincs tábla-swap) + élő teszt |
