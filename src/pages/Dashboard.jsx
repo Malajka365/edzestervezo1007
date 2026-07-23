@@ -1,22 +1,10 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { TeamProvider, useTeams } from '../context/TeamContext'
 import { DASHBOARD_MODULE_TO_PERMISSION_KEY, isModuleVisible } from '../lib/permissions'
 import TeamSelector from '../components/TeamSelector'
 import LoadingSpinner from '../components/LoadingSpinner'
-
-const Teams = lazy(() => import('./Teams'))
-const Measurements = lazy(() => import('./Measurements'))
-const TrainingLoad = lazy(() => import('./TrainingLoad'))
-const Leaderboard = lazy(() => import('./Leaderboard'))
-const PlayerProgress = lazy(() => import('./PlayerProgress'))
-const Profile = lazy(() => import('./Profile'))
-const MacrocyclePlanner = lazy(() => import('./MacrocyclePlanner'))
-const Calendar = lazy(() => import('./Calendar'))
-const TrainingTemplates = lazy(() => import('./TrainingTemplates'))
-const Matches = lazy(() => import('./Matches'))
-const ExerciseLibrary = lazy(() => import('./ExerciseLibrary'))
-const Rehabilitation = lazy(() => import('./Rehabilitation'))
 import {
   Home,
   Users,
@@ -27,7 +15,6 @@ import {
   Menu,
   X,
   User,
-  ChevronRight,
   Calculator,
   Trophy,
   TrendingUp,
@@ -39,12 +26,11 @@ import {
 
 export default function Dashboard({ session }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activeModule, setActiveModule] = useState('home')
   const [userRole, setUserRole] = useState('coach')
 
   useEffect(() => {
     fetchUserProfile()
-    
+
     // Listen for profile updates
     const channel = supabase
       .channel('profile-changes')
@@ -105,8 +91,6 @@ export default function Dashboard({ session }) {
         session={session}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        activeModule={activeModule}
-        setActiveModule={setActiveModule}
         userRole={userRole}
         getRoleLabel={getRoleLabel}
         handleSignOut={handleSignOut}
@@ -115,104 +99,126 @@ export default function Dashboard({ session }) {
   )
 }
 
+// Module registry: `path` is the real URL for each module (used by the sidebar
+// NavLinks, the header title lookup and the home quick-access grid).
+const modules = [
+  {
+    id: 'home',
+    name: 'Dashboard',
+    icon: Home,
+    description: 'Főoldal és áttekintés',
+    color: 'bg-blue-500',
+    path: '/dashboard',
+  },
+  {
+    id: 'teams',
+    name: 'Csapatok',
+    icon: Users,
+    description: 'Játékosok kezelése',
+    color: 'bg-blue-500',
+    path: '/dashboard/csapatok',
+  },
+  {
+    id: 'macrocycle',
+    name: 'Makrociklus Tervező',
+    icon: CalendarIcon,
+    description: 'Éves edzésterv és periodizáció',
+    color: 'bg-purple-500',
+    path: '/dashboard/makrociklus',
+  },
+  {
+    id: 'calendar',
+    name: 'Edzésnaptár',
+    icon: CalendarDays,
+    description: 'Interaktív naptár nézet',
+    color: 'bg-purple-500',
+    path: '/dashboard/naptar',
+  },
+  {
+    id: 'exercises',
+    name: 'Gyakorlat Könyvtár',
+    icon: Dumbbell,
+    description: 'Kondicionális gyakorlatok',
+    color: 'bg-purple-500',
+    path: '/dashboard/gyakorlatok',
+  },
+  {
+    id: 'templates',
+    name: 'Edzéssablonok',
+    icon: Clipboard,
+    description: 'Újrafelhasználható programok',
+    color: 'bg-purple-500',
+    path: '/dashboard/sablonok',
+  },
+  {
+    id: 'matches',
+    name: 'Mérkőzések',
+    icon: Medal,
+    description: 'Mérkőzések és eredmények',
+    color: 'bg-purple-500',
+    path: '/dashboard/merkozesek',
+  },
+  {
+    id: 'measurement',
+    name: 'Mérési modul',
+    icon: BarChart3,
+    description: 'Teljesítménymérések',
+    color: 'bg-emerald-500',
+    path: '/dashboard/meresek',
+  },
+  {
+    id: 'trainingload',
+    name: '1RM Kalkulátor',
+    icon: Calculator,
+    description: 'Terhelés százalékok',
+    color: 'bg-emerald-500',
+    path: '/dashboard/kalkulator',
+  },
+  {
+    id: 'leaderboard',
+    name: 'Ranglista',
+    icon: Trophy,
+    description: 'Testsúly arányos erő',
+    color: 'bg-emerald-500',
+    path: '/dashboard/ranglista',
+  },
+  {
+    id: 'progress',
+    name: 'Progresszió',
+    icon: TrendingUp,
+    description: 'Játékos fejlődés követése',
+    color: 'bg-emerald-500',
+    path: '/dashboard/progresszio',
+  },
+  {
+    id: 'rehab',
+    name: 'Rehabilitáció',
+    icon: Heart,
+    description: 'Sérülések és gyógyulás',
+    color: 'bg-red-500',
+    path: '/dashboard/rehabilitacio',
+  },
+]
+
+// Profile is reachable via its own URL but isn't a sidebar module; keep its
+// metadata here so the header can show a title on /dashboard/profil.
+const profileModule = {
+  id: 'profile',
+  name: 'Profil',
+  description: 'Fiók és beállítások',
+  path: '/dashboard/profil',
+}
+
 function DashboardContent({
   session,
   sidebarOpen,
   setSidebarOpen,
-  activeModule,
-  setActiveModule,
   userRole,
   getRoleLabel,
   handleSignOut,
 }) {
   const { currentUserPermissions, permissionsLoading } = useTeams()
-
-  const modules = [
-    {
-      id: 'home',
-      name: 'Dashboard',
-      icon: Home,
-      description: 'Főoldal és áttekintés',
-      color: 'bg-blue-500',
-    },
-    {
-      id: 'teams',
-      name: 'Csapatok',
-      icon: Users,
-      description: 'Játékosok kezelése',
-      color: 'bg-blue-500',
-    },
-    {
-      id: 'macrocycle',
-      name: 'Makrociklus Tervező',
-      icon: CalendarIcon,
-      description: 'Éves edzésterv és periodizáció',
-      color: 'bg-purple-500',
-    },
-    {
-      id: 'calendar',
-      name: 'Edzésnaptár',
-      icon: CalendarDays,
-      description: 'Interaktív naptár nézet',
-      color: 'bg-purple-500',
-    },
-    {
-      id: 'exercises',
-      name: 'Gyakorlat Könyvtár',
-      icon: Dumbbell,
-      description: 'Kondicionális gyakorlatok',
-      color: 'bg-purple-500',
-    },
-    {
-      id: 'templates',
-      name: 'Edzéssablonok',
-      icon: Clipboard,
-      description: 'Újrafelhasználható programok',
-      color: 'bg-purple-500',
-    },
-    {
-      id: 'matches',
-      name: 'Mérkőzések',
-      icon: Medal,
-      description: 'Mérkőzések és eredmények',
-      color: 'bg-purple-500',
-    },
-    {
-      id: 'measurement',
-      name: 'Mérési modul',
-      icon: BarChart3,
-      description: 'Teljesítménymérések',
-      color: 'bg-emerald-500',
-    },
-    {
-      id: 'trainingload',
-      name: '1RM Kalkulátor',
-      icon: Calculator,
-      description: 'Terhelés százalékok',
-      color: 'bg-emerald-500',
-    },
-    {
-      id: 'leaderboard',
-      name: 'Ranglista',
-      icon: Trophy,
-      description: 'Testsúly arányos erő',
-      color: 'bg-emerald-500',
-    },
-    {
-      id: 'progress',
-      name: 'Progresszió',
-      icon: TrendingUp,
-      description: 'Játékos fejlődés követése',
-      color: 'bg-emerald-500',
-    },
-    {
-      id: 'rehab',
-      name: 'Rehabilitáció',
-      icon: Heart,
-      description: 'Sérülések és gyógyulás',
-      color: 'bg-red-500',
-    },
-  ]
+  const location = useLocation()
 
   const visibleModules = permissionsLoading
     ? modules
@@ -221,7 +227,9 @@ function DashboardContent({
         return isModuleVisible(currentUserPermissions, permissionKey)
       })
 
-  const activeModuleData = modules.find((m) => m.id === activeModule)
+  // Derive the current module from the URL for the header title/description.
+  const currentModule =
+    [...modules, profileModule].find((m) => m.path === location.pathname) || modules[0]
 
   return (
     <div className="min-h-screen bg-slate-900">
@@ -268,20 +276,21 @@ function DashboardContent({
                 const Icon = module.icon
                 return (
                   <li key={module.id}>
-                    <button
-                      onClick={() => {
-                        setActiveModule(module.id)
-                        setSidebarOpen(false)
-                      }}
-                      className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
-                        activeModule === module.id
-                          ? 'bg-primary-600 text-white shadow-lg'
-                          : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-                      }`}
+                    <NavLink
+                      to={module.path}
+                      end={module.id === 'home'}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        `w-full flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${
+                          isActive
+                            ? 'bg-primary-600 text-white shadow-lg'
+                            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                        }`
+                      }
                     >
                       <Icon className="w-4 h-4" />
                       <span className="text-sm">{module.name}</span>
-                    </button>
+                    </NavLink>
                   </li>
                 )
               })}
@@ -290,12 +299,14 @@ function DashboardContent({
 
           {/* User Profile */}
           <div className="p-3 border-t border-slate-700">
-            <button
-              onClick={() => {
-                setActiveModule('profile')
-                setSidebarOpen(false)
-              }}
-              className="w-full flex items-center space-x-2 mb-2 p-1.5 rounded-lg hover:bg-slate-700 transition-colors"
+            <NavLink
+              to={profileModule.path}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `w-full flex items-center space-x-2 mb-2 p-1.5 rounded-lg transition-colors ${
+                  isActive ? 'bg-slate-700' : 'hover:bg-slate-700'
+                }`
+              }
             >
               <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
                 <User className="w-4 h-4 text-slate-300" />
@@ -306,7 +317,7 @@ function DashboardContent({
                 </p>
                 <p className="text-xs text-slate-400">{getRoleLabel(userRole)}</p>
               </div>
-            </button>
+            </NavLink>
             <button
               onClick={handleSignOut}
               className="w-full flex items-center justify-center space-x-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
@@ -332,9 +343,9 @@ function DashboardContent({
               </button>
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-white">
-                  {activeModuleData?.name}
+                  {currentModule?.name}
                 </h1>
-                <p className="text-sm text-slate-400 hidden sm:block">{activeModuleData?.description}</p>
+                <p className="text-sm text-slate-400 hidden sm:block">{currentModule?.description}</p>
               </div>
             </div>
 
@@ -345,125 +356,10 @@ function DashboardContent({
           </div>
         </header>
 
-        {/* Content Area */}
+        {/* Content Area - nested module routes render here via <Outlet>.
+            One Suspense wraps the Outlet so it covers every lazy module. */}
         <Suspense fallback={<LoadingSpinner />}>
-        {activeModule === 'rehab' ? (
-          <Rehabilitation />
-        ) : activeModule === 'macrocycle' ? (
-          <MacrocyclePlanner />
-        ) : activeModule === 'teams' ? (
-          <Teams />
-        ) : activeModule === 'calendar' ? (
-          <Calendar />
-        ) : activeModule === 'measurement' ? (
-          <Measurements session={session} />
-        ) : activeModule === 'leaderboard' ? (
-          <Leaderboard />
-        ) : activeModule === 'exercises' ? (
-          <ExerciseLibrary />
-        ) : activeModule === 'templates' ? (
-          <TrainingTemplates />
-        ) : activeModule === 'matches' ? (
-          <Matches />
-        ) : activeModule === 'trainingload' ? (
-          <TrainingLoad />
-        ) : activeModule === 'progress' ? (
-          <PlayerProgress />
-        ) : activeModule === 'profile' ? (
-          <main className="p-6">
-            <Profile session={session} />
-          </main>
-        ) : (
-          <main className="p-6">
-            {activeModule === 'home' && (
-              <div className="space-y-6">
-                {/* Welcome Card */}
-                <div className="card">
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    Üdvözöllek a TeamFlow-ban! 👋
-                  </h2>
-                  <p className="text-slate-300 mb-4">
-                    Kezdj el dolgozni a csapatod menedzselésével. Válassz egy modult a bal oldali menüből.
-                  </p>
-                  <div className="flex items-center space-x-2 text-primary-400">
-                    <span className="text-sm font-medium">
-                      Bejelentkezve: {session.user.email}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Quick Access Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {visibleModules.slice(1).map((module) => {
-                    const Icon = module.icon
-                    return (
-                      <button
-                        key={module.id}
-                        onClick={() => setActiveModule(module.id)}
-                        className="card hover:border-primary-500 transition-all duration-200 group text-left"
-                      >
-                        <div
-                          className={`w-12 h-12 ${module.color} rounded-lg flex items-center justify-center mb-4`}
-                        >
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white mb-2 group-hover:text-primary-400 transition-colors">
-                          {module.name}
-                        </h3>
-                        <p className="text-sm text-slate-400 mb-3">{module.description}</p>
-                        <div className="flex items-center text-primary-400 text-sm font-medium">
-                          Megnyitás
-                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* Info Card */}
-                <div className="card bg-gradient-to-r from-primary-900/30 to-purple-900/30 border-primary-700">
-                  <h3 className="text-lg font-bold text-white mb-2">
-                    🚀 Következő lépések
-                  </h3>
-                  <ul className="space-y-2 text-slate-300">
-                    <li className="flex items-start">
-                      <ChevronRight className="w-5 h-5 text-primary-400 mr-2 flex-shrink-0 mt-0.5" />
-                      <span>Hozd létre az első csapatodat és add hozzá a játékosokat</span>
-                    </li>
-                    <li className="flex items-start">
-                      <ChevronRight className="w-5 h-5 text-primary-400 mr-2 flex-shrink-0 mt-0.5" />
-                      <span>Készíts edzéstervet és oszd meg a csapattal</span>
-                    </li>
-                    <li className="flex items-start">
-                      <ChevronRight className="w-5 h-5 text-primary-400 mr-2 flex-shrink-0 mt-0.5" />
-                      <span>Rögzítsd a játékosok mérési eredményeit</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {activeModule !== 'home' && (
-              <div className="card text-center py-12">
-                <div
-                  className={`w-16 h-16 ${activeModuleData?.color} rounded-2xl flex items-center justify-center mx-auto mb-4`}
-                >
-                  {activeModuleData && <activeModuleData.icon className="w-8 h-8 text-white" />}
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  {activeModuleData?.name}
-                </h2>
-                <p className="text-slate-400 mb-6 max-w-md mx-auto">
-                  Ez a modul jelenleg fejlesztés alatt áll. Hamarosan elérhető lesz!
-                </p>
-                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-slate-700 rounded-lg text-slate-300 text-sm">
-                  <span>🔨</span>
-                  <span>Hamarosan...</span>
-                </div>
-              </div>
-            )}
-          </main>
-        )}
+          <Outlet context={{ session, visibleModules }} />
         </Suspense>
       </div>
     </div>

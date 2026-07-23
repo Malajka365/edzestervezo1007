@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -8,6 +8,22 @@ import Dashboard from './pages/Dashboard'
 import JoinTeam from './pages/JoinTeam'
 import LoadingSpinner from './components/LoadingSpinner'
 import ErrorBoundary from './components/ErrorBoundary'
+
+// Dashboard module routes — lazy-loaded; one <Suspense> around the layout's
+// <Outlet> (in Dashboard.jsx) catches all of these.
+const DashboardHome = lazy(() => import('./pages/DashboardHome'))
+const Teams = lazy(() => import('./pages/Teams'))
+const MacrocyclePlanner = lazy(() => import('./pages/MacrocyclePlanner'))
+const Calendar = lazy(() => import('./pages/Calendar'))
+const ExerciseLibrary = lazy(() => import('./pages/ExerciseLibrary'))
+const TrainingTemplates = lazy(() => import('./pages/TrainingTemplates'))
+const Matches = lazy(() => import('./pages/Matches'))
+const Measurements = lazy(() => import('./pages/Measurements'))
+const TrainingLoad = lazy(() => import('./pages/TrainingLoad'))
+const Leaderboard = lazy(() => import('./pages/Leaderboard'))
+const PlayerProgress = lazy(() => import('./pages/PlayerProgress'))
+const Rehabilitation = lazy(() => import('./pages/Rehabilitation'))
+const Profile = lazy(() => import('./pages/Profile'))
 
 // Module-scoped QueryClient — created once for the app's lifetime so the cache
 // survives module (route) switches. Sane defaults for a team-management app:
@@ -83,7 +99,30 @@ function App() {
           <Route
             path="/dashboard"
             element={session ? <Dashboard session={session} /> : <Navigate to="/auth" replace />}
-          />
+          >
+            <Route index element={<DashboardHome />} />
+            <Route path="csapatok" element={<Teams />} />
+            <Route path="makrociklus" element={<MacrocyclePlanner />} />
+            <Route path="naptar" element={<Calendar />} />
+            <Route path="gyakorlatok" element={<ExerciseLibrary />} />
+            <Route path="sablonok" element={<TrainingTemplates />} />
+            <Route path="merkozesek" element={<Matches />} />
+            <Route path="meresek" element={<Measurements session={session} />} />
+            <Route path="kalkulator" element={<TrainingLoad />} />
+            <Route path="ranglista" element={<Leaderboard />} />
+            <Route path="progresszio" element={<PlayerProgress />} />
+            <Route path="rehabilitacio" element={<Rehabilitation />} />
+            <Route
+              path="profil"
+              element={
+                <main className="p-6">
+                  <Profile session={session} />
+                </main>
+              }
+            />
+            {/* Unknown /dashboard/* slug → back to the dashboard home */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
           <Route path="/" element={<Navigate to={session ? "/dashboard" : "/auth"} replace />} />
         </Routes>
       </ErrorBoundary>
