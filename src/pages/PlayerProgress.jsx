@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { usePlayers } from '../hooks/usePlayers'
+import { useExercises } from '../hooks/useExercises'
 import {
   TrendingUp,
   Users,
@@ -31,7 +32,8 @@ export default function PlayerProgress() {
   const { selectedTeam } = useTeams()
   // Players come from the shared, cached usePlayers query (was a local fetch).
   const { data: players = [] } = usePlayers(selectedTeam?.id)
-  const [exercises, setExercises] = useState([])
+  // Exercises come from the shared, cached useExercises query (was a local fetch).
+  const { data: exercises = [] } = useExercises()
   const [selectedPlayer, setSelectedPlayer] = useState('')
   const [selectedExercise, setSelectedExercise] = useState('')
   const [dateFrom, setDateFrom] = useState('')
@@ -42,30 +44,10 @@ export default function PlayerProgress() {
   const chartRef = useRef(null)
 
   useEffect(() => {
-    if (selectedTeam) {
-      fetchExercises()
-    }
-  }, [selectedTeam])
-
-  useEffect(() => {
     if (selectedPlayer && selectedExercise) {
       fetchMeasurements()
     }
   }, [selectedPlayer, selectedExercise, dateFrom, dateTo])
-
-  const fetchExercises = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setExercises(data || [])
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-    }
-  }
 
   const fetchMeasurements = async () => {
     setLoading(true)

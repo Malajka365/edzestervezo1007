@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { usePlayers } from '../hooks/usePlayers'
+import { useExercises } from '../hooks/useExercises'
 import {
   Trophy,
   Medal,
@@ -21,41 +22,32 @@ export default function Leaderboard() {
   // Players come from the shared, cached usePlayers query (was fetched inline
   // inside fetchLeaderboard). The leaderboard is recomputed once they load.
   const { data: players = [] } = usePlayers(selectedTeam?.id)
-  const [exercises, setExercises] = useState([])
+  // Exercises come from the shared, cached useExercises query. The leaderboard
+  // only ranks weight-based lifts, so filter to `unit === 'kg'` (excluding the
+  // player_params catalog) client-side — the same subset the old inline fetch
+  // returned, preserving the name ordering the hook already applies.
+  const { data: allExercises = [] } = useExercises()
+  const exercises = useMemo(
+    () => allExercises.filter((e) => e.unit === 'kg' && e.category !== 'player_params'),
+    [allExercises]
+  )
   const [selectedExercise, setSelectedExercise] = useState('')
   const [leaderboardData, setLeaderboardData] = useState([])
   const [loading, setLoading] = useState(false)
 
+  // Auto-select the first exercise once the catalog loads (was done inside the
+  // old fetchExercises). Only sets a default when nothing is selected yet.
   useEffect(() => {
-    if (selectedTeam) {
-      fetchExercises()
+    if (exercises.length > 0 && !selectedExercise) {
+      setSelectedExercise(exercises[0].id)
     }
-  }, [selectedTeam])
+  }, [exercises, selectedExercise])
 
   useEffect(() => {
     if (selectedExercise && selectedTeam && players.length > 0) {
       fetchLeaderboard()
     }
   }, [selectedExercise, selectedTeam, players])
-
-  const fetchExercises = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('*')
-        .eq('unit', 'kg')
-        .neq('category', 'player_params')
-        .order('name')
-
-      if (error) throw error
-      setExercises(data || [])
-      if (data && data.length > 0) {
-        setSelectedExercise(data[0].id)
-      }
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-    }
-  }
 
   const fetchLeaderboard = async () => {
     setLoading(true)

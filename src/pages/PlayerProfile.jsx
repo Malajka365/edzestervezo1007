@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useExercises } from '../hooks/useExercises'
 import LoadingSpinner from '../components/LoadingSpinner'
 import {
   User,
@@ -38,7 +39,8 @@ export default function PlayerProfile({ player, onBack }) {
     latestHeight: null,
     best1RMs: [],
   })
-  const [exercises, setExercises] = useState([])
+  // Exercises come from the shared, cached useExercises query (was a local fetch).
+  const { data: exercises = [] } = useExercises()
   const [selectedExercise, setSelectedExercise] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -55,9 +57,16 @@ export default function PlayerProfile({ player, onBack }) {
   useEffect(() => {
     if (player) {
       fetchPlayerData()
-      fetchExercises()
     }
   }, [player])
+
+  // Auto-select the first exercise once the catalog loads (was done inside the
+  // old fetchExercises).
+  useEffect(() => {
+    if (exercises.length > 0 && !selectedExercise) {
+      setSelectedExercise(exercises[0].id)
+    }
+  }, [exercises, selectedExercise])
 
   useEffect(() => {
     if (player && selectedExercise) {
@@ -113,25 +122,6 @@ export default function PlayerProfile({ player, onBack }) {
       console.error('Error fetching player data:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchExercises = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('*')
-        .order('name')
-
-      if (error) throw error
-      setExercises(data || [])
-      
-      // Auto-select first exercise
-      if (data && data.length > 0 && !selectedExercise) {
-        setSelectedExercise(data[0].id)
-      }
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
     }
   }
 

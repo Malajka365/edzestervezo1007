@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
 import { usePlayers } from '../hooks/usePlayers'
+import { useExercises } from '../hooks/useExercises'
 import { canEditModule } from '../lib/permissions'
 import {
   BarChart3,
@@ -29,10 +31,13 @@ import toast from 'react-hot-toast'
 export default function Measurements({ session }) {
   const { selectedTeam, currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'measurement')
+  const queryClient = useQueryClient()
   const [measurements, setMeasurements] = useState([])
   // Players come from the shared, cached usePlayers query (was a local fetch).
   const { data: players = [] } = usePlayers(selectedTeam?.id)
-  const [exercises, setExercises] = useState([])
+  // Exercises come from the shared, cached useExercises query (was a local
+  // fetch). Mutations below invalidate ['exercises'] to refresh every screen.
+  const { data: exercises = [] } = useExercises()
   const [loading, setLoading] = useState(false)
   const [confirmState, setConfirmState] = useState(null)
   
@@ -77,7 +82,6 @@ export default function Measurements({ session }) {
 
   useEffect(() => {
     if (selectedTeam) {
-      fetchExercises()
       fetchMeasurements()
     }
   }, [selectedTeam])
@@ -87,20 +91,6 @@ export default function Measurements({ session }) {
       fetchMeasurements()
     }
   }, [filters, sortField, sortDirection])
-
-  const fetchExercises = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('*')
-        .eq('created_by', session.user.id)
-        .order('name')
-      if (error) throw error
-      setExercises(data || [])
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-    }
-  }
 
   const fetchMeasurements = async () => {
     if (!selectedTeam) return
@@ -151,7 +141,7 @@ export default function Measurements({ session }) {
           .select()
           .single()
         if (error) throw error
-        setExercises(exercises.map(ex => ex.id === editingExercise.id ? data : ex))
+        queryClient.invalidateQueries({ queryKey: ['exercises'] })
         toast.success('Gyakorlat sikeresen frissítve!')
       } else {
         // Create new exercise
@@ -161,7 +151,7 @@ export default function Measurements({ session }) {
           .select()
           .single()
         if (error) throw error
-        setExercises([...exercises, data])
+        queryClient.invalidateQueries({ queryKey: ['exercises'] })
         toast.success('Gyakorlat sikeresen létrehozva!')
       }
       setShowExerciseModal(false)
@@ -183,7 +173,7 @@ export default function Measurements({ session }) {
             .delete()
             .eq('id', exerciseId)
           if (error) throw error
-          setExercises(exercises.filter(ex => ex.id !== exerciseId))
+          queryClient.invalidateQueries({ queryKey: ['exercises'] })
           toast.success('Gyakorlat sikeresen törölve!')
         } catch (error) {
           console.error('Error deleting exercise:', error)

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { usePlayers } from '../hooks/usePlayers'
+import { useExercises } from '../hooks/useExercises'
 import {
   Calculator,
   Download,
@@ -12,13 +13,19 @@ import {
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
 import LoadingSpinner from '../components/LoadingSpinner'
-import toast from 'react-hot-toast'
 import { exportTablePdf } from '../lib/pdfExport'
 
 export default function TrainingLoad() {
   const { selectedTeam } = useTeams()
   const [loading, setLoading] = useState(false)
-  const [exercises, setExercises] = useState([])
+  // Exercises come from the shared, cached useExercises query. This screen only
+  // works with weight-based lifts, so filter to `unit === 'kg'` client-side —
+  // the same subset the old inline fetch returned (already ordered by name).
+  const { data: allExercises = [] } = useExercises()
+  const exercises = useMemo(
+    () => allExercises.filter((e) => e.unit === 'kg'),
+    [allExercises]
+  )
   const [selectedExercise, setSelectedExercise] = useState('')
   // Players come from the shared, cached usePlayers query (was a local fetch).
   // That query orders by name; this screen displayed players by jersey number,
@@ -42,32 +49,10 @@ export default function TrainingLoad() {
   const percentages = [97.5, 95, 92.5, 90, 87.5, 85, 82.5, 80, 75, 70, 65, 60, 55, 50]
 
   useEffect(() => {
-    if (selectedTeam) {
-      fetchExercises()
-    }
-  }, [selectedTeam])
-
-  useEffect(() => {
     if (selectedExercise && players.length > 0) {
       fetchLatest1RM()
     }
   }, [selectedExercise, players])
-
-  const fetchExercises = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('*')
-        .eq('unit', 'kg')
-        .order('name')
-
-      if (error) throw error
-      setExercises(data || [])
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    }
-  }
 
   const fetchLatest1RM = async () => {
     setLoading(true)
