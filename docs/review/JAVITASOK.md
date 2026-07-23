@@ -28,7 +28,7 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | F1b | D1 — Reszponzivitás (Auth/JoinTeam/Profile/TeamMembersPanel) | ✅ KÉSZ | `7acd4fc` | Mátrix mobil-kártyanézettel; 375px-en élőben tesztelve |
 | F2a | KT1/2 — ConfirmDialog + 15 confirm() csere | ✅ KÉSZ | `8c4a051` | 15 hely, 13 fájl; élőben tesztelve (modál nyit/zár) |
 | F2b | D2 — Dashboard kártyaszínek 10→4 kategória | ✅ KÉSZ | `23bfd84` | kék=csapat, lila=tervezés, zöld=mérés, piros=rehab |
-| F3 | D3+D4 — Loading egységesítés + üres állapotok | ⏳ | — | |
+| F3 | D3+D4 — Loading egységesítés + üres állapotok | ✅ KÉSZ | `1d133ee` + `fe5c1ed` | 9 loading csere, EmptyState 3 oldalon (4 oldalon már volt jó) |
 | F4 | KT5 — canEditModule a maradék 8 modulba | ⏳ | — | |
 | F5 | KT4 — Duplikációk (naptárak, PDF util) | ⏳ | — | |
 | F6 | KT2 — Óriásfájlok darabolása (4 fájl, sorban) | ⏳ | — | |
