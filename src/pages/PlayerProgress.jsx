@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { usePlayers } from '../hooks/usePlayers'
 import {
   TrendingUp,
   Users,
@@ -24,12 +25,12 @@ import {
   ReferenceDot,
   ReferenceArea,
 } from 'recharts'
-import toast from 'react-hot-toast'
 import { exportTablePdf } from '../lib/pdfExport'
 
 export default function PlayerProgress() {
   const { selectedTeam } = useTeams()
-  const [players, setPlayers] = useState([])
+  // Players come from the shared, cached usePlayers query (was a local fetch).
+  const { data: players = [] } = usePlayers(selectedTeam?.id)
   const [exercises, setExercises] = useState([])
   const [selectedPlayer, setSelectedPlayer] = useState('')
   const [selectedExercise, setSelectedExercise] = useState('')
@@ -42,7 +43,6 @@ export default function PlayerProgress() {
 
   useEffect(() => {
     if (selectedTeam) {
-      fetchPlayers()
       fetchExercises()
     }
   }, [selectedTeam])
@@ -52,22 +52,6 @@ export default function PlayerProgress() {
       fetchMeasurements()
     }
   }, [selectedPlayer, selectedExercise, dateFrom, dateTo])
-
-  const fetchPlayers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .order('name')
-
-      if (error) throw error
-      setPlayers(data || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    }
-  }
 
   const fetchExercises = async () => {
     try {

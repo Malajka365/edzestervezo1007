@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
+import { usePlayers } from '../hooks/usePlayers'
 import { canEditModule } from '../lib/permissions'
 import {
   BarChart3,
@@ -29,7 +30,8 @@ export default function Measurements({ session }) {
   const { selectedTeam, currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'measurement')
   const [measurements, setMeasurements] = useState([])
-  const [players, setPlayers] = useState([])
+  // Players come from the shared, cached usePlayers query (was a local fetch).
+  const { data: players = [] } = usePlayers(selectedTeam?.id)
   const [exercises, setExercises] = useState([])
   const [loading, setLoading] = useState(false)
   const [confirmState, setConfirmState] = useState(null)
@@ -75,7 +77,6 @@ export default function Measurements({ session }) {
 
   useEffect(() => {
     if (selectedTeam) {
-      fetchPlayers()
       fetchExercises()
       fetchMeasurements()
     }
@@ -86,21 +87,6 @@ export default function Measurements({ session }) {
       fetchMeasurements()
     }
   }, [filters, sortField, sortDirection])
-
-  const fetchPlayers = async () => {
-    if (!selectedTeam) return
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .order('name')
-      if (error) throw error
-      setPlayers(data || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
-    }
-  }
 
   const fetchExercises = async () => {
     try {

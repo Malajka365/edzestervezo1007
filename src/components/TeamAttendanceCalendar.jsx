@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { usePlayers } from '../hooks/usePlayers'
 import { ChevronLeft, ChevronRight, Users, X, Save, Trash2, Calendar, CalendarDays, CalendarRange, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
@@ -15,7 +16,9 @@ import {
 export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [attendance, setAttendance] = useState([])
-  const [players, setPlayers] = useState([])
+  // Players come from the shared, cached usePlayers query (was a local fetch).
+  // Keyed by teamId, so this shares the same cache entry as the parent screens.
+  const { data: players = [] } = usePlayers(teamId)
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [selectedDate, setSelectedDate] = useState(null)
@@ -32,25 +35,9 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
 
   useEffect(() => {
     if (teamId) {
-      fetchPlayers()
       fetchAttendance()
     }
   }, [currentDate, teamId])
-
-  const fetchPlayers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('id, name, jersey_number')
-        .eq('team_id', teamId)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      setPlayers(data || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
-    }
-  }
 
   const fetchAttendance = async () => {
     setLoading(true)

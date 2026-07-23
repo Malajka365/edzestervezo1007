@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { usePlayers } from '../hooks/usePlayers'
 import {
   Calculator,
   Download,
@@ -19,7 +20,22 @@ export default function TrainingLoad() {
   const [loading, setLoading] = useState(false)
   const [exercises, setExercises] = useState([])
   const [selectedExercise, setSelectedExercise] = useState('')
-  const [players, setPlayers] = useState([])
+  // Players come from the shared, cached usePlayers query (was a local fetch).
+  // That query orders by name; this screen displayed players by jersey number,
+  // so re-sort locally to preserve the historical row order.
+  const { data: playersRaw = [] } = usePlayers(selectedTeam?.id)
+  // Memoized so the reference is stable across renders — the fetchLatest1RM
+  // effect below depends on `players`, so a fresh array each render would loop.
+  const players = useMemo(
+    () =>
+      [...playersRaw].sort((a, b) => {
+        if (a.jersey_number == null && b.jersey_number == null) return 0
+        if (a.jersey_number == null) return 1
+        if (b.jersey_number == null) return -1
+        return Number(a.jersey_number) - Number(b.jersey_number)
+      }),
+    [playersRaw]
+  )
   const [calculations, setCalculations] = useState([])
 
   // Percentage columns to display (descending order, excluding 100% as it equals 1RM)
@@ -28,7 +44,6 @@ export default function TrainingLoad() {
   useEffect(() => {
     if (selectedTeam) {
       fetchExercises()
-      fetchPlayers()
     }
   }, [selectedTeam])
 
@@ -51,21 +66,6 @@ export default function TrainingLoad() {
     } catch (error) {
       console.error('Error fetching exercises:', error)
       toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    }
-  }
-
-  const fetchPlayers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .order('jersey_number')
-
-      if (error) throw error
-      setPlayers(data || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
     }
   }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { usePlayers } from '../hooks/usePlayers'
 import { canEditModule } from '../lib/permissions'
 import PlayerProfileRehab from './PlayerProfileRehab'
 import TeamAttendanceCalendar from '../components/TeamAttendanceCalendar'
@@ -19,14 +20,13 @@ import {
 import TeamSelector from '../components/TeamSelector'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
-import toast from 'react-hot-toast'
 
 export default function Rehabilitation() {
   const { selectedTeam, currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'rehab')
-  const [players, setPlayers] = useState([])
+  // Players come from the shared, cached usePlayers query (was a local fetch).
+  const { data: players = [], isLoading: loading } = usePlayers(selectedTeam?.id)
   const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [playerActiveTab, setPlayerActiveTab] = useState('overview')
@@ -38,7 +38,6 @@ export default function Rehabilitation() {
 
   useEffect(() => {
     if (selectedTeam) {
-      fetchPlayers()
       fetchStats()
     }
   }, [selectedTeam])
@@ -48,27 +47,6 @@ export default function Rehabilitation() {
       fetchStats()
     }
   }, [players])
-
-  const fetchPlayers = async () => {
-    if (!selectedTeam) return
-    
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      setPlayers(data || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const fetchStats = async () => {
     if (!selectedTeam) return

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
+import { usePlayers } from '../hooks/usePlayers'
 import { canEditModule } from '../lib/permissions'
 import PlayerProfile from './PlayerProfile'
 import TrainingLocations from '../components/TrainingLocations'
@@ -28,8 +30,10 @@ import toast from 'react-hot-toast'
 export default function Teams() {
   const { teams, selectedTeam, createTeam, updateTeam, deleteTeam, isTeamOwner, currentUserPermissions } = useTeams()
   const canEditPlayers = canEditModule(currentUserPermissions, 'players')
-  const [players, setPlayers] = useState([])
-  const [loadingPlayers, setLoadingPlayers] = useState(false)
+  const queryClient = useQueryClient()
+  // Players now come from the shared, cached usePlayers query. Mutations below
+  // invalidate ['players', selectedTeam.id] so every screen refetches fresh.
+  const { data: players = [], isLoading: loadingPlayers } = usePlayers(selectedTeam?.id)
   const [confirmState, setConfirmState] = useState(null)
   const [showTeamModal, setShowTeamModal] = useState(false)
   const [showPlayerModal, setShowPlayerModal] = useState(false)
@@ -47,33 +51,11 @@ export default function Teams() {
     notes: '',
   })
 
-  // Fetch players when selected team changes
-  useEffect(() => {
+  // Invalidate the shared players cache so every screen (this one included)
+  // refetches the up-to-date roster after a create/update/delete.
+  const invalidatePlayers = () => {
     if (selectedTeam) {
-      fetchPlayers()
-    } else {
-      setPlayers([])
-    }
-  }, [selectedTeam])
-
-  const fetchPlayers = async () => {
-    if (!selectedTeam) return
-    
-    try {
-      setLoadingPlayers(true)
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .order('jersey_number', { ascending: true })
-
-      if (error) throw error
-      setPlayers(data || [])
-    } catch (error) {
-      console.error('Error fetching players:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    } finally {
-      setLoadingPlayers(false)
+      queryClient.invalidateQueries({ queryKey: ['players', selectedTeam.id] })
     }
   }
 
@@ -128,7 +110,7 @@ export default function Teams() {
 
       if (error) throw error
 
-      setPlayers([...players, data])
+      invalidatePlayers()
       setShowPlayerModal(false)
       setPlayerForm({
         name: '',
@@ -157,7 +139,7 @@ export default function Teams() {
 
       if (error) throw error
 
-      setPlayers(players.map(p => p.id === editingPlayer.id ? data : p))
+      invalidatePlayers()
       setShowPlayerModal(false)
       setEditingPlayer(null)
       setPlayerForm({
@@ -185,7 +167,7 @@ export default function Teams() {
 
           if (error) throw error
 
-          setPlayers(players.filter(p => p.id !== playerId))
+          invalidatePlayers()
         } catch (error) {
           console.error('Error deleting player:', error)
           toast.error('Hiba történt a játékos törlésekor')
@@ -223,12 +205,20 @@ export default function Teams() {
     })
   }
 
-  // Filter players based on search query
-  const filteredPlayers = players.filter((player) =>
-    player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (player.jersey_number && player.jersey_number.toString().includes(searchQuery)) ||
-    (player.position && player.position.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  // The shared usePlayers query orders by name; this screen historically
+  // displayed players by jersey number, so re-sort locally to preserve that.
+  const filteredPlayers = players
+    .filter((player) =>
+      player.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (player.jersey_number && player.jersey_number.toString().includes(searchQuery)) ||
+      (player.position && player.position.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (a.jersey_number == null && b.jersey_number == null) return 0
+      if (a.jersey_number == null) return 1
+      if (b.jersey_number == null) return -1
+      return Number(a.jersey_number) - Number(b.jersey_number)
+    })
 
   // If a player is selected, show their profile
   if (selectedPlayer) {

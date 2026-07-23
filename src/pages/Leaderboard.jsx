@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { usePlayers } from '../hooks/usePlayers'
 import {
   Trophy,
   Medal,
@@ -17,6 +18,9 @@ import { exportTablePdf } from '../lib/pdfExport'
 
 export default function Leaderboard() {
   const { selectedTeam } = useTeams()
+  // Players come from the shared, cached usePlayers query (was fetched inline
+  // inside fetchLeaderboard). The leaderboard is recomputed once they load.
+  const { data: players = [] } = usePlayers(selectedTeam?.id)
   const [exercises, setExercises] = useState([])
   const [selectedExercise, setSelectedExercise] = useState('')
   const [leaderboardData, setLeaderboardData] = useState([])
@@ -29,10 +33,10 @@ export default function Leaderboard() {
   }, [selectedTeam])
 
   useEffect(() => {
-    if (selectedExercise && selectedTeam) {
+    if (selectedExercise && selectedTeam && players.length > 0) {
       fetchLeaderboard()
     }
-  }, [selectedExercise, selectedTeam])
+  }, [selectedExercise, selectedTeam, players])
 
   const fetchExercises = async () => {
     try {
@@ -56,13 +60,7 @@ export default function Leaderboard() {
   const fetchLeaderboard = async () => {
     setLoading(true)
     try {
-      // Get all players from the team
-      const { data: players, error: playersError } = await supabase
-        .from('players')
-        .select('id, name, jersey_number')
-        .eq('team_id', selectedTeam.id)
-
-      if (playersError) throw playersError
+      // Players come from the shared usePlayers hook (see component top).
 
       // Get latest body weight for each player
       const { data: bodyWeights, error: weightError } = await supabase
