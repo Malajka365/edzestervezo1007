@@ -24,7 +24,7 @@ A TeamFlow egy **jó alapokon álló, működő** alkalmazás: modern eszközök
 - **Státusz:** A review során azonnal javítva (`.gitignore`-ba került). **Javaslat:** a mappát idővel költöztesd a projekten kívülre (pl. Dokumentumok/Backups), a repo-ban semmi keresnivalója.
 - **Munka:** kész / 2 perc a költöztetés. **Hatás:** adatvédelmi katasztrófa elkerülése.
 
-### K2. Négy adatbázis-tábla védelme nincs verziókövetve
+### K2. Négy adatbázis-tábla védelme nincs verziókövetve ✅ JAVÍTVA (2026-07-20, migráció: 20260720121000)
 - **Mi:** A `training_exercises`, `exercises`, `user_exercise_favorites`, `profiles` táblákra egyik migrációs fájl sem ír RLS-védelmet (RLS = az adatbázis sorszintű "ki mit láthat" szabályai). Lehet, hogy a Supabase felületén kézzel be vannak állítva — de ez a kódból nem ellenőrizhető, és egy új környezetbe telepítésnél elveszne. A `profiles`-nál pl. az a kockázat, hogy bárki kiolvashatná az összes felhasználó nevét/e-mail címét.
 - **Mit tenni:** egy migrációs fájlban rögzíteni mind a négy tábla RLS-ét (a meglévő minta másolható), majd élesben ellenőrizni.
 - **Munka:** ~1-2 óra. **Hatás:** adatszivárgás-kockázat megszűnik, telepítés reprodukálható.
