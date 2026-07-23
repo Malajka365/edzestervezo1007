@@ -62,4 +62,4 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | G2a | Jelszó-szabály: min 10 kar + erősség-jelző | ✅ KÉSZ | `3b9967b` | + teendő: Supabase Dashboardon szerver-oldali minimum 10-re |
 | G2b | Meghívó e-mail-címhez kötése | ✅ KÉSZ | `586f111`+`60a2a4d` | Élő teszt: rossz e-mail elutasítva, régi (NULL) meghívók működnek |
 | G3 | MacrocyclePlanner data-hook (F6 Step 2) | ✅ KÉSZ | `70ae14b` | 1552→1225 sor, useMacrocycleData hook; Opus review CLEAN (6/6 success-flag audit, stale-closure SAFE) + élő teszt |
-| G4 | TypeScript infra (allowJs) | ⏳ | — | |
+| G4 | TypeScript infra (allowJs) | ✅ KÉSZ | `8e98fa7` | typecheck 0 hiba, régi .jsx nem ellenőrzött; új .ts+.test.ts működik. Megj: typescript@7 preview települt |
