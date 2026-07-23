@@ -71,3 +71,13 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | H1 | Calendar data-hook (useCalendarData) | ✅ KÉSZ | `ab81cd7` | 819→399 sor; Opus review CLEAN (debounce-mentés functional setState, 0 stale-closure) + élő teszt |
 | H2 | Measurements data-hook | ✅ KÉSZ | `45a038c` | 659→538 sor; Opus review CLEAN (3/3 exercises-invalidáció, selectedPlayers nem elejtett) + élő teszt |
 | H3 | ExerciseLibrary data-hook | ✅ KÉSZ | `80f4072` | 806→675 sor; Opus review CLEAN (kedvenc-irány + tábla-integritás igazolva) + élő teszt |
+
+## 5. kör — Testreszabható widget-dashboard (I-fázis)
+
+| Fázis | Feladat | Státusz | Commit | Megjegyzés |
+|---|---|---|---|---|
+| I1 | Alapok: user_dashboard_prefs (RLS) + registry + prefs-hook + DashboardHome átírás | ✅ KÉSZ | `0da2671`+`a1822d2` | Migráció élesben; régi modul-rács eltávolítva |
+| I2A | 5 default widget (7 nap, meccs, jelenlét, rehab, gyors műveletek) | ✅ KÉSZ | `a469ed7` | Oszlopok valós lekérdezésekből |
+| I2B | 4 widget (mérések, ranglista top3, szezon, csapat) | ✅ KÉSZ | `9dbc0c4` | Ranglista: egyszerűsített 1RM, őszintén címkézve |
+| I3 | Testreszabó szerkesztő (ki/be + sorrend + alaphelyzet) | ✅ KÉSZ | `e207418` | Élő E2E: toggle→mentés→toast→rács frissül→DB perzisztál |
+| I4 | Záró Opus review + javítások | ✅ KÉSZ | (fix commit) | 1 Important (UTC dátum-ablak eltolódás — minden nap rossz lett volna!) + 2 Minor javítva; RLS/permission-lánc/editor-integritás CLEAN |
