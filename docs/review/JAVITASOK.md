@@ -19,3 +19,17 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 - KT1 második fele: `confirm()` párbeszédek saját modálra cserélése (12 fájl)
 - KT2 — óriásfájlok darabolása · KT3 — React Query · KT4 — duplikált komponensek · KT5 — jogosultság-UI a többi 8 modulban
 - D1-D4 design/UX · GY4 code splitting · opcionális: URL-routing, TypeScript, tesztek, GDPR-csomag
+
+## 2. kör — hátralévő feladatok végrehajtása
+
+| Fázis | Feladat | Státusz | Commit | Megjegyzés |
+|---|---------|---------|--------|------------|
+| F1a | GY4 — Code splitting (React.lazy + lazy PDF libek) | ✅ KÉSZ | `34d928f` | Fő chunk 1,65 MB → 366 KB (39 chunk); élőben tesztelve |
+| F1b | D1 — Reszponzivitás (Auth/JoinTeam/Profile/TeamMembersPanel) | ✅ KÉSZ | `7acd4fc` | Mátrix mobil-kártyanézettel; 375px-en élőben tesztelve |
+| F2a | KT1/2 — ConfirmDialog + 15 confirm() csere | ⏳ | — | |
+| F2b | D2 — Dashboard kártyaszínek 10→4 kategória | ⏳ | — | |
+| F3 | D3+D4 — Loading egységesítés + üres állapotok | ⏳ | — | |
+| F4 | KT5 — canEditModule a maradék 8 modulba | ⏳ | — | |
+| F5 | KT4 — Duplikációk (naptárak, PDF util) | ⏳ | — | |
+| F6 | KT2 — Óriásfájlok darabolása (4 fájl, sorban) | ⏳ | — | |
+| F7 | KT3 — React Query adat-réteg | ⏳ | — | |
