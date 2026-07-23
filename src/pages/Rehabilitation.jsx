@@ -16,6 +16,8 @@ import {
   User,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import LoadingSpinner from '../components/LoadingSpinner'
+import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
 
 export default function Rehabilitation() {
@@ -270,15 +272,17 @@ export default function Rehabilitation() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto"></div>
-            <p className="text-slate-400 mt-4">Betöltés...</p>
-          </div>
+          <LoadingSpinner size="inline" />
         ) : filteredPlayers.length === 0 ? (
-          <div className="text-center py-12">
-            <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">Nincs találat</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title={searchQuery ? 'Nincs találat' : 'Még nincs játékos'}
+            description={
+              searchQuery
+                ? 'Próbálj meg más keresési kifejezést.'
+                : 'A csapatodhoz még nem tartozik játékos, akihez rehabilitációs adatot rögzíthetnél.'
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredPlayers.map((player) => (

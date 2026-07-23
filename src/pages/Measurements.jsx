@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
 
 export default function Measurements({ session }) {
@@ -520,13 +521,17 @@ export default function Measurements({ session }) {
             <BarChart3 className="w-8 h-8 text-primary-500 animate-pulse" />
           </div>
         ) : measurements.length === 0 ? (
-          <div className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">{hasActiveFilters ? 'Nincs találat' : 'Még nincs mérés'}</p>
-            <button onClick={() => setShowMeasurementModal(true)} className="mt-4 text-primary-400 hover:text-primary-300 text-sm font-medium">
-              Rögzíts egyet most
-            </button>
-          </div>
+          <EmptyState
+            icon={BarChart3}
+            title={hasActiveFilters ? 'Nincs találat' : 'Még nincs mérés'}
+            description={
+              hasActiveFilters
+                ? 'Próbálj meg más szűrőket használni.'
+                : 'Rögzíts egy mérést, hogy nyomon követhesd a játékosok fejlődését.'
+            }
+            actionLabel={hasActiveFilters ? undefined : 'Mérés rögzítése'}
+            onAction={hasActiveFilters ? undefined : () => setShowMeasurementModal(true)}
+          />
         ) : (
           <table className="w-full">
             <thead>

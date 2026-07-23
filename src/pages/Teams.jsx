@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
 
 export default function Teams() {
@@ -393,18 +394,13 @@ export default function Teams() {
               <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
             </div>
           ) : players.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400">Még nincs játékos ebben a csapatban</p>
-              {canEditPlayers && (
-                <button
-                  onClick={() => setShowPlayerModal(true)}
-                  className="mt-4 text-primary-400 hover:text-primary-300 text-sm font-medium"
-                >
-                  Adj hozzá egyet most
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon={Users}
+              title="Még nincs játékos"
+              description="Ebben a csapatban még nincs egyetlen játékos sem rögzítve."
+              actionLabel={canEditPlayers ? 'Játékos hozzáadása' : undefined}
+              onAction={canEditPlayers ? () => setShowPlayerModal(true) : undefined}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPlayers.map((player) => (
