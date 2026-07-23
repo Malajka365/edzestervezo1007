@@ -34,5 +34,5 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | F6-1 | KT2 — MacrocyclePlanner darabolás | ✅ KÉSZ | `397de9e` | -219 sor, 5 modál kiemelve; Opus review CLEAN + élő teszt |
 | F6-2 | KT2 — Calendar darabolás | ✅ KÉSZ | `6846b46` | 1548→819 sor, 3 nézet kiemelve; Opus review CLEAN (37 prop) + élő teszt |
 | F6-3 | KT2 — Measurements darabolás | ✅ KÉSZ | `78cfe4b` | 1224→683 sor, 5 modál; Opus review CLEAN (33 prop) + élő teszt |
-| F6-4 | KT2 — ExerciseLibrary darabolás | ⏳ | — | |
+| F6-4 | KT2 — ExerciseLibrary darabolás | ✅ KÉSZ | `001dd0d` | 1350→742 sor, create+edit modál; Opus review CLEAN (nincs swap) + élő teszt |
 | F7 | KT3 — React Query adat-réteg | ⏳ | — | |
