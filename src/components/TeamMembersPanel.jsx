@@ -14,6 +14,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
   const [loading, setLoading] = useState(true)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [inviteRole, setInviteRole] = useState('fitness_coach')
+  const [inviteEmail, setInviteEmail] = useState('')
   const [generatedLink, setGeneratedLink] = useState(null)
   const [permissions, setPermissions] = useState({}) // { [role]: { [module_key]: access_level } }
   const [savingPermissions, setSavingPermissions] = useState(false)
@@ -63,7 +64,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
       if (isOwner) {
         const { data: inviteData, error: inviteError } = await supabase
           .from('team_invites')
-          .select('id, token, role, expires_at, created_at')
+          .select('id, token, role, expires_at, created_at, invited_email')
           .eq('team_id', team.id)
           .is('used_at', null)
           .order('created_at', { ascending: false })
@@ -93,11 +94,18 @@ export default function TeamMembersPanel({ team, isOwner }) {
     }
   }
 
+  const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+
   const handleGenerateInvite = async () => {
     try {
       const { data, error } = await supabase
         .from('team_invites')
-        .insert({ team_id: team.id, role: inviteRole, created_by: (await supabase.auth.getUser()).data.user.id })
+        .insert({
+          team_id: team.id,
+          role: inviteRole,
+          invited_email: inviteEmail.trim().toLowerCase(),
+          created_by: (await supabase.auth.getUser()).data.user.id,
+        })
         .select()
         .single()
 
@@ -192,6 +200,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
               onClick={() => {
                 setShowInviteForm(true)
                 setGeneratedLink(null)
+                setInviteEmail('')
               }}
               className="btn btn-primary flex items-center gap-2"
             >
@@ -303,6 +312,9 @@ export default function TeamMembersPanel({ team, isOwner }) {
               <div key={inv.id} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
                 <div>
                   <p className="text-white font-medium">{roleLabel(inv.role)}</p>
+                  {inv.invited_email && (
+                    <p className="text-sm text-slate-300 break-all">{inv.invited_email}</p>
+                  )}
                   <p className="text-sm text-slate-400">
                     Lejár: {new Date(inv.expires_at).toLocaleDateString('hu-HU')}
                   </p>
@@ -329,6 +341,17 @@ export default function TeamMembersPanel({ team, isOwner }) {
             {!generatedLink ? (
               <div className="space-y-4">
                 <div>
+                  <label className="block text-sm font-medium text-white mb-2">Meghívott e-mail címe</label>
+                  <input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="pelda@email.hu"
+                    required
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-white mb-2">Szerepkör</label>
                   <select
                     value={inviteRole}
@@ -342,7 +365,11 @@ export default function TeamMembersPanel({ team, isOwner }) {
                     ))}
                   </select>
                 </div>
-                <button onClick={handleGenerateInvite} className="btn btn-primary w-full">
+                <button
+                  onClick={handleGenerateInvite}
+                  disabled={!isValidEmail(inviteEmail)}
+                  className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Meghívó link generálása
                 </button>
               </div>

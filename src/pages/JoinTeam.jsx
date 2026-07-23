@@ -64,7 +64,9 @@ export default function JoinTeam({ session }) {
       console.error('Error accepting invite:', error)
       setStatus('error')
       const message = error?.message || ''
-      if (message.includes('invite_already_used')) {
+      if (message.includes('invite_wrong_email')) {
+        setErrorMessage('Ez a meghívó egy másik e-mail címhez tartozik. Azzal a fiókkal jelentkezz be, amelyik a meghívót kapta.')
+      } else if (message.includes('invite_already_used')) {
         setErrorMessage('Ezt a meghívót már felhasználták.')
       } else if (message.includes('invite_expired')) {
         setErrorMessage('A meghívó link lejárt.')
@@ -78,6 +80,14 @@ export default function JoinTeam({ session }) {
 
   const roleLabel = (roleKey) => ROLES.find((r) => r.key === roleKey)?.name || roleKey
 
+  // Kliensoldali korai visszajelzés: ha a meghívó e-mail címhez kötött és a
+  // bejelentkezett felhasználó e-mail címe nem egyezik, ne engedjük a
+  // csatlakozást. A szerver (redeem_team_invite) ettől függetlenül is ellenőrzi.
+  const userEmail = session?.user?.email || ''
+  const emailMismatch =
+    !!invite?.invited_email &&
+    invite.invited_email.toLowerCase() !== userEmail.toLowerCase()
+
   if (status === 'loading' || status === 'joining') return <LoadingSpinner />
 
   return (
@@ -86,13 +96,24 @@ export default function JoinTeam({ session }) {
         {status === 'confirm' && invite && (
           <>
             <h2 className="text-lg sm:text-xl font-bold text-white mb-2">Csapat meghívó</h2>
-            <p className="text-sm sm:text-base text-slate-300 mb-6 break-words">
+            <p className="text-sm sm:text-base text-slate-300 mb-4 break-words">
               Csatlakozol a(z) <strong>{invite.team_name}</strong> csapathoz mint{' '}
               <strong>{roleLabel(invite.role)}</strong>?
             </p>
-            <button onClick={handleAccept} className="btn btn-primary w-full">
-              Csatlakozás
-            </button>
+            {invite.invited_email && (
+              <p className="text-xs sm:text-sm text-slate-400 mb-6 break-words">
+                A meghívó ehhez az e-mail címhez kötött: <strong>{invite.invited_email}</strong>
+              </p>
+            )}
+            {emailMismatch ? (
+              <p className="text-sm sm:text-base text-red-400">
+                Ez a meghívó egy másik e-mail címhez tartozik. Azzal a fiókkal jelentkezz be, amelyik a meghívót kapta.
+              </p>
+            ) : (
+              <button onClick={handleAccept} className="btn btn-primary w-full">
+                Csatlakozás
+              </button>
+            )}
           </>
         )}
         {status === 'success' && <p className="text-sm sm:text-base text-green-400">Sikeres csatlakozás! Átirányítás...</p>}
