@@ -7,6 +7,7 @@ import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import JoinTeam from './pages/JoinTeam'
 import LoadingSpinner from './components/LoadingSpinner'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // Module-scoped QueryClient — created once for the app's lifetime so the cache
 // survives module (route) switches. Sane defaults for a team-management app:
@@ -72,18 +73,20 @@ function App() {
           },
         }}
       />
-      <Routes>
-        <Route
-          path="/auth"
-          element={!session ? <Auth /> : <Navigate to="/dashboard" replace />}
-        />
-        <Route path="/join/:token" element={<JoinTeam session={session} />} />
-        <Route
-          path="/dashboard"
-          element={session ? <Dashboard session={session} /> : <Navigate to="/auth" replace />}
-        />
-        <Route path="/" element={<Navigate to={session ? "/dashboard" : "/auth"} replace />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route
+            path="/auth"
+            element={!session ? <Auth /> : <Navigate to="/dashboard" replace />}
+          />
+          <Route path="/join/:token" element={<JoinTeam session={session} />} />
+          <Route
+            path="/dashboard"
+            element={session ? <Dashboard session={session} /> : <Navigate to="/auth" replace />}
+          />
+          <Route path="/" element={<Navigate to={session ? "/dashboard" : "/auth"} replace />} />
+        </Routes>
+      </ErrorBoundary>
       </Router>
     </QueryClientProvider>
   )
