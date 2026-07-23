@@ -18,6 +18,7 @@ import {
 import TrainingSessionModal from '../components/TrainingSessionModal'
 import QuickAddTrainingModal from '../components/QuickAddTrainingModal'
 import TeamSelector from '../components/TeamSelector'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function Calendar() {
@@ -34,6 +35,7 @@ export default function Calendar() {
   const [editingSession, setEditingSession] = useState(null)
   const [selectedDateForSession, setSelectedDateForSession] = useState(null)
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+  const [confirmState, setConfirmState] = useState(null)
   
   // Load factors state for week view
   const [weekLoadFactors, setWeekLoadFactors] = useState({})
@@ -284,21 +286,24 @@ export default function Calendar() {
     return matches.filter(match => match.date === dateString)
   }
 
-  const deleteTrainingSession = async (id) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt az edzést?')) return
+  const deleteTrainingSession = (id) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt az edzést?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('training_sessions')
+            .delete()
+            .eq('id', id)
 
-    try {
-      const { error } = await supabase
-        .from('training_sessions')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      loadTrainingSessions()
-    } catch (error) {
-      console.error('Error deleting training session:', error)
-      toast.error('Hiba történt a törlés során!')
-    }
+          if (error) throw error
+          loadTrainingSessions()
+        } catch (error) {
+          console.error('Error deleting training session:', error)
+          toast.error('Hiba történt a törlés során!')
+        }
+      },
+    })
   }
 
   // Month view helpers
@@ -1521,6 +1526,17 @@ export default function Calendar() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

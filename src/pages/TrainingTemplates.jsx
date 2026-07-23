@@ -17,6 +17,7 @@ import TeamSelector from '../components/TeamSelector'
 import GymTemplateEditor from '../components/GymTemplateEditor'
 import BallTemplateEditor from '../components/BallTemplateEditor'
 import TacticTemplateEditor from '../components/TacticTemplateEditor'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function TrainingTemplates() {
@@ -28,6 +29,7 @@ export default function TrainingTemplates() {
   const [showModal, setShowModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [confirmState, setConfirmState] = useState(null)
 
   const templateTypes = [
     { value: 'all', label: 'Összes', icon: Trophy, color: 'bg-slate-600' },
@@ -82,21 +84,24 @@ export default function TrainingTemplates() {
     setFilteredTemplates(filtered)
   }
 
-  const deleteTemplate = async (id) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a sablont?')) return
+  const deleteTemplate = (id) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a sablont?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('training_templates')
+            .delete()
+            .eq('id', id)
 
-    try {
-      const { error } = await supabase
-        .from('training_templates')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      fetchTemplates()
-    } catch (error) {
-      console.error('Error deleting template:', error)
-      toast.error('Hiba történt a törlés során!')
-    }
+          if (error) throw error
+          fetchTemplates()
+        } catch (error) {
+          console.error('Error deleting template:', error)
+          toast.error('Hiba történt a törlés során!')
+        }
+      },
+    })
   }
 
   const duplicateTemplate = async (template) => {
@@ -336,6 +341,17 @@ export default function TrainingTemplates() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

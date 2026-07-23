@@ -14,6 +14,7 @@ import {
   Clock,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function Matches() {
@@ -24,6 +25,7 @@ export default function Matches() {
   const [showModal, setShowModal] = useState(false)
   const [editingMatch, setEditingMatch] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [confirmState, setConfirmState] = useState(null)
 
   useEffect(() => {
     if (selectedTeam) {
@@ -69,27 +71,30 @@ export default function Matches() {
     setFilteredMatches(filtered)
   }
 
-  const deleteMatch = async (id, match) => {
+  const deleteMatch = (id, match) => {
     let confirmMessage = 'Biztosan törölni szeretnéd ezt a mérkőzést?'
-    
+
     if (match?.created_from_macrocycle) {
       confirmMessage += '\n\n⚠️ Figyelem: Ez a mérkőzés a makrociklusból lett létrehozva.\nA törlés NEM érinti a makrociklust, csak ezt a mérkőzés rekordot törli.'
     }
-    
-    if (!confirm(confirmMessage)) return
 
-    try {
-      const { error } = await supabase
-        .from('matches')
-        .delete()
-        .eq('id', id)
+    setConfirmState({
+      message: confirmMessage,
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('matches')
+            .delete()
+            .eq('id', id)
 
-      if (error) throw error
-      fetchMatches()
-    } catch (error) {
-      console.error('Error deleting match:', error)
-      toast.error('Hiba történt a törlés során!')
-    }
+          if (error) throw error
+          fetchMatches()
+        } catch (error) {
+          console.error('Error deleting match:', error)
+          toast.error('Hiba történt a törlés során!')
+        }
+      },
+    })
   }
 
   const getMatchTypeLabel = (type) => {
@@ -383,6 +388,17 @@ export default function Matches() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

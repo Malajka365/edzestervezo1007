@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmDialog from './ui/ConfirmDialog'
 
 export default function AttendanceCalendar({ player, teamId }) {
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [selectedAttendance, setSelectedAttendance] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [formData, setFormData] = useState({
@@ -120,26 +122,29 @@ export default function AttendanceCalendar({ player, teamId }) {
     }
   }
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!selectedAttendance) return
-    if (!confirm('Biztosan törölni szeretnéd ezt a bejegyzést?')) return
-    
-    try {
-      const { error } = await supabase
-        .from('player_attendance')
-        .delete()
-        .eq('id', selectedAttendance.id)
-        
-      if (error) throw error
-      
-      setShowModal(false)
-      fetchAttendance()
-      toast.success('Jelenlét törölve!')
-    } catch (error) {
-      console.error('Error deleting attendance:', error)
-      const errorMessage = error?.message || error?.error_description || 'Ismeretlen hiba'
-      toast.error(`Hiba történt a törlés során!\n\nRészletek: ${errorMessage}`)
-    }
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a bejegyzést?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('player_attendance')
+            .delete()
+            .eq('id', selectedAttendance.id)
+
+          if (error) throw error
+
+          setShowModal(false)
+          fetchAttendance()
+          toast.success('Jelenlét törölve!')
+        } catch (error) {
+          console.error('Error deleting attendance:', error)
+          const errorMessage = error?.message || error?.error_description || 'Ismeretlen hiba'
+          toast.error(`Hiba történt a törlés során!\n\nRészletek: ${errorMessage}`)
+        }
+      },
+    })
   }
 
   const getStatusColor = (status) => {
@@ -385,6 +390,17 @@ export default function AttendanceCalendar({ player, teamId }) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

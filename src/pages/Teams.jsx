@@ -21,6 +21,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function Teams() {
@@ -28,6 +29,7 @@ export default function Teams() {
   const canEditPlayers = canEditModule(currentUserPermissions, 'players')
   const [players, setPlayers] = useState([])
   const [loadingPlayers, setLoadingPlayers] = useState(false)
+  const [confirmState, setConfirmState] = useState(null)
   const [showTeamModal, setShowTeamModal] = useState(false)
   const [showPlayerModal, setShowPlayerModal] = useState(false)
   const [showLocationsModal, setShowLocationsModal] = useState(false)
@@ -93,10 +95,13 @@ export default function Teams() {
     }
   }
 
-  const handleDeleteTeam = async (teamId) => {
-    if (confirm('Biztosan törölni szeretnéd ezt a csapatot? Minden játékos is törlődni fog!')) {
-      await deleteTeam(teamId)
-    }
+  const handleDeleteTeam = (teamId) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a csapatot? Minden játékos is törlődni fog!',
+      action: async () => {
+        await deleteTeam(teamId)
+      },
+    })
   }
 
   const openEditTeam = (team) => {
@@ -167,22 +172,25 @@ export default function Teams() {
     }
   }
 
-  const handleDeletePlayer = async (playerId) => {
-    if (confirm('Biztosan törölni szeretnéd ezt a játékost?')) {
-      try {
-        const { error } = await supabase
-          .from('players')
-          .delete()
-          .eq('id', playerId)
+  const handleDeletePlayer = (playerId) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a játékost?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('players')
+            .delete()
+            .eq('id', playerId)
 
-        if (error) throw error
+          if (error) throw error
 
-        setPlayers(players.filter(p => p.id !== playerId))
-      } catch (error) {
-        console.error('Error deleting player:', error)
-        toast.error('Hiba történt a játékos törlésekor')
-      }
-    }
+          setPlayers(players.filter(p => p.id !== playerId))
+        } catch (error) {
+          console.error('Error deleting player:', error)
+          toast.error('Hiba történt a játékos törlésekor')
+        }
+      },
+    })
   }
 
   const openEditPlayer = (player) => {
@@ -672,6 +680,17 @@ export default function Teams() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

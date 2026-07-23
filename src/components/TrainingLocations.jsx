@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { MapPin, Plus, Edit2, Trash2, X, Check, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmDialog from './ui/ConfirmDialog'
 
 export default function TrainingLocations({ teamId }) {
   const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingLocation, setEditingLocation] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -75,21 +77,24 @@ export default function TrainingLocations({ teamId }) {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a helyszínt?')) return
+  const handleDelete = (id) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a helyszínt?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('training_locations')
+            .delete()
+            .eq('id', id)
 
-    try {
-      const { error } = await supabase
-        .from('training_locations')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      fetchLocations()
-    } catch (error) {
-      console.error('Error deleting location:', error)
-      toast.error('Hiba történt a törlés során!')
-    }
+          if (error) throw error
+          fetchLocations()
+        } catch (error) {
+          console.error('Error deleting location:', error)
+          toast.error('Hiba történt a törlés során!')
+        }
+      },
+    })
   }
 
   const handleEdit = (location) => {
@@ -320,6 +325,17 @@ export default function TrainingLocations({ teamId }) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

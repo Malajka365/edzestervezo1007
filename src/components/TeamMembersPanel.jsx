@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { ROLES, MODULES, ACCESS_LEVELS } from '../lib/permissions'
 import { UserPlus, Trash2, Copy, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmDialog from './ui/ConfirmDialog'
 
 export default function TeamMembersPanel({ team, isOwner }) {
   const [members, setMembers] = useState([])
@@ -15,6 +16,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
   const [generatedLink, setGeneratedLink] = useState(null)
   const [permissions, setPermissions] = useState({}) // { [role]: { [module_key]: access_level } }
   const [savingPermissions, setSavingPermissions] = useState(false)
+  const [confirmState, setConfirmState] = useState(null)
 
   useEffect(() => {
     if (team?.id) {
@@ -109,26 +111,34 @@ export default function TeamMembersPanel({ team, isOwner }) {
     }
   }
 
-  const handleRevokeInvite = async (inviteId) => {
-    if (!confirm('Biztosan visszavonod ezt a meghívót?')) return
-    try {
-      const { error } = await supabase.from('team_invites').delete().eq('id', inviteId)
-      if (error) throw error
-      fetchMembersAndInvites()
-    } catch (error) {
-      console.error('Error revoking invite:', error)
-    }
+  const handleRevokeInvite = (inviteId) => {
+    setConfirmState({
+      message: 'Biztosan visszavonod ezt a meghívót?',
+      action: async () => {
+        try {
+          const { error } = await supabase.from('team_invites').delete().eq('id', inviteId)
+          if (error) throw error
+          fetchMembersAndInvites()
+        } catch (error) {
+          console.error('Error revoking invite:', error)
+        }
+      },
+    })
   }
 
-  const handleRemoveMember = async (memberId) => {
-    if (!confirm('Biztosan eltávolítod ezt a tagot a csapatból?')) return
-    try {
-      const { error } = await supabase.from('team_members').delete().eq('id', memberId)
-      if (error) throw error
-      fetchMembersAndInvites()
-    } catch (error) {
-      console.error('Error removing member:', error)
-    }
+  const handleRemoveMember = (memberId) => {
+    setConfirmState({
+      message: 'Biztosan eltávolítod ezt a tagot a csapatból?',
+      action: async () => {
+        try {
+          const { error } = await supabase.from('team_members').delete().eq('id', memberId)
+          if (error) throw error
+          fetchMembersAndInvites()
+        } catch (error) {
+          console.error('Error removing member:', error)
+        }
+      },
+    })
   }
 
   const handlePermissionChange = (role, moduleKey, accessLevel) => {
@@ -357,6 +367,17 @@ export default function TeamMembersPanel({ team, isOwner }) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Megerősítés"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

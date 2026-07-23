@@ -15,6 +15,7 @@ import {
   Edit,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function MacrocyclePlanner() {
@@ -25,6 +26,7 @@ export default function MacrocyclePlanner() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [seasonToDelete, setSeasonToDelete] = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
   const [showTemplateModal, setShowTemplateModal] = useState(false)
   const [showLoadTemplateModal, setShowLoadTemplateModal] = useState(false)
   const [templates, setTemplates] = useState([])
@@ -521,23 +523,26 @@ export default function MacrocyclePlanner() {
     }
   }
 
-  const deleteTemplate = async (templateId) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a sablont?')) return
+  const deleteTemplate = (templateId) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a sablont?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('macrocycle_templates')
+            .delete()
+            .eq('id', templateId)
 
-    try {
-      const { error } = await supabase
-        .from('macrocycle_templates')
-        .delete()
-        .eq('id', templateId)
+          if (error) throw error
 
-      if (error) throw error
-
-      toast.success('Sablon törölve!')
-      fetchTemplates()
-    } catch (error) {
-      console.error('Error deleting template:', error)
-      toast.error('Hiba történt a sablon törlése során!')
-    }
+          toast.success('Sablon törölve!')
+          fetchTemplates()
+        } catch (error) {
+          console.error('Error deleting template:', error)
+          toast.error('Hiba történt a sablon törlése során!')
+        }
+      },
+    })
   }
 
   useEffect(() => {
@@ -1731,6 +1736,17 @@ export default function MacrocyclePlanner() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import AnamnesisForm from '../components/AnamnesisForm'
 import DocumentUpload from '../components/DocumentUpload'
 import AttendanceCalendar from '../components/AttendanceCalendar'
 import BodyDiagram from '../components/BodyDiagram'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 import {
   FileText,
@@ -25,6 +26,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
   const [editingAnamnesis, setEditingAnamnesis] = useState(null)
   const [loading, setLoading] = useState(false)
   const [selectedAnamnesisIds, setSelectedAnamnesisIds] = useState([])
+  const [confirmState, setConfirmState] = useState(null)
 
   useEffect(() => {
     if (player && selectedTeam) {
@@ -89,48 +91,54 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
     }
   }
 
-  const deleteAnamnesis = async (anamnesisId) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt az anamnézist?')) return
+  const deleteAnamnesis = (anamnesisId) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt az anamnézist?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('player_anamnesis')
+            .delete()
+            .eq('id', anamnesisId)
 
-    try {
-      const { error } = await supabase
-        .from('player_anamnesis')
-        .delete()
-        .eq('id', anamnesisId)
+          if (error) throw error
 
-      if (error) throw error
-
-      toast.success('Anamnézis törölve!')
-      fetchAnamnesisData()
-    } catch (error) {
-      console.error('Error deleting anamnesis:', error)
-      toast.error('Hiba történt a törlés során!')
-    }
+          toast.success('Anamnézis törölve!')
+          fetchAnamnesisData()
+        } catch (error) {
+          console.error('Error deleting anamnesis:', error)
+          toast.error('Hiba történt a törlés során!')
+        }
+      },
+    })
   }
 
-  const deleteDocument = async (docId, filePath) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a dokumentumot?')) return
+  const deleteDocument = (docId, filePath) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a dokumentumot?',
+      action: async () => {
+        try {
+          // Törlés az adatbázisból
+          const { error: dbError } = await supabase
+            .from('player_documents')
+            .delete()
+            .eq('id', docId)
 
-    try {
-      // Törlés az adatbázisból
-      const { error: dbError } = await supabase
-        .from('player_documents')
-        .delete()
-        .eq('id', docId)
+          if (dbError) throw dbError
 
-      if (dbError) throw dbError
+          // Törlés a storage-ból
+          await supabase.storage
+            .from('player-documents')
+            .remove([filePath])
 
-      // Törlés a storage-ból
-      await supabase.storage
-        .from('player-documents')
-        .remove([filePath])
-
-      toast.success('Dokumentum törölve!')
-      fetchDocuments()
-    } catch (error) {
-      console.error('Error deleting document:', error)
-      toast.error('Hiba történt a törlés során!')
-    }
+          toast.success('Dokumentum törölve!')
+          fetchDocuments()
+        } catch (error) {
+          console.error('Error deleting document:', error)
+          toast.error('Hiba történt a törlés során!')
+        }
+      },
+    })
   }
 
   // Anamnézis kiválasztás kezelése
@@ -410,6 +418,17 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
           <AttendanceCalendar player={player} teamId={selectedTeam.id} />
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

@@ -19,6 +19,7 @@ import {
   Settings,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function Measurements({ session }) {
@@ -27,6 +28,7 @@ export default function Measurements({ session }) {
   const [players, setPlayers] = useState([])
   const [exercises, setExercises] = useState([])
   const [loading, setLoading] = useState(false)
+  const [confirmState, setConfirmState] = useState(null)
   
   const [filters, setFilters] = useState({
     playerId: '',
@@ -181,20 +183,24 @@ export default function Measurements({ session }) {
     }
   }
 
-  const handleDeleteExercise = async (exerciseId) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a gyakorlatot? Ez törli az összes hozzá tartozó mérést is!')) return
-    try {
-      const { error } = await supabase
-        .from('exercises')
-        .delete()
-        .eq('id', exerciseId)
-      if (error) throw error
-      setExercises(exercises.filter(ex => ex.id !== exerciseId))
-      toast.success('Gyakorlat sikeresen törölve!')
-    } catch (error) {
-      console.error('Error deleting exercise:', error)
-      toast.error('Hiba történt a törlés során')
-    }
+  const handleDeleteExercise = (exerciseId) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a gyakorlatot? Ez törli az összes hozzá tartozó mérést is!',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('exercises')
+            .delete()
+            .eq('id', exerciseId)
+          if (error) throw error
+          setExercises(exercises.filter(ex => ex.id !== exerciseId))
+          toast.success('Gyakorlat sikeresen törölve!')
+        } catch (error) {
+          console.error('Error deleting exercise:', error)
+          toast.error('Hiba történt a törlés során')
+        }
+      },
+    })
   }
 
   const openEditExercise = (exercise) => {
@@ -1191,6 +1197,17 @@ export default function Measurements({ session }) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   )
 }

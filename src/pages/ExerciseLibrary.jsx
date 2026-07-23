@@ -21,6 +21,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function ExerciseLibrary() {
@@ -38,6 +39,7 @@ export default function ExerciseLibrary() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [confirmState, setConfirmState] = useState(null)
   const [expandedGroups, setExpandedGroups] = useState({})
   const [newExercise, setNewExercise] = useState({
     name: '',
@@ -229,23 +231,26 @@ export default function ExerciseLibrary() {
     }
   }
 
-  const deleteExercise = async (exerciseId) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt a gyakorlatot?')) return
+  const deleteExercise = (exerciseId) => {
+    setConfirmState({
+      message: 'Biztosan törölni szeretnéd ezt a gyakorlatot?',
+      action: async () => {
+        try {
+          const { error } = await supabase
+            .from('training_exercises')
+            .delete()
+            .eq('id', exerciseId)
 
-    try {
-      const { error } = await supabase
-        .from('training_exercises')
-        .delete()
-        .eq('id', exerciseId)
+          if (error) throw error
 
-      if (error) throw error
-      
-      fetchExercises()
-      toast.success('Gyakorlat sikeresen törölve!')
-    } catch (error) {
-      console.error('Error deleting exercise:', error)
-      toast.error('Hiba történt a törlés során!')
-    }
+          fetchExercises()
+          toast.success('Gyakorlat sikeresen törölve!')
+        } catch (error) {
+          console.error('Error deleting exercise:', error)
+          toast.error('Hiba történt a törlés során!')
+        }
+      },
+    })
   }
 
   const startEditExercise = (exercise) => {
@@ -1317,6 +1322,17 @@ export default function ExerciseLibrary() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmState}
+        title="Törlés megerősítése"
+        message={confirmState?.message}
+        onConfirm={async () => {
+          await confirmState.action()
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
 
       </div>
     </div>
