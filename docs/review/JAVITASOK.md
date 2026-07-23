@@ -59,7 +59,7 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | G1b | Unit tesztek (permissions, attendance) — 44 teszt | ✅ KÉSZ | `d5a831d` | |
 | G1c | Komponens-tesztek (ConfirmDialog, ErrorBoundary, EmptyState, Auth) — 19 teszt | ✅ KÉSZ | `14b5346` | |
 | G1-rev | Mutációs teszt-minőség review | ✅ STRONG | — | 7/7 szándékos törés elkapva, 0 hamis zöld |
-| G2a | Jelszó-szabály: min 10 kar + visszajelzés | ⏳ | — | |
-| G2b | Meghívó e-mail-címhez kötése | ⏳ | — | |
+| G2a | Jelszó-szabály: min 10 kar + erősség-jelző | ✅ KÉSZ | `3b9967b` | + teendő: Supabase Dashboardon szerver-oldali minimum 10-re |
+| G2b | Meghívó e-mail-címhez kötése | ✅ KÉSZ | `586f111`+`60a2a4d` | Élő teszt: rossz e-mail elutasítva, régi (NULL) meghívók működnek |
 | G3 | Data-hookok (F6 Step 2) | ⏳ | — | |
 | G4 | TypeScript infra | ⏳ | — | |
