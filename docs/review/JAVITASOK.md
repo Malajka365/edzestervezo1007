@@ -32,7 +32,7 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | F4 | KT5 — canEditModule a maradék 8 modulba | ✅ KÉSZ | `480294a` | 13 fájl; élőben tesztelve (view: gomb rejtve, none: modul rejtve, edit: gomb látszik) |
 | F5 | KT4 — Duplikációk (naptárak, PDF util) | ✅ KÉSZ | `260ce8d` + `5c015d7` | -170 duplikált sor; lib/attendance.js + lib/pdfExport.js; élőben tesztelve |
 | F6-1 | KT2 — MacrocyclePlanner darabolás | ✅ KÉSZ | `397de9e` | -219 sor, 5 modál kiemelve; Opus review CLEAN + élő teszt |
-| F6-2 | KT2 — Calendar darabolás | ⏳ | — | |
+| F6-2 | KT2 — Calendar darabolás | ✅ KÉSZ | `6846b46` | 1548→819 sor, 3 nézet kiemelve; Opus review CLEAN (37 prop) + élő teszt |
 | F6-3 | KT2 — Measurements darabolás | ⏳ | — | |
 | F6-4 | KT2 — ExerciseLibrary darabolás | ⏳ | — | |
 | F7 | KT3 — React Query adat-réteg | ⏳ | — | |
