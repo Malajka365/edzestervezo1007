@@ -4,8 +4,12 @@ import { MapPin, Plus, Edit2, Trash2, X, Check, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
 import LoadingSpinner from './LoadingSpinner'
+import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 
 export default function TrainingLocations({ teamId }) {
+  const { currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'players')
   const [locations, setLocations] = useState([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
@@ -140,17 +144,19 @@ export default function TrainingLocations({ teamId }) {
           <h3 className="text-lg font-semibold text-white">Edzés Helyszínek</h3>
           <span className="text-sm text-slate-400">({locations.length})</span>
         </div>
-        <button
-          onClick={() => {
-            setEditingLocation(null)
-            setFormData({ name: '', address: '', notes: '', is_default: false })
-            setShowModal(true)
-          }}
-          className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Új Helyszín</span>
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => {
+              setEditingLocation(null)
+              setFormData({ name: '', address: '', notes: '', is_default: false })
+              setShowModal(true)
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Új Helyszín</span>
+          </button>
+        )}
       </div>
 
       {/* Locations List */}
@@ -181,29 +187,31 @@ export default function TrainingLocations({ teamId }) {
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                  {!location.is_default && (
+                {canEdit && (
+                  <div className="flex items-center gap-1">
+                    {!location.is_default && (
+                      <button
+                        onClick={() => handleSetDefault(location.id)}
+                        className="p-1 hover:bg-slate-700 rounded transition-colors"
+                        title="Alapértelmezettnek jelöl"
+                      >
+                        <Star className="w-4 h-4 text-slate-400" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleSetDefault(location.id)}
+                      onClick={() => handleEdit(location)}
                       className="p-1 hover:bg-slate-700 rounded transition-colors"
-                      title="Alapértelmezettnek jelöl"
                     >
-                      <Star className="w-4 h-4 text-slate-400" />
+                      <Edit2 className="w-4 h-4 text-slate-400" />
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleEdit(location)}
-                    className="p-1 hover:bg-slate-700 rounded transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4 text-slate-400" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(location.id)}
-                    className="p-1 hover:bg-red-500/20 rounded transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-400" />
-                  </button>
-                </div>
+                    <button
+                      onClick={() => handleDelete(location.id)}
+                      className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                    </button>
+                  </div>
+                )}
               </div>
               
               {location.address && (

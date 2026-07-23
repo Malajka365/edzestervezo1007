@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Upload, X, File, FileText, Image as ImageIcon, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-export default function DocumentUpload({ player, teamId, onUploaded }) {
+export default function DocumentUpload({ player, teamId, onUploaded, canEdit = true }) {
   const [uploading, setUploading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -88,6 +88,10 @@ export default function DocumentUpload({ player, teamId, onUploaded }) {
     } finally {
       setUploading(false)
     }
+  }
+
+  if (!canEdit) {
+    return null
   }
 
   return (

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 import {
   Calendar,
   Plus,
@@ -19,7 +20,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function MacrocyclePlanner() {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'macrocycle')
   const [seasons, setSeasons] = useState([])
   const [currentSeason, setCurrentSeason] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -989,49 +991,59 @@ export default function MacrocyclePlanner() {
 
           {/* Középső gombok */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-              title="Új Szezon"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Új Szezon</span>
-            </button>
-            
+            {canEdit && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+                title="Új Szezon"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Új Szezon</span>
+              </button>
+            )}
+
             {currentSeason && (
               <>
-                <button
-                  onClick={() => openEditModal(currentSeason)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-                  title="Szerkesztés"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span className="hidden sm:inline">Szerkesztés</span>
-                </button>
-                <button
-                  onClick={() => openDeleteModal(currentSeason)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
-                  title="Törlés"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Törlés</span>
-                </button>
-                <button
-                  onClick={() => setShowTemplateModal(true)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
-                  title="Sablon"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sablon</span>
-                </button>
-                <button
-                  onClick={() => setShowLoadTemplateModal(true)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-                  title="Betöltés"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span className="hidden sm:inline">Betöltés</span>
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => openEditModal(currentSeason)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                    title="Szerkesztés"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span className="hidden sm:inline">Szerkesztés</span>
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={() => openDeleteModal(currentSeason)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
+                    title="Törlés"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Törlés</span>
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={() => setShowTemplateModal(true)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                    title="Sablon"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">Sablon</span>
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={() => setShowLoadTemplateModal(true)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+                    title="Betöltés"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span className="hidden sm:inline">Betöltés</span>
+                  </button>
+                )}
                 <button
                   onClick={exportToPDF}
                   disabled={exporting}
@@ -1041,15 +1053,17 @@ export default function MacrocyclePlanner() {
                   <FileDown className="w-4 h-4" />
                   <span className="hidden sm:inline">{exporting ? 'Exportálás...' : 'PDF'}</span>
                 </button>
-                <button
-                  onClick={handleManualSave}
-                  disabled={isSaving}
-                  className="flex items-center space-x-2 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
-                  title="Mentés"
-                >
-                  <Save className="w-4 h-4" />
-                  <span className="hidden sm:inline">{isSaving ? 'Mentés...' : 'Mentés'}</span>
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={handleManualSave}
+                    disabled={isSaving}
+                    className="flex items-center space-x-2 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+                    title="Mentés"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span className="hidden sm:inline">{isSaving ? 'Mentés...' : 'Mentés'}</span>
+                  </button>
+                )}
                 {saveMessage && (
                   <span className={`text-sm font-medium whitespace-nowrap ${
                     saveMessage.includes('✅') ? 'text-green-400' : 'text-red-400'
@@ -1211,8 +1225,9 @@ export default function MacrocyclePlanner() {
                       />
                     ) : (
                       <button
-                        onClick={() => handleCycleClick(idx)}
-                        className="w-full h-full px-0.5 py-1.5 text-center text-[10px] text-slate-300 hover:bg-slate-700 transition-colors"
+                        onClick={() => canEdit && handleCycleClick(idx)}
+                        disabled={!canEdit}
+                        className={`w-full h-full px-0.5 py-1.5 text-center text-[10px] text-slate-300 transition-colors ${canEdit ? 'hover:bg-slate-700' : 'cursor-default'}`}
                       >
                         {cycleValue || '-'}
                       </button>
@@ -1239,8 +1254,9 @@ export default function MacrocyclePlanner() {
                       return (
                         <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className="relative border-r border-slate-600">
                           <button
-                            onClick={() => handleCellClick(weekIdx, categoryKey, category)}
-                            className={`w-full h-full px-1 py-1.5 text-[10px] font-medium text-white hover:opacity-80 transition-opacity border-0 ${cellColor}`}
+                            onClick={() => canEdit && handleCellClick(weekIdx, categoryKey, category)}
+                            disabled={!canEdit}
+                            className={`w-full h-full px-1 py-1.5 text-[10px] font-medium text-white transition-opacity border-0 ${cellColor} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
                           >
                           </button>
                         </div>
@@ -1268,8 +1284,9 @@ export default function MacrocyclePlanner() {
                         <button
                           data-week={weekIdx}
                           data-category={categoryKey}
-                          onClick={() => handleCellClick(weekIdx, categoryKey, category)}
-                          className={`w-full h-full px-1 py-1.5 text-[10px] font-medium text-white hover:opacity-80 transition-opacity border-0 ${cellColor}`}
+                          onClick={() => canEdit && handleCellClick(weekIdx, categoryKey, category)}
+                          disabled={!canEdit}
+                          className={`w-full h-full px-1 py-1.5 text-[10px] font-medium text-white transition-opacity border-0 ${cellColor} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
                         >
                           {cellValue && (
                             <span className="block truncate" title={cellValue}>
@@ -1278,7 +1295,7 @@ export default function MacrocyclePlanner() {
                           )}
                         </button>
 
-                        {isActive && category.type === 'dropdown' && (
+                        {isActive && category.type === 'dropdown' && canEdit && (
                           <div className="absolute bottom-full left-0 z-[100] mb-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl">
                             <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
                               {category.options.map((option) => (
@@ -1325,8 +1342,9 @@ export default function MacrocyclePlanner() {
                       return (
                         <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className={`relative border-r border-slate-600 ${isActive ? 'z-[101]' : ''}`}>
                           <button
-                            onClick={() => setActiveDropdown({ weekIndex: weekIdx, category: `daily_${dayIdx}` })}
-                            className={`w-full h-full px-1 py-1.5 text-[10px] font-bold text-white hover:opacity-80 transition-opacity border-0 ${getCellBgColor()}`}
+                            onClick={() => canEdit && setActiveDropdown({ weekIndex: weekIdx, category: `daily_${dayIdx}` })}
+                            disabled={!canEdit}
+                            className={`w-full h-full px-1 py-1.5 text-[10px] font-bold text-white transition-opacity border-0 ${getCellBgColor()} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
                           >
                             {dailyData.length > 0 && (
                               <span className="block truncate" title={dailyData.map(k => dailyCategories[k].fullName).join(', ')}>
@@ -1335,7 +1353,7 @@ export default function MacrocyclePlanner() {
                             )}
                           </button>
 
-                          {isActive && (
+                          {isActive && canEdit && (
                             <div className="absolute bottom-full left-0 z-[100] mb-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl">
                               <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
                                 {/* Clear/Empty option - Always visible */}

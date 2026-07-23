@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 import {
   Plus,
   Search,
@@ -21,7 +22,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function TrainingTemplates() {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'templates')
   const [templates, setTemplates] = useState([])
   const [filteredTemplates, setFilteredTemplates] = useState([])
   const [selectedType, setSelectedType] = useState('all')
@@ -167,17 +169,19 @@ export default function TrainingTemplates() {
 
           {/* Középső gombok */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => {
-                setEditingTemplate(null)
-                setShowModal(true)
-              }}
-              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-              title="Új sablon"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Új sablon</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => {
+                  setEditingTemplate(null)
+                  setShowModal(true)
+                }}
+                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+                title="Új sablon"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Új sablon</span>
+              </button>
+            )}
           </div>
 
           {/* Jobb oldal: TeamSelector */}
@@ -244,16 +248,18 @@ export default function TrainingTemplates() {
           <p className="text-slate-400 mb-4">
             Hozz létre az első újrafelhasználható edzésprogramot!
           </p>
-          <button
-            onClick={() => {
-              setEditingTemplate(null)
-              setShowModal(true)
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Első sablon létrehozása</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => {
+                setEditingTemplate(null)
+                setShowModal(true)
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Első sablon létrehozása</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -270,32 +276,34 @@ export default function TrainingTemplates() {
                   <div className={`w-12 h-12 ${typeConfig.color} rounded-lg flex items-center justify-center`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingTemplate(template)
-                        setShowModal(true)
-                      }}
-                      className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                      title="Szerkesztés"
-                    >
-                      <Edit className="w-4 h-4 text-slate-400" />
-                    </button>
-                    <button
-                      onClick={() => duplicateTemplate(template)}
-                      className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                      title="Duplikálás"
-                    >
-                      <Copy className="w-4 h-4 text-slate-400" />
-                    </button>
-                    <button
-                      onClick={() => deleteTemplate(template.id)}
-                      className="p-2 hover:bg-red-600 rounded-lg transition-colors"
-                      title="Törlés"
-                    >
-                      <Trash2 className="w-4 h-4 text-slate-400" />
-                    </button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingTemplate(template)
+                          setShowModal(true)
+                        }}
+                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                        title="Szerkesztés"
+                      >
+                        <Edit className="w-4 h-4 text-slate-400" />
+                      </button>
+                      <button
+                        onClick={() => duplicateTemplate(template)}
+                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                        title="Duplikálás"
+                      >
+                        <Copy className="w-4 h-4 text-slate-400" />
+                      </button>
+                      <button
+                        onClick={() => deleteTemplate(template.id)}
+                        className="p-2 hover:bg-red-600 rounded-lg transition-colors"
+                        title="Törlés"
+                      >
+                        <Trash2 className="w-4 h-4 text-slate-400" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <h3 className="text-lg font-semibold text-white mb-2">

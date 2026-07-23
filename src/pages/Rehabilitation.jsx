@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 import PlayerProfileRehab from './PlayerProfileRehab'
 import TeamAttendanceCalendar from '../components/TeamAttendanceCalendar'
 import {
@@ -21,7 +22,8 @@ import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
 
 export default function Rehabilitation() {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'rehab')
   const [players, setPlayers] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
@@ -315,7 +317,7 @@ export default function Rehabilitation() {
           </div>
         ) : activeTab === 'attendance' ? (
           <div className="p-6">
-            <TeamAttendanceCalendar teamId={selectedTeam.id} />
+            <TeamAttendanceCalendar teamId={selectedTeam.id} canEdit={canEdit} />
           </div>
         ) : null}
       </div>

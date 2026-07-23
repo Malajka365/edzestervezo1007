@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
 import LoadingSpinner from './LoadingSpinner'
 
-export default function AttendanceCalendar({ player, teamId }) {
+export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
@@ -210,13 +210,15 @@ export default function AttendanceCalendar({ player, teamId }) {
               </button>
             )}
           </div>
-          <button
-            onClick={handleNewClick}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Új jelenlét
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleNewClick}
+              className="btn btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Új jelenlét
+            </button>
+          )}
         </div>
       </div>
 
@@ -259,15 +261,17 @@ export default function AttendanceCalendar({ player, teamId }) {
                 </div>
 
                 {/* Szerkesztés gomb */}
-                <div className="flex items-center">
-                  <button
-                    onClick={() => handleEditClick(att)}
-                    className="p-2 hover:bg-slate-500 rounded-lg transition-colors"
-                    title="Szerkesztés"
-                  >
-                    <Edit className="w-4 h-4 text-slate-300" />
-                  </button>
-                </div>
+                {canEdit && (
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => handleEditClick(att)}
+                      className="p-2 hover:bg-slate-500 rounded-lg transition-colors"
+                      title="Szerkesztés"
+                    >
+                      <Edit className="w-4 h-4 text-slate-300" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))

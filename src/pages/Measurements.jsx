@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
+import { canEditModule } from '../lib/permissions'
 import {
   BarChart3,
   Plus,
@@ -24,7 +25,8 @@ import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
 
 export default function Measurements({ session }) {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'measurement')
   const [measurements, setMeasurements] = useState([])
   const [players, setPlayers] = useState([])
   const [exercises, setExercises] = useState([])
@@ -412,44 +414,46 @@ export default function Measurements({ session }) {
           </div>
 
           {/* Középső gombok */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button 
-              onClick={() => setShowExerciseModal(true)} 
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-              title="Új Gyakorlat"
-            >
-              <Dumbbell className="w-4 h-4" />
-              <span className="hidden sm:inline">Új Gyakorlat</span>
-            </button>
-            <button 
-              onClick={() => setShowExerciseManagementModal(true)} 
-              className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-              title="Gyakorlatok kezelése"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Gyakorlatok kezelése</span>
-            </button>
-            <button 
-              onClick={() => {
-                setSelectedPlayers(players.map(p => p.id))
-                setShowPlayerSelectionModal(true)
-              }} 
-              className="flex items-center space-x-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
-              disabled={players.length === 0}
-              title="Csapat Felmérés"
-            >
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Csapat Felmérés</span>
-            </button>
-            <button 
-              onClick={() => setShowMeasurementModal(true)} 
-              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-              title="Új Mérés"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Új Mérés</span>
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setShowExerciseModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                title="Új Gyakorlat"
+              >
+                <Dumbbell className="w-4 h-4" />
+                <span className="hidden sm:inline">Új Gyakorlat</span>
+              </button>
+              <button
+                onClick={() => setShowExerciseManagementModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+                title="Gyakorlatok kezelése"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Gyakorlatok kezelése</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedPlayers(players.map(p => p.id))
+                  setShowPlayerSelectionModal(true)
+                }}
+                className="flex items-center space-x-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+                disabled={players.length === 0}
+                title="Csapat Felmérés"
+              >
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Csapat Felmérés</span>
+              </button>
+              <button
+                onClick={() => setShowMeasurementModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+                title="Új Mérés"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Új Mérés</span>
+              </button>
+            </div>
+          )}
 
           {/* Jobb oldal: TeamSelector */}
           <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
@@ -529,8 +533,8 @@ export default function Measurements({ session }) {
                 ? 'Próbálj meg más szűrőket használni.'
                 : 'Rögzíts egy mérést, hogy nyomon követhesd a játékosok fejlődését.'
             }
-            actionLabel={hasActiveFilters ? undefined : 'Mérés rögzítése'}
-            onAction={hasActiveFilters ? undefined : () => setShowMeasurementModal(true)}
+            actionLabel={hasActiveFilters || !canEdit ? undefined : 'Mérés rögzítése'}
+            onAction={hasActiveFilters || !canEdit ? undefined : () => setShowMeasurementModal(true)}
           />
         ) : (
           <table className="w-full">
@@ -1165,22 +1169,24 @@ export default function Measurements({ session }) {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => openEditExercise(exercise)}
-                            className="p-2 text-slate-400 hover:text-primary-400 hover:bg-slate-700 rounded transition-colors"
-                            title="Szerkesztés"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteExercise(exercise.id)}
-                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
-                            title="Törlés"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {canEdit && (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => openEditExercise(exercise)}
+                              className="p-2 text-slate-400 hover:text-primary-400 hover:bg-slate-700 rounded transition-colors"
+                              title="Szerkesztés"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteExercise(exercise.id)}
+                              className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                              title="Törlés"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {exercise.description && (
                         <p className="text-sm text-slate-400 mt-2">{exercise.description}</p>

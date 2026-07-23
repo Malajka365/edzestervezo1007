@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 import {
   Search,
   Filter,
@@ -25,7 +26,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function ExerciseLibrary() {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'exercises')
   const [exercises, setExercises] = useState([])
   const [filteredExercises, setFilteredExercises] = useState([])
   const [favorites, setFavorites] = useState([])
@@ -347,16 +349,18 @@ export default function ExerciseLibrary() {
           </div>
 
           {/* Középső gombok */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button 
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-              title="Új gyakorlat"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Új gyakorlat</span>
-            </button>
-          </div>
+          {canEdit && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+                title="Új gyakorlat"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Új gyakorlat</span>
+              </button>
+            </div>
+          )}
 
           {/* Jobb oldal: TeamSelector */}
           <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
@@ -555,28 +559,30 @@ export default function ExerciseLibrary() {
                       )}
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            startEditExercise(exercise)
-                          }}
-                          className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Szerkesztés
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            deleteExercise(exercise.id)
-                          }}
-                          className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Törlés
-                        </button>
-                      </div>
+                      {canEdit && (
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              startEditExercise(exercise)
+                            }}
+                            className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Szerkesztés
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteExercise(exercise.id)
+                            }}
+                            className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Törlés
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -697,26 +703,30 @@ export default function ExerciseLibrary() {
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-slate-700">
-                <button
-                  onClick={() => {
-                    setSelectedExercise(null)
-                    startEditExercise(selectedExercise)
-                  }}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                  <Edit className="w-5 h-5" />
-                  Szerkesztés
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedExercise(null)
-                    deleteExercise(selectedExercise.id)
-                  }}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                  <Trash2 className="w-5 h-5" />
-                  Törlés
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      setSelectedExercise(null)
+                      startEditExercise(selectedExercise)
+                    }}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Edit className="w-5 h-5" />
+                    Szerkesztés
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      setSelectedExercise(null)
+                      deleteExercise(selectedExercise.id)
+                    }}
+                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    Törlés
+                  </button>
+                )}
                 <button
                   onClick={() => toggleFavorite(selectedExercise.id)}
                   className={`px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${

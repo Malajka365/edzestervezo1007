@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Users, X, Save, Trash2, Calendar, CalendarDa
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
 
-export default function TeamAttendanceCalendar({ teamId }) {
+export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [attendance, setAttendance] = useState([])
   const [players, setPlayers] = useState([])
@@ -159,7 +159,7 @@ export default function TeamAttendanceCalendar({ teamId }) {
   }
 
   const handleDayClick = (day) => {
-    if (!day) return
+    if (!day || !canEdit) return
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     setSelectedDate(dateStr)
     setFormData({
@@ -175,6 +175,7 @@ export default function TeamAttendanceCalendar({ teamId }) {
 
   const handleAttendanceClick = (e, attendance) => {
     e.stopPropagation()
+    if (!canEdit) return
     setSelectedDate(attendance.date)
     setFormData({
       id: attendance.id,
@@ -391,13 +392,15 @@ export default function TeamAttendanceCalendar({ teamId }) {
                   <>
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-sm font-bold text-white">{day}</div>
-                      <button
-                        onClick={() => handleDayClick(day)}
-                        className="w-5 h-5 bg-primary-500 hover:bg-primary-600 rounded flex items-center justify-center text-white transition-colors"
-                        title="Új jelenlét hozzáadása"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleDayClick(day)}
+                          className="w-5 h-5 bg-primary-500 hover:bg-primary-600 rounded flex items-center justify-center text-white transition-colors"
+                          title="Új jelenlét hozzáadása"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                     {dayAttendance.length > 0 && (
                       <div className="space-y-1">
@@ -452,13 +455,15 @@ export default function TeamAttendanceCalendar({ teamId }) {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm font-bold text-white">{date.getDate()}</div>
-                    <button
-                      onClick={() => handleDayClick(date.getDate())}
-                      className="w-5 h-5 bg-primary-500 hover:bg-primary-600 rounded flex items-center justify-center text-white transition-colors"
-                      title="Új jelenlét hozzáadása"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleDayClick(date.getDate())}
+                        className="w-5 h-5 bg-primary-500 hover:bg-primary-600 rounded flex items-center justify-center text-white transition-colors"
+                        title="Új jelenlét hozzáadása"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                   {dayAttendance.length > 0 && (
                     <div className="space-y-1">
@@ -533,16 +538,18 @@ export default function TeamAttendanceCalendar({ teamId }) {
                   <div className="text-center py-8 text-slate-400">
                     <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                     <p>Nincs jelenlét ezen a napon</p>
-                    <button
-                      onClick={() => {
-                        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
-                        setSelectedDate(dateStr)
-                        setShowModal(true)
-                      }}
-                      className="mt-4 btn btn-primary"
-                    >
-                      Jelenlét felvitele
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => {
+                          const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
+                          setSelectedDate(dateStr)
+                          setShowModal(true)
+                        }}
+                        className="mt-4 btn btn-primary"
+                      >
+                        Jelenlét felvitele
+                      </button>
+                    )}
                   </div>
                 )
               })()}
@@ -656,7 +663,7 @@ export default function TeamAttendanceCalendar({ teamId }) {
               </div>
 
               <div className="flex gap-3 pt-4">
-                {formData.id && (
+                {formData.id && canEdit && (
                   <button
                     type="button"
                     onClick={handleDelete}
@@ -666,13 +673,15 @@ export default function TeamAttendanceCalendar({ teamId }) {
                     Törlés
                   </button>
                 )}
-                <button
-                  type="submit"
-                  className="flex-1 btn btn-primary flex items-center justify-center gap-2"
-                >
-                  <Save className="w-5 h-5" />
-                  {formData.id ? 'Frissítés' : 'Mentés'}
-                </button>
+                {canEdit && (
+                  <button
+                    type="submit"
+                    className="flex-1 btn btn-primary flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-5 h-5" />
+                    {formData.id ? 'Frissítés' : 'Mentés'}
+                  </button>
+                )}
               </div>
             </form>
           </div>

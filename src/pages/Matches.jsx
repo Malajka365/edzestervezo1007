@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 import {
   Plus,
   Calendar,
@@ -18,7 +19,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function Matches() {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'matches')
   const [matches, setMatches] = useState([])
   const [filteredMatches, setFilteredMatches] = useState([])
   const [selectedFilter, setSelectedFilter] = useState('all') // all, upcoming, past
@@ -192,17 +194,19 @@ export default function Matches() {
 
           {/* Jobb oldal: Új mérkőzés + TeamSelector */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={() => {
-                setEditingMatch(null)
-                setShowModal(true)
-              }}
-              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-              title="Új mérkőzés"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Új mérkőzés</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => {
+                  setEditingMatch(null)
+                  setShowModal(true)
+                }}
+                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
+                title="Új mérkőzés"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Új mérkőzés</span>
+              </button>
+            )}
             <TeamSelector />
           </div>
         </div>
@@ -225,16 +229,18 @@ export default function Matches() {
           <p className="text-slate-400 mb-4">
             Add hozzá az első mérkőzést a naptárhoz!
           </p>
-          <button
-            onClick={() => {
-              setEditingMatch(null)
-              setShowModal(true)
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Első mérkőzés hozzáadása</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => {
+                setEditingMatch(null)
+                setShowModal(true)
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Első mérkőzés hozzáadása</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -337,25 +343,27 @@ export default function Matches() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingMatch(match)
-                        setShowModal(true)
-                      }}
-                      className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                      title="Szerkesztés"
-                    >
-                      <Edit className="w-4 h-4 text-slate-400" />
-                    </button>
-                    <button
-                      onClick={() => deleteMatch(match.id, match)}
-                      className="p-2 hover:bg-red-600 rounded-lg transition-colors"
-                      title="Törlés"
-                    >
-                      <Trash2 className="w-4 h-4 text-slate-400" />
-                    </button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingMatch(match)
+                          setShowModal(true)
+                        }}
+                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                        title="Szerkesztés"
+                      >
+                        <Edit className="w-4 h-4 text-slate-400" />
+                      </button>
+                      <button
+                        onClick={() => deleteMatch(match.id, match)}
+                        className="p-2 hover:bg-red-600 rounded-lg transition-colors"
+                        title="Törlés"
+                      >
+                        <Trash2 className="w-4 h-4 text-slate-400" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}

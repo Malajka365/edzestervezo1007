@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 import AnamnesisForm from '../components/AnamnesisForm'
 import DocumentUpload from '../components/DocumentUpload'
 import AttendanceCalendar from '../components/AttendanceCalendar'
@@ -20,7 +21,8 @@ import {
 } from 'lucide-react'
 
 export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'rehab')
   const [anamnesisData, setAnamnesisData] = useState([])
   const [documents, setDocuments] = useState([])
   const [editingAnamnesis, setEditingAnamnesis] = useState(null)
@@ -255,25 +257,27 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
                           </h4>
                           <p className="text-sm text-slate-400 capitalize">{anamnesis.current_status}</p>
                         </div>
-                        <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingAnamnesis(anamnesis)
-                            setActiveTab('anamnesis')
-                          }}
-                          className="p-2 hover:bg-slate-600 rounded transition-colors"
-                          title="Szerkesztés"
-                        >
-                          <Edit className="w-4 h-4 text-slate-400" />
-                        </button>
-                        <button
-                          onClick={() => deleteAnamnesis(anamnesis.id)}
-                          className="p-2 hover:bg-red-700 rounded transition-colors"
-                          title="Törlés"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-400" />
-                        </button>
-                      </div>
+                        {canEdit && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingAnamnesis(anamnesis)
+                                setActiveTab('anamnesis')
+                              }}
+                              className="p-2 hover:bg-slate-600 rounded transition-colors"
+                              title="Szerkesztés"
+                            >
+                              <Edit className="w-4 h-4 text-slate-400" />
+                            </button>
+                            <button
+                              onClick={() => deleteAnamnesis(anamnesis.id)}
+                              className="p-2 hover:bg-red-700 rounded transition-colors"
+                              title="Törlés"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-400" />
+                            </button>
+                          </div>
+                        )}
                     </div>
                     {anamnesis.problem_description && (
                       <p className="text-sm text-slate-300 mb-3">{anamnesis.problem_description}</p>
@@ -342,6 +346,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
               fetchAnamnesisData()
             }}
             embedded={true}
+            canEdit={canEdit}
           />
         </div>
       )}
@@ -352,6 +357,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
             player={player}
             teamId={selectedTeam.id}
             onUploaded={fetchDocuments}
+            canEdit={canEdit}
           />
 
           {documents.length === 0 ? (
@@ -397,12 +403,14 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
                           <Eye className="w-4 h-4" />
                           Megnyitás
                         </button>
-                        <button
-                          onClick={() => deleteDocument(doc.id, doc.file_url)}
-                          className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => deleteDocument(doc.id, doc.file_url)}
+                            className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -415,7 +423,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
 
       {activeTab === 'attendance' && (
         <div className="flex-1 overflow-hidden p-6 flex flex-col">
-          <AttendanceCalendar player={player} teamId={selectedTeam.id} />
+          <AttendanceCalendar player={player} teamId={selectedTeam.id} canEdit={canEdit} />
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
+import { canEditModule } from '../lib/permissions'
 import {
   ChevronLeft,
   ChevronRight,
@@ -22,7 +23,8 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
 export default function Calendar() {
-  const { selectedTeam } = useTeams()
+  const { selectedTeam, currentUserPermissions } = useTeams()
+  const canEdit = canEditModule(currentUserPermissions, 'calendar')
   const [view, setView] = useState('month') // 'month', 'week', 'day'
   const [currentDate, setCurrentDate] = useState(new Date())
   const [seasons, setSeasons] = useState([])
@@ -600,7 +602,7 @@ export default function Calendar() {
               </div>
             )}
 
-            {view === 'month' && (
+            {view === 'month' && canEdit && (
               <button
                 onClick={() => setShowQuickAddModal(true)}
                 className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-teal-600 hover:from-purple-700 hover:to-teal-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl text-sm whitespace-nowrap"
@@ -963,7 +965,7 @@ export default function Calendar() {
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={`circ-star-${star}`}
-                            disabled={!hasBall}
+                            disabled={!hasBall || !canEdit}
                             onClick={() => updateLoadFactor(date, 'circulation', star, true)}
                             className={`p-0.5 transition-colors ${
                               !hasBall ? 'cursor-not-allowed' : 'hover:scale-110'
@@ -988,7 +990,7 @@ export default function Calendar() {
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={`mech-star-${star}`}
-                            disabled={!hasBall}
+                            disabled={!hasBall || !canEdit}
                             onClick={() => updateLoadFactor(date, 'mechanical', star, true)}
                             className={`p-0.5 transition-colors ${
                               !hasBall ? 'cursor-not-allowed' : 'hover:scale-110'
@@ -1010,7 +1012,7 @@ export default function Calendar() {
                     <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
                       <div className="text-[10px] text-slate-400 mb-1 text-center">Energiarendszer</div>
                       <select
-                        disabled={!hasBall}
+                        disabled={!hasBall || !canEdit}
                         value={getLoadFactor(date, 'energy')}
                         onChange={(e) => updateLoadFactor(date, 'energy', e.target.value, true)}
                         className={`w-full px-1 py-1 text-[10px] text-center bg-slate-700 text-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
@@ -1030,7 +1032,7 @@ export default function Calendar() {
                       <div className="text-[10px] text-slate-400 mb-1 text-center">Időtartam</div>
                       <input
                         type="text"
-                        disabled={!hasBall}
+                        disabled={!hasBall || !canEdit}
                         value={getLoadFactor(date, 'duration')}
                         onChange={(e) => updateLoadFactor(date, 'duration', e.target.value)}
                         placeholder={hasBall ? 'pl. 90p' : ''}
@@ -1044,7 +1046,7 @@ export default function Calendar() {
                     <div className={`px-2 py-2 border-b border-slate-600 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
                       <div className="text-[10px] text-slate-400 mb-1 text-center">Terhelés:Pihenő</div>
                       <select
-                        disabled={!hasBall}
+                        disabled={!hasBall || !canEdit}
                         value={getLoadFactor(date, 'ratio')}
                         onChange={(e) => updateLoadFactor(date, 'ratio', e.target.value, true)}
                         className={`w-full px-1 py-1 text-[10px] text-center bg-slate-700 text-white rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
@@ -1068,7 +1070,7 @@ export default function Calendar() {
                       <div className="text-[10px] text-slate-400 mb-1 text-center">Típus</div>
                       <input
                         type="text"
-                        disabled={!hasBall}
+                        disabled={!hasBall || !canEdit}
                         value={getLoadFactor(date, 'type')}
                         onChange={(e) => updateLoadFactor(date, 'type', e.target.value)}
                         placeholder={hasBall ? 'pl. HIIT' : ''}
@@ -1105,7 +1107,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Taktikai - Támadás</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'tactical_support')}
                           onChange={(e) => updateTacticsTechnique(date, 'tactical_support', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1120,7 +1122,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Taktikai - Védekezés</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'tactical_defense')}
                           onChange={(e) => updateTacticsTechnique(date, 'tactical_defense', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1135,7 +1137,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Technikai - Támadás</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'technical_support')}
                           onChange={(e) => updateTacticsTechnique(date, 'technical_support', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1150,7 +1152,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Technikai - Védekezés</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'technical_defense')}
                           onChange={(e) => updateTacticsTechnique(date, 'technical_defense', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1164,7 +1166,7 @@ export default function Calendar() {
                       <div className={`px-2 py-2 border-t-[3px] border-b-[3px] border-slate-400 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Videó</div>
                         <select
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'video_url') || ''}
                           onChange={(e) => updateTacticsTechnique(date, 'video_url', e.target.value)}
                           className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
@@ -1182,7 +1184,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Közös</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_support_common')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_support_common', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1197,7 +1199,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Szélső</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_support_wide')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_support_wide', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1212,7 +1214,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Beálló</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_support_inside')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_support_inside', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1227,7 +1229,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Tám Átlövő</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_support_main_direction')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_support_main_direction', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1242,7 +1244,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Közös</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_defense_common')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_defense_common', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1257,7 +1259,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Szélső</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_defense_wide')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_defense_wide', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1272,7 +1274,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Beálló</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_defense_inside')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_defense_inside', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1287,7 +1289,7 @@ export default function Calendar() {
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Gyak - Véd Átlövő</div>
                         <input
                           type="text"
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_defense_main_direction')}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_defense_main_direction', e.target.value)}
                           placeholder={hasBall ? '-' : ''}
@@ -1301,7 +1303,7 @@ export default function Calendar() {
                       <div className={`px-2 py-2 border-t-[3px] border-slate-400 ${!hasBall ? 'bg-slate-700/50' : ''}`}>
                         <div className="text-[10px] text-slate-400 mb-1 text-center">Kapus edzés</div>
                         <select
-                          disabled={!hasBall}
+                          disabled={!hasBall || !canEdit}
                           value={getTacticsTechnique(date, 'practice_game') || ''}
                           onChange={(e) => updateTacticsTechnique(date, 'practice_game', e.target.value)}
                           className={`w-full px-1 py-1 text-center bg-slate-700 text-white text-[10px] rounded border-0 focus:outline-none focus:ring-1 focus:ring-teal-500 ${
@@ -1359,17 +1361,19 @@ export default function Calendar() {
                   <div className="card bg-slate-800">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-white">🏋️ Edzések ({daySessions.length})</h3>
-                      <button
-                        onClick={() => {
-                          setSelectedDateForSession(currentDate)
-                          setEditingSession(null)
-                          setShowSessionModal(true)
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Edzés hozzáadása</span>
-                      </button>
+                      {canEdit && (
+                        <button
+                          onClick={() => {
+                            setSelectedDateForSession(currentDate)
+                            setEditingSession(null)
+                            setShowSessionModal(true)
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Edzés hozzáadása</span>
+                        </button>
+                      )}
                     </div>
                     
                     {daySessions.length === 0 ? (
@@ -1392,25 +1396,27 @@ export default function Calendar() {
                                   <div className="text-sm text-slate-400 mt-1">📍 {session.location}</div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => {
-                                    setEditingSession(session)
-                                    setShowSessionModal(true)
-                                  }}
-                                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                                  title="Szerkesztés"
-                                >
-                                  <Edit className="w-4 h-4 text-slate-400" />
-                                </button>
-                                <button
-                                  onClick={() => deleteTrainingSession(session.id)}
-                                  className="p-2 hover:bg-red-600 rounded-lg transition-colors"
-                                  title="Törlés"
-                                >
-                                  <Trash2 className="w-4 h-4 text-slate-400" />
-                                </button>
-                              </div>
+                              {canEdit && (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setEditingSession(session)
+                                      setShowSessionModal(true)
+                                    }}
+                                    className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                                    title="Szerkesztés"
+                                  >
+                                    <Edit className="w-4 h-4 text-slate-400" />
+                                  </button>
+                                  <button
+                                    onClick={() => deleteTrainingSession(session.id)}
+                                    className="p-2 hover:bg-red-600 rounded-lg transition-colors"
+                                    title="Törlés"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-slate-400" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                             {session.notes && (
                               <p className="text-sm text-slate-300 mt-2">{session.notes}</p>

@@ -4,7 +4,7 @@ import { X, Save, AlertCircle } from 'lucide-react'
 import BodyDiagram from './BodyDiagram'
 import toast from 'react-hot-toast'
 
-export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClose, onSaved, embedded = false }) {
+export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClose, onSaved, embedded = false, canEdit = true }) {
   const [loading, setLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const [formData, setFormData] = useState(existingAnamnesis || {
@@ -642,25 +642,33 @@ export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClo
           {/* Footer */}
           <div className="flex items-center justify-end px-6 py-3 border-t border-slate-700 bg-slate-800">
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleSaveAnamnesis}
-                disabled={loading}
-                className="px-6 py-2 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Mentés...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Mentés
-                  </>
-                )}
-              </button>
-              
+              {!canEdit && (
+                <span className="text-sm text-slate-400 flex items-center gap-2 mr-2">
+                  <AlertCircle className="w-4 h-4" />
+                  Csak megtekintési jogosultság
+                </span>
+              )}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={handleSaveAnamnesis}
+                  disabled={loading}
+                  className="px-6 py-2 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Mentés...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      Mentés
+                    </>
+                  )}
+                </button>
+              )}
+
               {!embedded && (
                 <button
                   type="button"
