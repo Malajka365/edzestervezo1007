@@ -174,7 +174,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
   return (
     <div className="space-y-6">
       <div className="card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
           <h3 className="text-lg font-bold text-white">Csapattagok</h3>
           {isOwner && (
             <button
@@ -209,7 +209,36 @@ export default function TeamMembersPanel({ team, isOwner }) {
       {isOwner && (
         <div className="card">
           <h3 className="text-lg font-bold text-white mb-4">Jogosultságok</h3>
-          <div className="overflow-x-auto">
+
+          {/* Mobilon (< md): egy kártya modulonként, benne a 3 szerep legördülővel */}
+          <div className="space-y-3 md:hidden">
+            {MODULES.map((mod) => (
+              <div key={mod.key} className="bg-slate-700/50 rounded-lg p-3">
+                <p className="text-white font-medium mb-3">{mod.name}</p>
+                <div className="space-y-2">
+                  {ROLES.map((r) => (
+                    <div key={r.key} className="flex items-center justify-between gap-3">
+                      <label className="text-sm text-slate-400 flex-shrink-0">{r.name}</label>
+                      <select
+                        value={permissions[r.key]?.[mod.key] || 'none'}
+                        onChange={(e) => handlePermissionChange(r.key, mod.key, e.target.value)}
+                        className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm min-w-0 flex-shrink-0"
+                      >
+                        {ACCESS_LEVELS.map((lvl) => (
+                          <option key={lvl.key} value={lvl.key}>
+                            {lvl.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* md és afelett: eredeti táblázat nézet */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr>
@@ -248,7 +277,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
           <button
             onClick={handleSavePermissions}
             disabled={savingPermissions}
-            className="btn btn-primary mt-4 disabled:opacity-50"
+            className="btn btn-primary mt-4 disabled:opacity-50 w-full sm:w-auto"
           >
             {savingPermissions ? 'Mentés...' : 'Jogosultságok mentése'}
           </button>

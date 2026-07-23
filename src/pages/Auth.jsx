@@ -78,12 +78,12 @@ export default function Auth() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         {/* Connection Test Toggle */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-4 px-2">
           <button
             onClick={() => setShowConnectionTest(!showConnectionTest)}
-            className="text-sm text-slate-400 hover:text-primary-400 transition-colors flex items-center mx-auto"
+            className="text-sm text-slate-400 hover:text-primary-400 transition-colors inline-flex items-center mx-auto"
           >
-            <Database className="w-4 h-4 mr-2" />
+            <Database className="w-4 h-4 mr-2 flex-shrink-0" />
             {showConnectionTest ? 'Kapcsolat teszt elrejtése' : 'Adatbázis kapcsolat tesztelése'}
           </button>
         </div>
@@ -97,12 +97,12 @@ export default function Auth() {
 
       <div className="w-full max-w-md mx-auto">
         {/* Logo & Title */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-            <span className="text-3xl font-bold text-white">TF</span>
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-primary-600 rounded-2xl mb-4">
+            <span className="text-2xl sm:text-3xl font-bold text-white">TF</span>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">TeamFlow</h1>
-          <p className="text-slate-400">Csapatsport Edzés Menedzsment</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">TeamFlow</h1>
+          <p className="text-sm sm:text-base text-slate-400">Csapatsport Edzés Menedzsment</p>
         </div>
 
         {/* Auth Card */}
@@ -110,24 +110,24 @@ export default function Auth() {
           <div className="flex mb-6 bg-slate-700 rounded-lg p-1">
             <button
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md font-semibold transition-all duration-200 ${
+              className={`flex-1 py-2 px-2 sm:px-4 rounded-md text-sm sm:text-base font-semibold transition-all duration-200 ${
                 isLogin
                   ? 'bg-primary-600 text-white'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <LogIn className="w-4 h-4 inline mr-2" />
+              <LogIn className="w-4 h-4 inline mr-1 sm:mr-2" />
               Bejelentkezés
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md font-semibold transition-all duration-200 ${
+              className={`flex-1 py-2 px-2 sm:px-4 rounded-md text-sm sm:text-base font-semibold transition-all duration-200 ${
                 !isLogin
                   ? 'bg-primary-600 text-white'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              <UserPlus className="w-4 h-4 inline mr-2" />
+              <UserPlus className="w-4 h-4 inline mr-1 sm:mr-2" />
               Regisztráció
             </button>
           </div>

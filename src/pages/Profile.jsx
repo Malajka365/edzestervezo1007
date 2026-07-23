@@ -146,10 +146,10 @@ export default function Profile({ session }) {
           ) : (
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
           )}
-          <p className="text-sm">{message.text}</p>
+          <p className="text-sm flex-1 min-w-0">{message.text}</p>
           <button
             onClick={() => setMessage({ type: '', text: '' })}
-            className="ml-auto text-slate-400 hover:text-white"
+            className="ml-auto text-slate-400 hover:text-white flex-shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -319,11 +319,11 @@ export default function Profile({ session }) {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 pt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-primary flex items-center space-x-2 disabled:opacity-50"
+                className="btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
               >
                 <Save className="w-5 h-5" />
                 <span>{loading ? 'Mentés...' : 'Jelszó Mentése'}</span>

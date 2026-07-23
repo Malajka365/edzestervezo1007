@@ -82,11 +82,11 @@ export default function JoinTeam({ session }) {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="card max-w-md w-full text-center">
+      <div className="card max-w-md w-full text-center p-5 sm:p-6">
         {status === 'confirm' && invite && (
           <>
-            <h2 className="text-xl font-bold text-white mb-2">Csapat meghívó</h2>
-            <p className="text-slate-300 mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-2">Csapat meghívó</h2>
+            <p className="text-sm sm:text-base text-slate-300 mb-6 break-words">
               Csatlakozol a(z) <strong>{invite.team_name}</strong> csapathoz mint{' '}
               <strong>{roleLabel(invite.role)}</strong>?
             </p>
@@ -95,8 +95,8 @@ export default function JoinTeam({ session }) {
             </button>
           </>
         )}
-        {status === 'success' && <p className="text-green-400">Sikeres csatlakozás! Átirányítás...</p>}
-        {status === 'error' && <p className="text-red-400">{errorMessage}</p>}
+        {status === 'success' && <p className="text-sm sm:text-base text-green-400">Sikeres csatlakozás! Átirányítás...</p>}
+        {status === 'error' && <p className="text-sm sm:text-base text-red-400">{errorMessage}</p>}
       </div>
     </div>
   )
