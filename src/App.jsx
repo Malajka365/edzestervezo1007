@@ -1,11 +1,25 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { supabase } from './lib/supabase'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import JoinTeam from './pages/JoinTeam'
 import LoadingSpinner from './components/LoadingSpinner'
+
+// Module-scoped QueryClient — created once for the app's lifetime so the cache
+// survives module (route) switches. Sane defaults for a team-management app:
+// the roster rarely changes mid-session, so cache stays fresh for 5 minutes and
+// we don't refetch just because the window regained focus.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
 
 function App() {
   const [session, setSession] = useState(null)
@@ -33,7 +47,8 @@ function App() {
   }
 
   return (
-    <Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -69,7 +84,8 @@ function App() {
         />
         <Route path="/" element={<Navigate to={session ? "/dashboard" : "/auth"} replace />} />
       </Routes>
-    </Router>
+      </Router>
+    </QueryClientProvider>
   )
 }
 
