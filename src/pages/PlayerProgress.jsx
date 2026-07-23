@@ -23,9 +23,6 @@ import {
   ReferenceDot,
   ReferenceArea,
 } from 'recharts'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import html2canvas from 'html2canvas'
 import toast from 'react-hot-toast'
 
 export default function PlayerProgress() {
@@ -200,6 +197,9 @@ export default function PlayerProgress() {
 
   const exportToPDF = async () => {
     try {
+      const { jsPDF } = await import('jspdf')
+      const { default: autoTable } = await import('jspdf-autotable')
+      const { default: html2canvas } = await import('html2canvas')
       const doc = new jsPDF()
       const player = getSelectedPlayer()
       const exercise = getSelectedExercise()

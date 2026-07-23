@@ -10,8 +10,6 @@ import {
   Dumbbell,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import toast from 'react-hot-toast'
 
 export default function TrainingLoad() {
@@ -122,8 +120,10 @@ export default function TrainingLoad() {
     }
   }
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     try {
+      const { jsPDF } = await import('jspdf')
+      const { default: autoTable } = await import('jspdf-autotable')
       const doc = new jsPDF('landscape')
       const exercise = exercises.find((e) => e.id === selectedExercise)
 

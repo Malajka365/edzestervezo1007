@@ -15,8 +15,6 @@ import {
   Edit,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import toast from 'react-hot-toast'
 
 export default function MacrocyclePlanner() {
@@ -390,6 +388,8 @@ export default function MacrocyclePlanner() {
 
     setExporting(true)
     try {
+      const { default: html2canvas } = await import('html2canvas')
+      const { default: jsPDF } = await import('jspdf')
       const canvas = await html2canvas(tableRef.current, {
         scale: 2,
         useCORS: true,

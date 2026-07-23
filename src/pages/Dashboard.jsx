@@ -1,20 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from '../lib/supabase'
 import { TeamProvider, useTeams } from '../context/TeamContext'
 import { DASHBOARD_MODULE_TO_PERMISSION_KEY, isModuleVisible } from '../lib/permissions'
 import TeamSelector from '../components/TeamSelector'
-import Teams from './Teams'
-import Measurements from './Measurements'
-import TrainingLoad from './TrainingLoad'
-import Leaderboard from './Leaderboard'
-import PlayerProgress from './PlayerProgress'
-import Profile from './Profile'
-import MacrocyclePlanner from './MacrocyclePlanner'
-import Calendar from './Calendar'
-import TrainingTemplates from './TrainingTemplates'
-import Matches from './Matches'
-import ExerciseLibrary from './ExerciseLibrary'
-import Rehabilitation from './Rehabilitation'
+import LoadingSpinner from '../components/LoadingSpinner'
+
+const Teams = lazy(() => import('./Teams'))
+const Measurements = lazy(() => import('./Measurements'))
+const TrainingLoad = lazy(() => import('./TrainingLoad'))
+const Leaderboard = lazy(() => import('./Leaderboard'))
+const PlayerProgress = lazy(() => import('./PlayerProgress'))
+const Profile = lazy(() => import('./Profile'))
+const MacrocyclePlanner = lazy(() => import('./MacrocyclePlanner'))
+const Calendar = lazy(() => import('./Calendar'))
+const TrainingTemplates = lazy(() => import('./TrainingTemplates'))
+const Matches = lazy(() => import('./Matches'))
+const ExerciseLibrary = lazy(() => import('./ExerciseLibrary'))
+const Rehabilitation = lazy(() => import('./Rehabilitation'))
 import {
   Home,
   Users,
@@ -344,6 +346,7 @@ function DashboardContent({
         </header>
 
         {/* Content Area */}
+        <Suspense fallback={<LoadingSpinner />}>
         {activeModule === 'rehab' ? (
           <Rehabilitation />
         ) : activeModule === 'macrocycle' ? (
@@ -461,6 +464,7 @@ function DashboardContent({
             )}
           </main>
         )}
+        </Suspense>
       </div>
     </div>
   )
