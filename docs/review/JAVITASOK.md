@@ -31,5 +31,8 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | F3 | D3+D4 — Loading egységesítés + üres állapotok | ✅ KÉSZ | `1d133ee` + `fe5c1ed` | 9 loading csere, EmptyState 3 oldalon (4 oldalon már volt jó) |
 | F4 | KT5 — canEditModule a maradék 8 modulba | ✅ KÉSZ | `480294a` | 13 fájl; élőben tesztelve (view: gomb rejtve, none: modul rejtve, edit: gomb látszik) |
 | F5 | KT4 — Duplikációk (naptárak, PDF util) | ✅ KÉSZ | `260ce8d` + `5c015d7` | -170 duplikált sor; lib/attendance.js + lib/pdfExport.js; élőben tesztelve |
-| F6 | KT2 — Óriásfájlok darabolása (4 fájl, sorban) | ⏳ | — | |
+| F6-1 | KT2 — MacrocyclePlanner darabolás | ✅ KÉSZ | `397de9e` | -219 sor, 5 modál kiemelve; Opus review CLEAN + élő teszt |
+| F6-2 | KT2 — Calendar darabolás | ⏳ | — | |
+| F6-3 | KT2 — Measurements darabolás | ⏳ | — | |
+| F6-4 | KT2 — ExerciseLibrary darabolás | ⏳ | — | |
 | F7 | KT3 — React Query adat-réteg | ⏳ | — | |
