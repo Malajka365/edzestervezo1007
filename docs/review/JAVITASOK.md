@@ -70,4 +70,4 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 |---|---|---|---|---|
 | H1 | Calendar data-hook (useCalendarData) | ✅ KÉSZ | `ab81cd7` | 819→399 sor; Opus review CLEAN (debounce-mentés functional setState, 0 stale-closure) + élő teszt |
 | H2 | Measurements data-hook | ✅ KÉSZ | `45a038c` | 659→538 sor; Opus review CLEAN (3/3 exercises-invalidáció, selectedPlayers nem elejtett) + élő teszt |
-| H3 | ExerciseLibrary data-hook | ⏳ | — | |
+| H3 | ExerciseLibrary data-hook | ✅ KÉSZ | `80f4072` | 806→675 sor; Opus review CLEAN (kedvenc-irány + tábla-integritás igazolva) + élő teszt |
