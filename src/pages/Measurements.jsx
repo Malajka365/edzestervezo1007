@@ -11,17 +11,18 @@ import {
   Calendar,
   Users,
   Dumbbell,
-  X,
-  Save,
   ChevronUp,
   ChevronDown,
-  Edit2,
-  Trash2,
   Settings,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
+import ExerciseModal from './measurements/ExerciseModal'
+import MeasurementModal from './measurements/MeasurementModal'
+import PlayerSelectionModal from './measurements/PlayerSelectionModal'
+import TeamMeasurementModal from './measurements/TeamMeasurementModal'
+import ExerciseManagementModal from './measurements/ExerciseManagementModal'
 import toast from 'react-hot-toast'
 
 export default function Measurements({ session }) {
@@ -606,607 +607,65 @@ export default function Measurements({ session }) {
 
       {/* Exercise Modal */}
       {showExerciseModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">{editingExercise ? 'Gyakorlat Szerkesztése' : 'Új Gyakorlat'}</h3>
-              <button onClick={() => {
-                setShowExerciseModal(false)
-                setEditingExercise(null)
-                setExerciseForm({ name: '', category: 'strength', unit: 'kg', description: '' })
-              }} className="text-slate-400 hover:text-white">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateExercise} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Gyakorlat neve *</label>
-                <input type="text" value={exerciseForm.name} onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })} required className="input-field" placeholder="pl. Guggolás" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Kategória</label>
-                <select value={exerciseForm.category} onChange={(e) => setExerciseForm({ ...exerciseForm, category: e.target.value })} className="input-field">
-                  <option value="strength">Erő</option>
-                  <option value="cardio">Kardió</option>
-                  <option value="flexibility">Rugalmasság</option>
-                  <option value="player_params">Játékos paraméterek</option>
-                  <option value="other">Egyéb</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Mértékegység</label>
-                <select value={exerciseForm.unit} onChange={(e) => setExerciseForm({ ...exerciseForm, unit: e.target.value })} className="input-field">
-                  {exerciseForm.category === 'player_params' ? (
-                    <>
-                      <option value="kg">kg</option>
-                      <option value="cm">cm</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="kg">kg</option>
-                      <option value="cm">cm</option>
-                      <option value="reps">ismétlés</option>
-                      <option value="m">m</option>
-                      <option value="sec">másodperc</option>
-                      <option value="min">perc</option>
-                    </>
-                  )}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Leírás</label>
-                <textarea value={exerciseForm.description} onChange={(e) => setExerciseForm({ ...exerciseForm, description: e.target.value })} className="input-field resize-none" rows="3" />
-              </div>
-              <div className="flex items-center space-x-3 pt-4">
-                <button type="submit" className="flex-1 btn-primary flex items-center justify-center space-x-2">
-                  <Save className="w-5 h-5" />
-                  <span>Létrehozás</span>
-                </button>
-                <button type="button" onClick={() => setShowExerciseModal(false)} className="flex-1 btn-secondary">Mégse</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ExerciseModal
+          editingExercise={editingExercise}
+          exerciseForm={exerciseForm}
+          setExerciseForm={setExerciseForm}
+          setShowExerciseModal={setShowExerciseModal}
+          setEditingExercise={setEditingExercise}
+          handleCreateExercise={handleCreateExercise}
+        />
       )}
 
       {/* Measurement Modal */}
       {showMeasurementModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-slate-800 rounded-xl max-w-lg w-full p-6 border border-slate-700 my-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Új Mérés Rögzítése</h3>
-              <button onClick={() => setShowMeasurementModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateMeasurement} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Játékos *</label>
-                <select value={measurementForm.player_id} onChange={(e) => setMeasurementForm({ ...measurementForm, player_id: e.target.value })} required className="input-field">
-                  <option value="">Válassz játékost</option>
-                  {players.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.jersey_number ? `#${player.jersey_number} ` : ''}{player.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Gyakorlat *</label>
-                <select value={measurementForm.exercise_id} onChange={(e) => setMeasurementForm({ ...measurementForm, exercise_id: e.target.value })} required className="input-field">
-                  <option value="">Válassz gyakorlatot</option>
-                  {exercises.map((exercise) => (
-                    <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
-                  ))}
-                </select>
-              </div>
-              {measurementForm.exercise_id && exercises.find(e => e.id === measurementForm.exercise_id)?.unit === 'reps' ? (
-                // Only show "Ismétlések" for reps exercises
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Ismétlések *</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    value={measurementForm.value} 
-                    onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })} 
-                    required 
-                    className="input-field" 
-                    placeholder="pl. 15"
-                  />
-                </div>
-              ) : measurementForm.exercise_id && exercises.find(e => e.id === measurementForm.exercise_id)?.unit === 'cm' ? (
-                // Only show single field for cm exercises (e.g., height)
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    {exercises.find(e => e.id === measurementForm.exercise_id)?.name} (cm) *
-                  </label>
-                  <input 
-                    type="number" 
-                    step="0.1"
-                    min="0"
-                    value={measurementForm.value} 
-                    onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })} 
-                    required 
-                    className="input-field" 
-                    placeholder="pl. 180"
-                  />
-                </div>
-              ) : measurementForm.exercise_id && exercises.find(e => e.id === measurementForm.exercise_id)?.category === 'player_params' ? (
-                // Only show single field for player parameter exercises (e.g., weight)
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    {exercises.find(e => e.id === measurementForm.exercise_id)?.name} ({exercises.find(e => e.id === measurementForm.exercise_id)?.unit}) *
-                  </label>
-                  <input 
-                    type="number" 
-                    step="0.1"
-                    min="0"
-                    value={measurementForm.value} 
-                    onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })} 
-                    required 
-                    className="input-field" 
-                    placeholder={exercises.find(e => e.id === measurementForm.exercise_id)?.unit === 'kg' ? "pl. 75" : "pl. 100"}
-                  />
-                </div>
-              ) : (
-                // Show both fields for other exercises (kg, etc.)
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Érték *</label>
-                    <input type="number" step="0.1" value={measurementForm.value} onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value })} required className="input-field" placeholder="pl. 100" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Ismétlések</label>
-                    <input type="number" min="1" value={measurementForm.reps} onChange={(e) => setMeasurementForm({ ...measurementForm, reps: e.target.value })} className="input-field" />
-                  </div>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Dátum *</label>
-                <input type="date" value={measurementForm.measured_at} onChange={(e) => setMeasurementForm({ ...measurementForm, measured_at: e.target.value })} required className="input-field" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Jegyzetek</label>
-                <textarea value={measurementForm.notes} onChange={(e) => setMeasurementForm({ ...measurementForm, notes: e.target.value })} className="input-field resize-none" rows="3" placeholder="Opcionális jegyzetek..." />
-              </div>
-              {measurementForm.value && measurementForm.reps && measurementForm.exercise_id && 
-               exercises.find(e => e.id === measurementForm.exercise_id)?.unit !== 'reps' && 
-               exercises.find(e => e.id === measurementForm.exercise_id)?.unit !== 'cm' && (
-                <div className="bg-primary-900/30 border border-primary-700 rounded-lg p-3">
-                  <p className="text-sm text-primary-300">
-                    <TrendingUp className="w-4 h-4 inline mr-1" />
-                    Kalkulált 1RM: <strong>{calculate1RM(parseFloat(measurementForm.value), parseInt(measurementForm.reps))} {exercises.find(e => e.id === measurementForm.exercise_id)?.unit}</strong>
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center space-x-3 pt-4">
-                <button type="submit" className="flex-1 btn-primary flex items-center justify-center space-x-2">
-                  <Save className="w-5 h-5" />
-                  <span>Rögzítés</span>
-                </button>
-                <button type="button" onClick={() => setShowMeasurementModal(false)} className="flex-1 btn-secondary">Mégse</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <MeasurementModal
+          players={players}
+          exercises={exercises}
+          measurementForm={measurementForm}
+          setMeasurementForm={setMeasurementForm}
+          setShowMeasurementModal={setShowMeasurementModal}
+          handleCreateMeasurement={handleCreateMeasurement}
+          calculate1RM={calculate1RM}
+        />
       )}
 
       {/* Player Selection Modal */}
       {showPlayerSelectionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-2xl w-full p-6 border border-slate-700">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-white">Játékosok Kiválasztása</h3>
-                <p className="text-sm text-slate-400 mt-1">
-                  Válaszd ki, mely játékosok felmérését szeretnéd rögzíteni
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowPlayerSelectionModal(false)} 
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Select All */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-700">
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedPlayers.length === players.length}
-                    onChange={toggleAllPlayers}
-                    className="w-5 h-5 rounded border-slate-600 text-primary-600 focus:ring-primary-500 focus:ring-offset-slate-800"
-                  />
-                  <span className="text-white font-semibold">
-                    Összes kiválasztása ({players.length})
-                  </span>
-                </label>
-                <span className="text-sm text-slate-400">
-                  {selectedPlayers.length} kiválasztva
-                </span>
-              </div>
-
-              {/* Players List */}
-              <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                {players.map((player) => (
-                  <label
-                    key={player.id}
-                    className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                      selectedPlayers.includes(player.id)
-                        ? 'bg-primary-900/30 border border-primary-600'
-                        : 'bg-slate-700 hover:bg-slate-600 border border-transparent'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedPlayers.includes(player.id)}
-                      onChange={() => togglePlayerSelection(player.id)}
-                      className="w-5 h-5 rounded border-slate-600 text-primary-600 focus:ring-primary-500 focus:ring-offset-slate-800"
-                    />
-                    <div className="flex items-center space-x-3 flex-1">
-                      {player.jersey_number && (
-                        <span className="text-xl font-bold text-primary-400">
-                          #{player.jersey_number}
-                        </span>
-                      )}
-                      <span className="text-white font-medium">{player.name}</span>
-                      {player.position && (
-                        <span className="text-sm text-slate-400">• {player.position}</span>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center space-x-3 pt-4 border-t border-slate-700">
-                <button
-                  onClick={proceedToTeamMeasurement}
-                  disabled={selectedPlayers.length === 0}
-                  className="flex-1 btn-primary flex items-center justify-center space-x-2 disabled:opacity-50"
-                >
-                  <Users className="w-5 h-5" />
-                  <span>Tovább a Felméréshez ({selectedPlayers.length})</span>
-                </button>
-                <button
-                  onClick={() => setShowPlayerSelectionModal(false)}
-                  className="flex-1 btn-secondary"
-                >
-                  Mégse
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PlayerSelectionModal
+          players={players}
+          selectedPlayers={selectedPlayers}
+          toggleAllPlayers={toggleAllPlayers}
+          togglePlayerSelection={togglePlayerSelection}
+          proceedToTeamMeasurement={proceedToTeamMeasurement}
+          setShowPlayerSelectionModal={setShowPlayerSelectionModal}
+        />
       )}
 
       {/* Team Measurement Modal */}
       {showTeamMeasurementModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-6xl w-full h-[90vh] flex flex-col border border-slate-700">
-            {/* Header - Fixed */}
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-700 flex-shrink-0">
-              <div>
-                <h3 className="text-xl font-bold text-white">Csapat Felmérés</h3>
-                <p className="text-sm text-slate-400 mt-1">Rögzítsd az egész csapat mérését egyszerre</p>
-              </div>
-              <button onClick={() => setShowTeamMeasurementModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateTeamMeasurement} className="flex flex-col flex-1 overflow-hidden">
-              {/* Common Fields - Fixed */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 pb-4 border-b border-slate-700 flex-shrink-0">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Gyakorlat *</label>
-                  <select
-                    value={teamMeasurementForm.exercise_id}
-                    onChange={(e) => setTeamMeasurementForm({ ...teamMeasurementForm, exercise_id: e.target.value })}
-                    required
-                    className="input-field"
-                  >
-                    <option value="">Válassz gyakorlatot</option>
-                    {exercises.map((exercise) => (
-                      <option key={exercise.id} value={exercise.id}>
-                        {exercise.name} ({exercise.unit})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Dátum *</label>
-                  <input
-                    type="date"
-                    value={teamMeasurementForm.measured_at}
-                    onChange={(e) => setTeamMeasurementForm({ ...teamMeasurementForm, measured_at: e.target.value })}
-                    required
-                    className="input-field"
-                  />
-                </div>
-              </div>
-
-              {/* Players Table - Scrollable */}
-              <div className="flex-1 overflow-y-auto px-6">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center sticky top-0 bg-slate-800 py-2 z-10">
-                  <Users className="w-5 h-5 mr-2 text-primary-400" />
-                  Játékosok ({selectedPlayers.length})
-                </h4>
-                <div className="overflow-x-auto pb-4">
-                  {teamMeasurementForm.exercise_id && exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.unit === 'reps' ? (
-                    // Simplified table for "ismétlés" exercises
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-700">
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Játékos</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Ismétlések</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Jegyzetek</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
-                        {players.filter(p => selectedPlayers.includes(p.id)).map((player) => {
-                          const playerData = teamMeasurementForm.playerData[player.id] || {}
-                          return (
-                            <tr key={player.id} className="hover:bg-slate-700/50 transition-colors">
-                              <td className="px-3 py-3 whitespace-nowrap">
-                                <div className="flex items-center space-x-2">
-                                  {player.jersey_number && (
-                                    <span className="text-lg font-bold text-primary-400">#{player.jersey_number}</span>
-                                  )}
-                                  <span className="text-white font-medium">{player.name}</span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-3">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={playerData.value || ''}
-                                  onChange={(e) => updatePlayerData(player.id, 'value', e.target.value)}
-                                  className="w-24 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                  placeholder="pl. 15"
-                                />
-                              </td>
-                              <td className="px-3 py-3">
-                                <input
-                                  type="text"
-                                  value={playerData.notes || ''}
-                                  onChange={(e) => updatePlayerData(player.id, 'notes', e.target.value)}
-                                  className="w-full px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                  placeholder="Opcionális"
-                                />
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  ) : teamMeasurementForm.exercise_id && (exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.unit === 'cm' || exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.category === 'player_params') ? (
-                    // Simplified table for "cm" exercises and player parameters (e.g., height, weight)
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-700">
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Játékos</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">
-                            {exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.name} ({exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.unit})
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Jegyzetek</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700">
-                        {players.filter(p => selectedPlayers.includes(p.id)).map((player) => {
-                          const playerData = teamMeasurementForm.playerData[player.id] || {}
-                          const selectedExercise = exercises.find(e => e.id === teamMeasurementForm.exercise_id)
-                          return (
-                            <tr key={player.id} className="hover:bg-slate-700/50 transition-colors">
-                              <td className="px-3 py-3 whitespace-nowrap">
-                                <div className="flex items-center space-x-2">
-                                  {player.jersey_number && (
-                                    <span className="text-lg font-bold text-primary-400">#{player.jersey_number}</span>
-                                  )}
-                                  <span className="text-white font-medium">{player.name}</span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-3">
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  min="0"
-                                  value={playerData.value || ''}
-                                  onChange={(e) => updatePlayerData(player.id, 'value', e.target.value)}
-                                  className="w-24 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                  placeholder={selectedExercise?.unit === 'kg' ? "pl. 75" : selectedExercise?.unit === 'cm' ? "pl. 180" : "pl. 15"}
-                                />
-                              </td>
-                              <td className="px-3 py-3">
-                                <input
-                                  type="text"
-                                  value={playerData.notes || ''}
-                                  onChange={(e) => updatePlayerData(player.id, 'notes', e.target.value)}
-                                  className="w-full px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                  placeholder="Opcionális"
-                                />
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  ) : (
-                    // Full table for other exercises
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-slate-700">
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Játékos</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Súly/Érték</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Ismétlések</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">1RM</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase">Jegyzetek</th>
-                        </tr>
-                      </thead>
-                    <tbody className="divide-y divide-slate-700">
-                      {players.filter(p => selectedPlayers.includes(p.id)).map((player) => {
-                        const playerData = teamMeasurementForm.playerData[player.id] || {}
-                        const calculated1RM = playerData.value && playerData.reps
-                          ? calculate1RM(parseFloat(playerData.value), parseInt(playerData.reps || 1))
-                          : null
-
-                        return (
-                          <tr key={player.id} className="hover:bg-slate-700/50 transition-colors">
-                            <td className="px-3 py-3 whitespace-nowrap">
-                              <div className="flex items-center space-x-2">
-                                {player.jersey_number && (
-                                  <span className="text-lg font-bold text-primary-400">
-                                    #{player.jersey_number}
-                                  </span>
-                                )}
-                                <span className="text-white font-medium">{player.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-3">
-                              <input
-                                type="number"
-                                step="0.1"
-                                value={playerData.value || ''}
-                                onChange={(e) => updatePlayerData(player.id, 'value', e.target.value)}
-                                className="w-24 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                placeholder="100"
-                              />
-                            </td>
-                            <td className="px-3 py-3">
-                              <input
-                                type="number"
-                                min="1"
-                                value={playerData.reps || '1'}
-                                onChange={(e) => updatePlayerData(player.id, 'reps', e.target.value)}
-                                className="w-16 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                              />
-                            </td>
-                            <td className="px-3 py-3">
-                              {calculated1RM && exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.unit !== 'reps' && exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.unit !== 'cm' ? (
-                                <span className="text-primary-400 font-semibold text-sm">
-                                  {calculated1RM} {exercises.find(e => e.id === teamMeasurementForm.exercise_id)?.unit}
-                                </span>
-                              ) : (
-                                <span className="text-slate-500 text-sm">-</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-3">
-                              <input
-                                type="text"
-                                value={playerData.notes || ''}
-                                onChange={(e) => updatePlayerData(player.id, 'notes', e.target.value)}
-                                className="w-full px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                placeholder="Opcionális"
-                              />
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                  )}
-                </div>
-              </div>
-
-              {/* Footer - Fixed */}
-              <div className="flex items-center space-x-3 p-6 pt-4 border-t border-slate-700 flex-shrink-0">
-                <button type="submit" className="flex-1 btn-primary flex items-center justify-center space-x-2">
-                  <Save className="w-5 h-5" />
-                  <span>Összes Mérés Rögzítése</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowTeamMeasurementModal(false)}
-                  className="flex-1 btn-secondary"
-                >
-                  Mégse
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <TeamMeasurementModal
+          players={players}
+          exercises={exercises}
+          selectedPlayers={selectedPlayers}
+          teamMeasurementForm={teamMeasurementForm}
+          setTeamMeasurementForm={setTeamMeasurementForm}
+          setShowTeamMeasurementModal={setShowTeamMeasurementModal}
+          handleCreateTeamMeasurement={handleCreateTeamMeasurement}
+          updatePlayerData={updatePlayerData}
+          calculate1RM={calculate1RM}
+        />
       )}
 
       {/* Exercise Management Modal */}
       {showExerciseManagementModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-slate-700">
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <div>
-                <h3 className="text-xl font-bold text-white">Gyakorlatok Kezelése</h3>
-                <p className="text-sm text-slate-400 mt-1">Szerkeszd vagy töröld a gyakorlatokat</p>
-              </div>
-              <button onClick={() => setShowExerciseManagementModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              {exercises.length === 0 ? (
-                <div className="text-center py-12">
-                  <Dumbbell className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-400">Még nincs gyakorlat létrehozva</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {exercises.map((exercise) => (
-                    <div key={exercise.id} className="card hover:border-primary-500 transition-colors">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h4 className="text-lg font-bold text-white">{exercise.name}</h4>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded">
-                              {exercise.category === 'strength' ? 'Erő' : 
-                               exercise.category === 'cardio' ? 'Kardió' : 
-                               exercise.category === 'flexibility' ? 'Rugalmasság' : 
-                               exercise.category === 'player_params' ? 'Játékos paraméterek' : 'Egyéb'}
-                            </span>
-                            <span className="text-xs px-2 py-1 bg-primary-900/30 text-primary-400 rounded font-semibold">
-                              {exercise.unit}
-                            </span>
-                          </div>
-                        </div>
-                        {canEdit && (
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => openEditExercise(exercise)}
-                              className="p-2 text-slate-400 hover:text-primary-400 hover:bg-slate-700 rounded transition-colors"
-                              title="Szerkesztés"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteExercise(exercise.id)}
-                              className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
-                              title="Törlés"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      {exercise.description && (
-                        <p className="text-sm text-slate-400 mt-2">{exercise.description}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 border-t border-slate-700">
-              <button
-                onClick={() => setShowExerciseManagementModal(false)}
-                className="w-full btn-secondary"
-              >
-                Bezárás
-              </button>
-            </div>
-          </div>
-        </div>
+        <ExerciseManagementModal
+          exercises={exercises}
+          canEdit={canEdit}
+          openEditExercise={openEditExercise}
+          handleDeleteExercise={handleDeleteExercise}
+          setShowExerciseManagementModal={setShowExerciseManagementModal}
+        />
       )}
 
       <ConfirmDialog
