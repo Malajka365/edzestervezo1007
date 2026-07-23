@@ -63,3 +63,11 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 | G2b | Meghívó e-mail-címhez kötése | ✅ KÉSZ | `586f111`+`60a2a4d` | Élő teszt: rossz e-mail elutasítva, régi (NULL) meghívók működnek |
 | G3 | MacrocyclePlanner data-hook (F6 Step 2) | ✅ KÉSZ | `70ae14b` | 1552→1225 sor, useMacrocycleData hook; Opus review CLEAN (6/6 success-flag audit, stale-closure SAFE) + élő teszt |
 | G4 | TypeScript infra (allowJs) | ✅ KÉSZ | `8e98fa7` | typecheck 0 hiba, régi .jsx nem ellenőrzött; új .ts+.test.ts működik. Megj: typescript@7 preview települt |
+
+## 4. kör — maradék data-hookok (H-fázis, G3 mintája)
+
+| Fázis | Feladat | Státusz | Commit | Megjegyzés |
+|---|---|---|---|---|
+| H1 | Calendar data-hook (useCalendarData) | ✅ KÉSZ | `ab81cd7` | 819→399 sor; Opus review CLEAN (debounce-mentés functional setState, 0 stale-closure) + élő teszt |
+| H2 | Measurements data-hook | ⏳ | — | |
+| H3 | ExerciseLibrary data-hook | ⏳ | — | |
