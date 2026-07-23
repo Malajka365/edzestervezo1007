@@ -97,6 +97,15 @@ export default function Teams() {
     setShowTeamModal(true)
   }
 
+  // Üres szövegmezők NULL-ra alakítása a szám/dátum oszlopoknál — üres string
+  // (pl. kitöltetlen születési dátum vagy mezszám) érvénytelen a date/integer
+  // oszlopoknak és elhasalna a mentés.
+  const sanitizePlayerForm = (form) => ({
+    ...form,
+    birth_date: form.birth_date || null,
+    jersey_number: form.jersey_number === '' ? null : form.jersey_number,
+  })
+
   const handleCreatePlayer = async (e) => {
     e.preventDefault()
     if (!selectedTeam) return
@@ -104,7 +113,7 @@ export default function Teams() {
     try {
       const { data, error } = await supabase
         .from('players')
-        .insert([{ ...playerForm, team_id: selectedTeam.id }])
+        .insert([{ ...sanitizePlayerForm(playerForm), team_id: selectedTeam.id }])
         .select()
         .single()
 
@@ -132,7 +141,7 @@ export default function Teams() {
     try {
       const { data, error } = await supabase
         .from('players')
-        .update({ ...playerForm, updated_at: new Date().toISOString() })
+        .update({ ...sanitizePlayerForm(playerForm), updated_at: new Date().toISOString() })
         .eq('id', editingPlayer.id)
         .select()
         .single()
