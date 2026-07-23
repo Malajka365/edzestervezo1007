@@ -3,6 +3,14 @@ import { supabase } from '../lib/supabase'
 import { ChevronLeft, ChevronRight, Users, X, Save, Trash2, Calendar, CalendarDays, CalendarRange, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
+import {
+  ATTENDANCE_STATUSES,
+  TRAINING_TYPES,
+  getStatusColor,
+  getStatusLabel,
+  saveAttendance,
+  deleteAttendance,
+} from '../lib/attendance'
 
 export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -111,28 +119,6 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
     return attendance.filter(a => a.date === dateStr)
   }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'jelen': return 'bg-green-500'
-      case 'hiányzik': return 'bg-red-500'
-      case 'beteg': return 'bg-yellow-500'
-      case 'sérült': return 'bg-orange-500'
-      case 'egyéb': return 'bg-gray-500'
-      default: return 'bg-slate-600'
-    }
-  }
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'jelen': return 'Jelen'
-      case 'hiányzik': return 'Hiányzik'
-      case 'beteg': return 'Beteg'
-      case 'sérült': return 'Sérült'
-      case 'egyéb': return 'Egyéb'
-      default: return status
-    }
-  }
-
   const monthNames = [
     'Január', 'Február', 'Március', 'Április', 'Május', 'Június',
     'Július', 'Augusztus', 'Szeptember', 'Október', 'November', 'December'
@@ -198,38 +184,20 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
     
     try {
       const { id, ...dataToSave } = formData
-      
-      // Convert empty strings to null for optional fields
-      const cleanedData = {
-        ...dataToSave,
-        event_time: dataToSave.event_time || null,
-        notes: dataToSave.notes || null,
-        training_type: dataToSave.training_type || null,
-      }
-      
-      if (id) {
-        // Update existing
-        const { error } = await supabase
-          .from('player_attendance')
-          .update(cleanedData)
-          .eq('id', id)
-          
-        if (error) throw error
-        toast.success('Jelenlét sikeresen frissítve!')
-      } else {
-        // Insert new
-        const { error } = await supabase
-          .from('player_attendance')
-          .insert({
-            ...cleanedData,
-            team_id: teamId,
-            date: selectedDate,
-          })
-          
-        if (error) throw error
-        toast.success('Jelenlét sikeresen mentve!')
-      }
-      
+
+      const result = await saveAttendance({
+        id,
+        data: id
+          ? dataToSave
+          : { ...dataToSave, team_id: teamId, date: selectedDate },
+      })
+
+      toast.success(
+        result === 'updated'
+          ? 'Jelenlét sikeresen frissítve!'
+          : 'Jelenlét sikeresen mentve!'
+      )
+
       setShowModal(false)
       fetchAttendance()
     } catch (error) {
@@ -245,12 +213,7 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
       message: 'Biztosan törölni szeretnéd ezt a bejegyzést?',
       action: async () => {
         try {
-          const { error } = await supabase
-            .from('player_attendance')
-            .delete()
-            .eq('id', formData.id)
-
-          if (error) throw error
+          await deleteAttendance(formData.id)
 
           setShowModal(false)
           fetchAttendance()
@@ -611,11 +574,9 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                   required
                 >
-                  <option value="jelen">Jelen</option>
-                  <option value="hiányzik">Hiányzik</option>
-                  <option value="beteg">Beteg</option>
-                  <option value="sérült">Sérült</option>
-                  <option value="egyéb">Egyéb</option>
+                  {ATTENDANCE_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -628,11 +589,9 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
                   onChange={(e) => setFormData({...formData, training_type: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                 >
-                  <option value="edzés">Edzés</option>
-                  <option value="mérkőzés">Mérkőzés</option>
-                  <option value="regeneráció">Regeneráció</option>
-                  <option value="orvosi">Orvosi</option>
-                  <option value="egyéb">Egyéb</option>
+                  {TRAINING_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
 

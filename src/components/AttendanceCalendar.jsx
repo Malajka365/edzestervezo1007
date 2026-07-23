@@ -4,6 +4,14 @@ import { Plus, Edit, Trash2, X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
 import LoadingSpinner from './LoadingSpinner'
+import {
+  ATTENDANCE_STATUSES,
+  TRAINING_TYPES,
+  getStatusColor,
+  getStatusLabel,
+  saveAttendance,
+  deleteAttendance,
+} from '../lib/attendance'
 
 export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
   const [attendance, setAttendance] = useState([])
@@ -83,37 +91,19 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
     e.preventDefault()
     
     try {
-      // Convert empty strings to null for optional fields
-      const cleanedData = {
-        ...formData,
-        event_time: formData.event_time || null,
-        notes: formData.notes || null,
-        training_type: formData.training_type || null,
-      }
-      
-      if (selectedAttendance) {
-        // Update
-        const { error } = await supabase
-          .from('player_attendance')
-          .update(cleanedData)
-          .eq('id', selectedAttendance.id)
-          
-        if (error) throw error
-        toast.success('Jelenlét sikeresen frissítve!')
-      } else {
-        // Insert
-        const { error } = await supabase
-          .from('player_attendance')
-          .insert({
-            player_id: player.id,
-            team_id: teamId,
-            ...cleanedData,
-          })
-          
-        if (error) throw error
-        toast.success('Jelenlét sikeresen mentve!')
-      }
-      
+      const result = await saveAttendance({
+        id: selectedAttendance?.id,
+        data: selectedAttendance
+          ? formData
+          : { player_id: player.id, team_id: teamId, ...formData },
+      })
+
+      toast.success(
+        result === 'updated'
+          ? 'Jelenlét sikeresen frissítve!'
+          : 'Jelenlét sikeresen mentve!'
+      )
+
       setShowModal(false)
       fetchAttendance()
     } catch (error) {
@@ -129,12 +119,7 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
       message: 'Biztosan törölni szeretnéd ezt a bejegyzést?',
       action: async () => {
         try {
-          const { error } = await supabase
-            .from('player_attendance')
-            .delete()
-            .eq('id', selectedAttendance.id)
-
-          if (error) throw error
+          await deleteAttendance(selectedAttendance.id)
 
           setShowModal(false)
           fetchAttendance()
@@ -146,28 +131,6 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
         }
       },
     })
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'jelen': return 'bg-green-500'
-      case 'hiányzik': return 'bg-red-500'
-      case 'beteg': return 'bg-yellow-500'
-      case 'sérült': return 'bg-orange-500'
-      case 'egyéb': return 'bg-gray-500'
-      default: return 'bg-slate-600'
-    }
-  }
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'jelen': return 'Jelen'
-      case 'hiányzik': return 'Hiányzik'
-      case 'beteg': return 'Beteg'
-      case 'sérült': return 'Sérült'
-      case 'egyéb': return 'Egyéb'
-      default: return status
-    }
   }
 
   const formatDate = (dateStr) => {
@@ -318,11 +281,9 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                   required
                 >
-                  <option value="jelen">Jelen</option>
-                  <option value="hiányzik">Hiányzik</option>
-                  <option value="beteg">Beteg</option>
-                  <option value="sérült">Sérült</option>
-                  <option value="egyéb">Egyéb</option>
+                  {ATTENDANCE_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -335,11 +296,9 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
                   onChange={(e) => setFormData({...formData, training_type: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                 >
-                  <option value="edzés">Edzés</option>
-                  <option value="mérkőzés">Mérkőzés</option>
-                  <option value="regeneráció">Regeneráció</option>
-                  <option value="orvosi">Orvosi</option>
-                  <option value="egyéb">Egyéb</option>
+                  {TRAINING_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
                 </select>
               </div>
 
