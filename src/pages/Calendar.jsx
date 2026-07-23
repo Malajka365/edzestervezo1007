@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { useState } from 'react'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
 import {
@@ -17,31 +16,34 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import MonthView from './calendar/MonthView'
 import WeekView from './calendar/WeekView'
 import DayView from './calendar/DayView'
-import toast from 'react-hot-toast'
+import useCalendarData, { getWeekDays } from './calendar/useCalendarData'
 
 export default function Calendar() {
   const { selectedTeam, currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'calendar')
   const [view, setView] = useState('month') // 'month', 'week', 'day'
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [seasons, setSeasons] = useState([])
-  const [currentSeason, setCurrentSeason] = useState(null)
-  const [planningData, setPlanningData] = useState({})
-  const [trainingSessions, setTrainingSessions] = useState([])
-  const [matches, setMatches] = useState([])
-  const [loading, setLoading] = useState(false)
   const [showSessionModal, setShowSessionModal] = useState(false)
   const [editingSession, setEditingSession] = useState(null)
   const [selectedDateForSession, setSelectedDateForSession] = useState(null)
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
   const [confirmState, setConfirmState] = useState(null)
-  
-  // Load factors state for week view
-  const [weekLoadFactors, setWeekLoadFactors] = useState({})
-  const [saveTimeouts, setSaveTimeouts] = useState({})
-  
-  // Tactics & Technique state for week view
-  const [weekTacticsTechnique, setWeekTacticsTechnique] = useState({})
+
+  // Data layer (fetches, debounced auto-save, readers) lives in the hook.
+  const {
+    seasons,
+    currentSeason,
+    setCurrentSeason,
+    planningData,
+    trainingSessions,
+    matches,
+    loadTrainingSessions,
+    updateLoadFactor,
+    getLoadFactor,
+    updateTacticsTechnique,
+    getTacticsTechnique,
+    deleteTrainingSession: deleteTrainingSessionById,
+  } = useCalendarData(selectedTeam, currentDate)
 
   const daysOfWeek = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
   const daysOfWeekShort = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V']
@@ -60,195 +62,6 @@ export default function Calendar() {
     '-': { color: 'bg-slate-700', textColor: 'text-slate-400', shortLabel: '-' },
   }
 
-  useEffect(() => {
-    if (selectedTeam) {
-      fetchSeasons()
-    }
-  }, [selectedTeam])
-
-  useEffect(() => {
-    if (currentSeason && selectedTeam) {
-      loadPlanningData()
-      loadTrainingSessions()
-      loadMatches()
-      loadWeekLoadFactors()
-      loadWeekTacticsTechnique()
-    }
-  }, [currentSeason, selectedTeam, currentDate])
-
-  const fetchSeasons = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('training_seasons')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .order('start_date', { ascending: false })
-
-      if (error) throw error
-      setSeasons(data || [])
-      
-      if (data && data.length > 0) {
-        // Find season that includes current date
-        const activeSeason = data.find(season => {
-          const start = new Date(season.start_date)
-          const end = new Date(season.end_date)
-          return currentDate >= start && currentDate <= end
-        })
-        setCurrentSeason(activeSeason || data[0])
-      }
-    } catch (error) {
-      console.error('Error fetching seasons:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    }
-  }
-
-  const loadPlanningData = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('macrocycle_planning')
-        .select('*')
-        .eq('season_id', currentSeason.id)
-        .eq('team_id', selectedTeam.id)
-        .single()
-
-      if (data) {
-        setPlanningData(data.planning || {})
-      } else {
-        setPlanningData({})
-      }
-    } catch (error) {
-      console.error('Error loading planning:', error)
-      setPlanningData({})
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadTrainingSessions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('training_sessions')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .gte('date', currentSeason.start_date)
-        .lte('date', currentSeason.end_date)
-        .order('date', { ascending: true })
-
-      if (error) throw error
-      setTrainingSessions(data || [])
-    } catch (error) {
-      console.error('Error loading training sessions:', error)
-      setTrainingSessions([])
-    }
-  }
-
-  const loadMatches = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('matches')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .gte('date', currentSeason.start_date)
-        .lte('date', currentSeason.end_date)
-        .order('date', { ascending: true })
-
-      if (error) throw error
-      setMatches(data || [])
-    } catch (error) {
-      console.error('Error loading matches:', error)
-      setMatches([])
-    }
-  }
-
-  const loadWeekLoadFactors = async () => {
-    if (!currentSeason || !selectedTeam) return
-    
-    try {
-      // Get the current week's date range
-      const weekDays = getWeekDays(currentDate)
-      const startDate = getDateKey(weekDays[0])
-      const endDate = getDateKey(weekDays[6])
-
-      const { data, error } = await supabase
-        .from('training_load_factors')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .gte('date', startDate)
-        .lte('date', endDate)
-
-      if (error) throw error
-
-      // Convert array to object keyed by date
-      const factorsMap = {}
-      if (data) {
-        data.forEach(item => {
-          factorsMap[item.date] = {
-            circulation: item.circulation_load,
-            mechanical: item.mechanical_load,
-            energy: item.energy_system || '',
-            duration: item.duration || '',
-            ratio: item.work_rest_ratio || '',
-            type: item.training_type || ''
-          }
-        })
-      }
-      
-      setWeekLoadFactors(factorsMap)
-    } catch (error) {
-      console.error('Error loading load factors:', error)
-      setWeekLoadFactors({})
-    }
-  }
-
-  const saveLoadFactorToDatabase = async (date, factorType, value) => {
-    if (!selectedTeam) return
-
-    const dateKey = getDateKey(date)
-    
-    try {
-      // Prepare the data object
-      const updateData = {
-        team_id: selectedTeam.id,
-        date: dateKey
-      }
-
-      // Map factor types to database columns
-      switch (factorType) {
-        case 'circulation':
-          updateData.circulation_load = value
-          break
-        case 'mechanical':
-          updateData.mechanical_load = value
-          break
-        case 'energy':
-          updateData.energy_system = value
-          break
-        case 'duration':
-          updateData.duration = value
-          break
-        case 'ratio':
-          updateData.work_rest_ratio = value
-          break
-        case 'type':
-          updateData.training_type = value
-          break
-      }
-
-      // Use upsert to insert or update
-      const { error } = await supabase
-        .from('training_load_factors')
-        .upsert(updateData, {
-          onConflict: 'team_id,date'
-        })
-
-      if (error) throw error
-    } catch (error) {
-      console.error('Error saving load factor:', error)
-      toast.error('Hiba történt a mentés során!')
-    }
-  }
-
   const getWeekNumber = (date) => {
     if (!currentSeason) return null
     const seasonStart = new Date(currentSeason.start_date)
@@ -263,7 +76,7 @@ export default function Calendar() {
     const dayOfWeek = date.getDay()
     const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Convert to Monday=0
     const dayKey = `day_${dayIndex}`
-    
+
     return planningData[weekIndex][dayKey] || null
   }
 
@@ -289,18 +102,7 @@ export default function Calendar() {
     setConfirmState({
       message: 'Biztosan törölni szeretnéd ezt az edzést?',
       action: async () => {
-        try {
-          const { error } = await supabase
-            .from('training_sessions')
-            .delete()
-            .eq('id', id)
-
-          if (error) throw error
-          loadTrainingSessions()
-        } catch (error) {
-          console.error('Error deleting training session:', error)
-          toast.error('Hiba történt a törlés során!')
-        }
+        await deleteTrainingSessionById(id)
       },
     })
   }
@@ -311,39 +113,23 @@ export default function Calendar() {
     const month = date.getMonth()
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
-    
+
     // Get day of week (0 = Sunday, 1 = Monday, etc.)
     let firstDayOfWeek = firstDay.getDay()
     firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1 // Convert to Monday = 0
-    
+
     const days = []
-    
+
     // Add empty cells for days before month starts
     for (let i = 0; i < firstDayOfWeek; i++) {
       days.push(null)
     }
-    
+
     // Add all days in month
     for (let day = 1; day <= lastDay.getDate(); day++) {
       days.push(new Date(year, month, day))
     }
-    
-    return days
-  }
 
-  const getWeekDays = (date) => {
-    const days = []
-    const dayOfWeek = date.getDay()
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // Get Monday
-    const monday = new Date(date)
-    monday.setDate(date.getDate() + diff)
-    
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(monday)
-      day.setDate(monday.getDate() + i)
-      days.push(day)
-    }
-    
     return days
   }
 
@@ -374,174 +160,9 @@ export default function Calendar() {
     return date.getMonth() === currentDate.getMonth()
   }
 
-  // Load factors helper functions
-  const getDateKey = (date) => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  const updateLoadFactor = (date, factorType, value, immediate = false) => {
-    const dateKey = getDateKey(date)
-    const timeoutKey = `${dateKey}-${factorType}`
-    
-    // Update local state immediately for responsive UI
-    setWeekLoadFactors(prev => ({
-      ...prev,
-      [dateKey]: {
-        ...prev[dateKey],
-        [factorType]: value
-      }
-    }))
-
-    // Clear existing timeout for this field
-    if (saveTimeouts[timeoutKey]) {
-      clearTimeout(saveTimeouts[timeoutKey])
-    }
-
-    // For star ratings and dropdowns, save immediately
-    // For text inputs, debounce by 1 second
-    const delay = immediate ? 0 : 1000
-
-    const timeoutId = setTimeout(() => {
-      saveLoadFactorToDatabase(date, factorType, value)
-      
-      // Clean up timeout reference
-      setSaveTimeouts(prev => {
-        const newTimeouts = { ...prev }
-        delete newTimeouts[timeoutKey]
-        return newTimeouts
-      })
-    }, delay)
-
-    setSaveTimeouts(prev => ({
-      ...prev,
-      [timeoutKey]: timeoutId
-    }))
-  }
-
-  const getLoadFactor = (date, factorType) => {
-    const dateKey = getDateKey(date)
-    return weekLoadFactors[dateKey]?.[factorType] || ''
-  }
-
   const hasBallTraining = (date) => {
     const sessions = getTrainingSessionsForDate(date)
     return sessions.some(session => session.type === 'ball')
-  }
-
-  // Tactics & Technique functions
-  const loadWeekTacticsTechnique = async () => {
-    if (!currentSeason || !selectedTeam) return
-    
-    try {
-      const weekDays = getWeekDays(currentDate)
-      const startDate = getDateKey(weekDays[0])
-      const endDate = getDateKey(weekDays[6])
-
-      const { data, error } = await supabase
-        .from('tactics_technique')
-        .select('*')
-        .eq('team_id', selectedTeam.id)
-        .gte('date', startDate)
-        .lte('date', endDate)
-
-      if (error) throw error
-
-      const tacticsMap = {}
-      if (data) {
-        data.forEach(item => {
-          tacticsMap[item.date] = {
-            tactical_support: item.tactical_support || '',
-            tactical_defense: item.tactical_defense || '',
-            technical_support: item.technical_support || '',
-            technical_defense: item.technical_defense || '',
-            video_url: item.video_url || '',
-            practice_support_common: item.practice_support_common || '',
-            practice_support_wide: item.practice_support_wide || '',
-            practice_support_inside: item.practice_support_inside || '',
-            practice_support_main_direction: item.practice_support_main_direction || '',
-            practice_defense_common: item.practice_defense_common || '',
-            practice_defense_wide: item.practice_defense_wide || '',
-            practice_defense_inside: item.practice_defense_inside || '',
-            practice_defense_main_direction: item.practice_defense_main_direction || '',
-            practice_game: item.practice_game || ''
-          }
-        })
-      }
-      
-      setWeekTacticsTechnique(tacticsMap)
-    } catch (error) {
-      console.error('Error loading tactics technique:', error)
-      setWeekTacticsTechnique({})
-    }
-  }
-
-  const saveTacticsTechniqueToDatabase = async (date, fieldName, value) => {
-    if (!selectedTeam) return
-
-    const dateKey = getDateKey(date)
-    
-    try {
-      const updateData = {
-        team_id: selectedTeam.id,
-        date: dateKey,
-        [fieldName]: value
-      }
-
-      const { error } = await supabase
-        .from('tactics_technique')
-        .upsert(updateData, {
-          onConflict: 'team_id,date'
-        })
-
-      if (error) throw error
-    } catch (error) {
-      console.error('Error saving tactics technique:', error)
-      toast.error('Hiba történt a mentés során!')
-    }
-  }
-
-  const updateTacticsTechnique = (date, fieldName, value) => {
-    const dateKey = getDateKey(date)
-    const timeoutKey = `tactics-${dateKey}-${fieldName}`
-    
-    setWeekTacticsTechnique(prev => ({
-      ...prev,
-      [dateKey]: {
-        ...prev[dateKey],
-        [fieldName]: value
-      }
-    }))
-
-    if (saveTimeouts[timeoutKey]) {
-      clearTimeout(saveTimeouts[timeoutKey])
-    }
-
-    // Dropdown mezők (video_url, practice_game) azonnal mentődnek
-    const isDropdown = fieldName === 'video_url' || fieldName === 'practice_game'
-    const delay = isDropdown ? 0 : 1000
-
-    const timeoutId = setTimeout(() => {
-      saveTacticsTechniqueToDatabase(date, fieldName, value)
-      
-      setSaveTimeouts(prev => {
-        const newTimeouts = { ...prev }
-        delete newTimeouts[timeoutKey]
-        return newTimeouts
-      })
-    }, delay)
-
-    setSaveTimeouts(prev => ({
-      ...prev,
-      [timeoutKey]: timeoutId
-    }))
-  }
-
-  const getTacticsTechnique = (date, fieldName) => {
-    const dateKey = getDateKey(date)
-    return weekTacticsTechnique[dateKey]?.[fieldName] || ''
   }
 
   if (!selectedTeam) {
@@ -576,7 +197,7 @@ export default function Calendar() {
               <h1 className="text-xl font-bold text-white">Edzésnaptár</h1>
               <p className="text-sm text-slate-400 hidden sm:block">Interaktív naptár nézet</p>
             </div>
-            
+
             {seasons.length > 0 && currentSeason && (
               <div className="flex items-center gap-3">
                 <select
