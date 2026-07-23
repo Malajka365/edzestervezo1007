@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { supabase } from './lib/supabase'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
@@ -33,6 +34,29 @@ function App() {
 
   return (
     <Router>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1e293b',
+            color: '#ffffff',
+            border: '1px solid #334155',
+          },
+          success: {
+            iconTheme: {
+              primary: '#22c55e',
+              secondary: '#1e293b',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#1e293b',
+            },
+          },
+        }}
+      />
       <Routes>
         <Route
           path="/auth"
