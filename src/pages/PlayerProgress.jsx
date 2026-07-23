@@ -26,6 +26,7 @@ import {
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import html2canvas from 'html2canvas'
+import toast from 'react-hot-toast'
 
 export default function PlayerProgress() {
   const { selectedTeam } = useTeams()
@@ -65,6 +66,7 @@ export default function PlayerProgress() {
       setPlayers(data || [])
     } catch (error) {
       console.error('Error fetching players:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     }
   }
 
@@ -296,7 +298,7 @@ export default function PlayerProgress() {
       console.log('PDF exported successfully:', fileName)
     } catch (error) {
       console.error('Error exporting PDF:', error)
-      alert('Hiba történt a PDF exportálás során!')
+      toast.error('Hiba történt a PDF exportálás során!')
     }
   }
 

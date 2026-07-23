@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { X, Copy, Upload } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function TrainingSessionModal({ 
   date, 
@@ -53,6 +54,7 @@ export default function TrainingSessionModal({
       setTemplates(data || [])
     } catch (error) {
       console.error('Error fetching templates:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     }
   }
 
@@ -100,7 +102,7 @@ export default function TrainingSessionModal({
       fetchLocations()
     } catch (error) {
       console.error('Error adding location:', error)
-      alert('Hiba történt a helyszín hozzáadása során!')
+      toast.error('Hiba történt a helyszín hozzáadása során!')
     }
   }
 
@@ -149,7 +151,7 @@ export default function TrainingSessionModal({
       onSave()
     } catch (error) {
       console.error('Error saving training session:', error)
-      alert('Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     } finally {
       setLoading(false)
     }

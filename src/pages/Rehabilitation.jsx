@@ -16,6 +16,7 @@ import {
   User,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import toast from 'react-hot-toast'
 
 export default function Rehabilitation() {
   const { selectedTeam } = useTeams()
@@ -59,6 +60,7 @@ export default function Rehabilitation() {
       setPlayers(data || [])
     } catch (error) {
       console.error('Error fetching players:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }

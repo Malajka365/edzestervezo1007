@@ -21,6 +21,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import toast from 'react-hot-toast'
 
 export default function ExerciseLibrary() {
   const { selectedTeam } = useTeams()
@@ -102,6 +103,7 @@ export default function ExerciseLibrary() {
       setExercises(data || [])
     } catch (error) {
       console.error('Error fetching exercises:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }
@@ -143,7 +145,7 @@ export default function ExerciseLibrary() {
 
   const createExercise = async () => {
     if (!newExercise.name.trim()) {
-      alert('A gyakorlat neve kötelező!')
+      toast.error('A gyakorlat neve kötelező!')
       return
     }
 
@@ -183,10 +185,10 @@ export default function ExerciseLibrary() {
 
       setShowCreateModal(false)
       fetchExercises()
-      alert('✅ Gyakorlat sikeresen létrehozva!')
+      toast.success('Gyakorlat sikeresen létrehozva!')
     } catch (error) {
       console.error('Error creating exercise:', error)
-      alert('❌ Hiba történt a gyakorlat létrehozása során!')
+      toast.error('Hiba történt a gyakorlat létrehozása során!')
     } finally {
       setLoading(false)
     }
@@ -223,7 +225,7 @@ export default function ExerciseLibrary() {
       }
     } catch (error) {
       console.error('Error toggling favorite:', error)
-      alert('Hiba történt a kedvenc jelölés során!')
+      toast.error('Hiba történt a kedvenc jelölés során!')
     }
   }
 
@@ -239,10 +241,10 @@ export default function ExerciseLibrary() {
       if (error) throw error
       
       fetchExercises()
-      alert('✅ Gyakorlat sikeresen törölve!')
+      toast.success('Gyakorlat sikeresen törölve!')
     } catch (error) {
       console.error('Error deleting exercise:', error)
-      alert('❌ Hiba történt a törlés során!')
+      toast.error('Hiba történt a törlés során!')
     }
   }
 
@@ -259,7 +261,7 @@ export default function ExerciseLibrary() {
 
   const updateExercise = async () => {
     if (!editingExercise.name.trim()) {
-      alert('A gyakorlat neve kötelező!')
+      toast.error('A gyakorlat neve kötelező!')
       return
     }
 
@@ -285,10 +287,10 @@ export default function ExerciseLibrary() {
       setShowEditModal(false)
       setEditingExercise(null)
       fetchExercises()
-      alert('✅ Gyakorlat sikeresen frissítve!')
+      toast.success('Gyakorlat sikeresen frissítve!')
     } catch (error) {
       console.error('Error updating exercise:', error)
-      alert('❌ Hiba történt a frissítés során!')
+      toast.error('Hiba történt a frissítés során!')
     } finally {
       setLoading(false)
     }

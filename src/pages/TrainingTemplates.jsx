@@ -17,6 +17,7 @@ import TeamSelector from '../components/TeamSelector'
 import GymTemplateEditor from '../components/GymTemplateEditor'
 import BallTemplateEditor from '../components/BallTemplateEditor'
 import TacticTemplateEditor from '../components/TacticTemplateEditor'
+import toast from 'react-hot-toast'
 
 export default function TrainingTemplates() {
   const { selectedTeam } = useTeams()
@@ -59,6 +60,7 @@ export default function TrainingTemplates() {
       setTemplates(data || [])
     } catch (error) {
       console.error('Error fetching templates:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }
@@ -93,7 +95,7 @@ export default function TrainingTemplates() {
       fetchTemplates()
     } catch (error) {
       console.error('Error deleting template:', error)
-      alert('Hiba történt a törlés során!')
+      toast.error('Hiba történt a törlés során!')
     }
   }
 
@@ -114,7 +116,7 @@ export default function TrainingTemplates() {
       fetchTemplates()
     } catch (error) {
       console.error('Error duplicating template:', error)
-      alert('Hiba történt a másolás során!')
+      toast.error('Hiba történt a másolás során!')
     }
   }
 
@@ -377,7 +379,7 @@ function TemplateModal({ template, selectedTeam, onClose, onSave }) {
       onSave()
     } catch (error) {
       console.error('Error saving template:', error)
-      alert('Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     } finally {
       setLoading(false)
     }

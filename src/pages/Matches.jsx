@@ -14,6 +14,7 @@ import {
   Clock,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import toast from 'react-hot-toast'
 
 export default function Matches() {
   const { selectedTeam } = useTeams()
@@ -47,6 +48,7 @@ export default function Matches() {
       setMatches(data || [])
     } catch (error) {
       console.error('Error fetching matches:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }
@@ -86,7 +88,7 @@ export default function Matches() {
       fetchMatches()
     } catch (error) {
       console.error('Error deleting match:', error)
-      alert('Hiba történt a törlés során!')
+      toast.error('Hiba történt a törlés során!')
     }
   }
 
@@ -434,7 +436,7 @@ function MatchModal({ match, selectedTeam, onClose, onSave }) {
       onSave()
     } catch (error) {
       console.error('Error saving match:', error)
-      alert('Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     } finally {
       setLoading(false)
     }

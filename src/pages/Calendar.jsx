@@ -18,6 +18,7 @@ import {
 import TrainingSessionModal from '../components/TrainingSessionModal'
 import QuickAddTrainingModal from '../components/QuickAddTrainingModal'
 import TeamSelector from '../components/TeamSelector'
+import toast from 'react-hot-toast'
 
 export default function Calendar() {
   const { selectedTeam } = useTeams()
@@ -96,6 +97,7 @@ export default function Calendar() {
       }
     } catch (error) {
       console.error('Error fetching seasons:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     }
   }
 
@@ -242,7 +244,7 @@ export default function Calendar() {
       if (error) throw error
     } catch (error) {
       console.error('Error saving load factor:', error)
-      alert('Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     }
   }
 
@@ -295,7 +297,7 @@ export default function Calendar() {
       loadTrainingSessions()
     } catch (error) {
       console.error('Error deleting training session:', error)
-      alert('Hiba történt a törlés során!')
+      toast.error('Hiba történt a törlés során!')
     }
   }
 
@@ -493,7 +495,7 @@ export default function Calendar() {
       if (error) throw error
     } catch (error) {
       console.error('Error saving tactics technique:', error)
-      alert('Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     }
   }
 

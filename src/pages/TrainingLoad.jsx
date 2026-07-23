@@ -12,6 +12,7 @@ import {
 import TeamSelector from '../components/TeamSelector'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import toast from 'react-hot-toast'
 
 export default function TrainingLoad() {
   const { selectedTeam } = useTeams()
@@ -49,6 +50,7 @@ export default function TrainingLoad() {
       setExercises(data || [])
     } catch (error) {
       console.error('Error fetching exercises:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     }
   }
 
@@ -158,7 +160,7 @@ export default function TrainingLoad() {
 
       if (rows.length === 0) {
         console.error('No data to export')
-        alert('Nincs exportálható adat!')
+        toast.error('Nincs exportálható adat!')
         return
       }
 
@@ -192,7 +194,7 @@ export default function TrainingLoad() {
       console.log('PDF exported successfully:', fileName)
     } catch (error) {
       console.error('Error exporting PDF:', error)
-      alert('Hiba történt a PDF exportálás során!')
+      toast.error('Hiba történt a PDF exportálás során!')
     }
   }
 

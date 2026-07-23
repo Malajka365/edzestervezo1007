@@ -19,6 +19,7 @@ import {
   Settings,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import toast from 'react-hot-toast'
 
 export default function Measurements({ session }) {
   const { selectedTeam } = useTeams()
@@ -134,6 +135,7 @@ export default function Measurements({ session }) {
       setMeasurements(data || [])
     } catch (error) {
       console.error('Error fetching measurements:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }
@@ -158,7 +160,7 @@ export default function Measurements({ session }) {
           .single()
         if (error) throw error
         setExercises(exercises.map(ex => ex.id === editingExercise.id ? data : ex))
-        alert('Gyakorlat sikeresen frissítve!')
+        toast.success('Gyakorlat sikeresen frissítve!')
       } else {
         // Create new exercise
         const { data, error } = await supabase
@@ -168,14 +170,14 @@ export default function Measurements({ session }) {
           .single()
         if (error) throw error
         setExercises([...exercises, data])
-        alert('Gyakorlat sikeresen létrehozva!')
+        toast.success('Gyakorlat sikeresen létrehozva!')
       }
       setShowExerciseModal(false)
       setEditingExercise(null)
       setExerciseForm({ name: '', category: 'strength', unit: 'kg', description: '' })
     } catch (error) {
       console.error('Error saving exercise:', error)
-      alert('Hiba történt')
+      toast.error('Hiba történt')
     }
   }
 
@@ -188,10 +190,10 @@ export default function Measurements({ session }) {
         .eq('id', exerciseId)
       if (error) throw error
       setExercises(exercises.filter(ex => ex.id !== exerciseId))
-      alert('Gyakorlat sikeresen törölve!')
+      toast.success('Gyakorlat sikeresen törölve!')
     } catch (error) {
       console.error('Error deleting exercise:', error)
-      alert('Hiba történt a törlés során')
+      toast.error('Hiba történt a törlés során')
     }
   }
 
@@ -235,10 +237,10 @@ export default function Measurements({ session }) {
         measured_at: new Date().toISOString().split('T')[0],
         notes: '',
       })
-      alert('Mérés sikeresen rögzítve!')
+      toast.success('Mérés sikeresen rögzítve!')
     } catch (error) {
       console.error('Error creating measurement:', error)
-      alert('Hiba történt')
+      toast.error('Hiba történt')
     }
   }
 
@@ -268,7 +270,7 @@ export default function Measurements({ session }) {
       })
 
       if (measurementsToInsert.length === 0) {
-        alert('Add meg legalább egy játékos mérési adatát!')
+        toast.error('Add meg legalább egy játékos mérési adatát!')
         return
       }
 
@@ -286,10 +288,10 @@ export default function Measurements({ session }) {
         measured_at: new Date().toISOString().split('T')[0],
         playerData: {},
       })
-      alert(`${measurementsToInsert.length} mérés sikeresen rögzítve!`)
+      toast.success(`${measurementsToInsert.length} mérés sikeresen rögzítve!`)
     } catch (error) {
       console.error('Error creating team measurements:', error)
-      alert('Hiba történt a mérések rögzítésekor')
+      toast.error('Hiba történt a mérések rögzítésekor')
     }
   }
 
@@ -324,7 +326,7 @@ export default function Measurements({ session }) {
 
   const proceedToTeamMeasurement = () => {
     if (selectedPlayers.length === 0) {
-      alert('Válassz ki legalább egy játékost!')
+      toast.error('Válassz ki legalább egy játékost!')
       return
     }
     setShowPlayerSelectionModal(false)
@@ -341,7 +343,7 @@ export default function Measurements({ session }) {
   }
 
   const exportToCSV = () => {
-    if (measurements.length === 0) return alert('Nincs exportálható adat')
+    if (measurements.length === 0) return toast.error('Nincs exportálható adat')
     const headers = ['Játékos', 'Gyakorlat', 'Érték', '1RM', 'Ismétlések', 'Dátum', 'Jegyzetek']
     const rows = measurements.map((m) => [
       m.player?.name || '',

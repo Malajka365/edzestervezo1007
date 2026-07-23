@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { X, Save, AlertCircle } from 'lucide-react'
 import BodyDiagram from './BodyDiagram'
+import toast from 'react-hot-toast'
 
 export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClose, onSaved, embedded = false }) {
   const [loading, setLoading] = useState(false)
@@ -122,7 +123,7 @@ export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClo
         if (error) throw error
       }
 
-      alert('✅ Anamnézis sikeresen mentve!')
+      toast.success('Anamnézis sikeresen mentve!')
       onSaved?.()
       
       // Embedded módban új üres form betöltése
@@ -161,7 +162,7 @@ export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClo
       }
     } catch (error) {
       console.error('Error saving anamnesis:', error)
-      alert('❌ Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     } finally {
       setLoading(false)
     }

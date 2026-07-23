@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Upload, X, File, FileText, Image as ImageIcon, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function DocumentUpload({ player, teamId, onUploaded }) {
   const [uploading, setUploading] = useState(false)
@@ -20,13 +21,13 @@ export default function DocumentUpload({ player, teamId, onUploaded }) {
       // Ellenőrizzük a fájl típust
       const allowedTypes = ['image/jpeg', 'image/jpg', 'application/pdf']
       if (!allowedTypes.includes(file.type)) {
-        alert('Csak JPEG/JPG és PDF fájlok tölthetők fel!')
+        toast.error('Csak JPEG/JPG és PDF fájlok tölthetők fel!')
         return
       }
 
       // Ellenőrizzük a fájl méretét (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert('A fájl mérete maximum 10MB lehet!')
+        toast.error('A fájl mérete maximum 10MB lehet!')
         return
       }
 
@@ -70,7 +71,7 @@ export default function DocumentUpload({ player, teamId, onUploaded }) {
 
       if (dbError) throw dbError
 
-      alert('✅ Dokumentum sikeresen feltöltve!')
+      toast.success('Dokumentum sikeresen feltöltve!')
       setShowForm(false)
       setSelectedFile(null)
       setFormData({
@@ -83,7 +84,7 @@ export default function DocumentUpload({ player, teamId, onUploaded }) {
       onUploaded?.()
     } catch (error) {
       console.error('Error uploading document:', error)
-      alert('❌ Hiba történt a feltöltés során!')
+      toast.error('Hiba történt a feltöltés során!')
     } finally {
       setUploading(false)
     }

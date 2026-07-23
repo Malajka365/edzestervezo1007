@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { X, Check, Dumbbell, Circle } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function QuickAddTrainingModal({ 
   currentDate, 
@@ -176,7 +177,7 @@ export default function QuickAddTrainingModal({
       onSave()
     } catch (error) {
       console.error('Error saving training sessions:', error)
-      alert('Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     } finally {
       setLoading(false)
     }

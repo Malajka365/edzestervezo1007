@@ -21,6 +21,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import toast from 'react-hot-toast'
 
 export default function Teams() {
   const { teams, selectedTeam, createTeam, updateTeam, deleteTeam, isTeamOwner, currentUserPermissions } = useTeams()
@@ -67,6 +68,7 @@ export default function Teams() {
       setPlayers(data || [])
     } catch (error) {
       console.error('Error fetching players:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoadingPlayers(false)
     }
@@ -131,7 +133,7 @@ export default function Teams() {
       })
     } catch (error) {
       console.error('Error creating player:', error)
-      alert('Hiba történt a játékos létrehozásakor')
+      toast.error('Hiba történt a játékos létrehozásakor')
     }
   }
 
@@ -161,7 +163,7 @@ export default function Teams() {
       })
     } catch (error) {
       console.error('Error updating player:', error)
-      alert('Hiba történt a játékos frissítésekor')
+      toast.error('Hiba történt a játékos frissítésekor')
     }
   }
 
@@ -178,7 +180,7 @@ export default function Teams() {
         setPlayers(players.filter(p => p.id !== playerId))
       } catch (error) {
         console.error('Error deleting player:', error)
-        alert('Hiba történt a játékos törlésekor')
+        toast.error('Hiba történt a játékos törlésekor')
       }
     }
   }

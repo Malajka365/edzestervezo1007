@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { MapPin, Plus, Edit2, Trash2, X, Check, Star } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function TrainingLocations({ teamId }) {
   const [locations, setLocations] = useState([])
@@ -34,6 +35,7 @@ export default function TrainingLocations({ teamId }) {
       setLocations(data || [])
     } catch (error) {
       console.error('Error fetching locations:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }
@@ -67,7 +69,7 @@ export default function TrainingLocations({ teamId }) {
       fetchLocations()
     } catch (error) {
       console.error('Error saving location:', error)
-      alert('Hiba történt a mentés során!')
+      toast.error('Hiba történt a mentés során!')
     } finally {
       setLoading(false)
     }
@@ -86,7 +88,7 @@ export default function TrainingLocations({ teamId }) {
       fetchLocations()
     } catch (error) {
       console.error('Error deleting location:', error)
-      alert('Hiba történt a törlés során!')
+      toast.error('Hiba történt a törlés során!')
     }
   }
 
@@ -119,7 +121,7 @@ export default function TrainingLocations({ teamId }) {
       fetchLocations()
     } catch (error) {
       console.error('Error setting default location:', error)
-      alert('Hiba történt!')
+      toast.error('Hiba történt!')
     }
   }
 

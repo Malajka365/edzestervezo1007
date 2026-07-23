@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Plus, Edit, Trash2, X, Save } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function AttendanceCalendar({ player, teamId }) {
   const [attendance, setAttendance] = useState([])
@@ -45,6 +46,7 @@ export default function AttendanceCalendar({ player, teamId }) {
       setAttendance(data || [])
     } catch (error) {
       console.error('Error fetching attendance:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }
@@ -94,7 +96,7 @@ export default function AttendanceCalendar({ player, teamId }) {
           .eq('id', selectedAttendance.id)
           
         if (error) throw error
-        alert('✅ Jelenlét sikeresen frissítve!')
+        toast.success('Jelenlét sikeresen frissítve!')
       } else {
         // Insert
         const { error } = await supabase
@@ -106,7 +108,7 @@ export default function AttendanceCalendar({ player, teamId }) {
           })
           
         if (error) throw error
-        alert('✅ Jelenlét sikeresen mentve!')
+        toast.success('Jelenlét sikeresen mentve!')
       }
       
       setShowModal(false)
@@ -114,7 +116,7 @@ export default function AttendanceCalendar({ player, teamId }) {
     } catch (error) {
       console.error('Error saving attendance:', error)
       const errorMessage = error?.message || error?.error_description || 'Ismeretlen hiba'
-      alert(`❌ Hiba történt a mentés során!\n\nRészletek: ${errorMessage}`)
+      toast.error(`Hiba történt a mentés során!\n\nRészletek: ${errorMessage}`)
     }
   }
 
@@ -132,11 +134,11 @@ export default function AttendanceCalendar({ player, teamId }) {
       
       setShowModal(false)
       fetchAttendance()
-      alert('✅ Jelenlét törölve!')
+      toast.success('Jelenlét törölve!')
     } catch (error) {
       console.error('Error deleting attendance:', error)
       const errorMessage = error?.message || error?.error_description || 'Ismeretlen hiba'
-      alert(`❌ Hiba történt a törlés során!\n\nRészletek: ${errorMessage}`)
+      toast.error(`Hiba történt a törlés során!\n\nRészletek: ${errorMessage}`)
     }
   }
 

@@ -17,6 +17,7 @@ import {
 import TeamSelector from '../components/TeamSelector'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import toast from 'react-hot-toast'
 
 export default function MacrocyclePlanner() {
   const { selectedTeam } = useTeams()
@@ -242,6 +243,7 @@ export default function MacrocyclePlanner() {
       }
     } catch (error) {
       console.error('Error fetching seasons:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     }
   }
 
@@ -296,7 +298,7 @@ export default function MacrocyclePlanner() {
 
   const updateSeason = async () => {
     if (!editSeason.name || !editSeason.start_date || !editSeason.end_date) {
-      alert('Kérlek töltsd ki az összes mezőt!')
+      toast.error('Kérlek töltsd ki az összes mezőt!')
       return
     }
 
@@ -324,7 +326,7 @@ export default function MacrocyclePlanner() {
       }
     } catch (error) {
       console.error('Error updating season:', error)
-      alert('Hiba történt a szezon frissítése során!')
+      toast.error('Hiba történt a szezon frissítése során!')
     } finally {
       setLoading(false)
     }
@@ -376,7 +378,7 @@ export default function MacrocyclePlanner() {
       }
     } catch (error) {
       console.error('Error deleting season:', error)
-      alert('Hiba történt a szezon törlése során!')
+      toast.error('Hiba történt a szezon törlése során!')
     } finally {
       setLoading(false)
     }
@@ -416,7 +418,7 @@ export default function MacrocyclePlanner() {
       pdf.save(`${currentSeason.name}_makrociklus.pdf`)
     } catch (error) {
       console.error('Error exporting PDF:', error)
-      alert('Hiba történt a PDF exportálás során!')
+      toast.error('Hiba történt a PDF exportálás során!')
     } finally {
       setExporting(false)
     }
@@ -449,7 +451,7 @@ export default function MacrocyclePlanner() {
 
   const saveTemplate = async () => {
     if (!templateName.trim() || !currentSeason) {
-      alert('Kérlek adj meg egy sablon nevet!')
+      toast.error('Kérlek adj meg egy sablon nevet!')
       return
     }
 
@@ -470,7 +472,7 @@ export default function MacrocyclePlanner() {
       if (error) {
         // If table doesn't exist
         if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
-          alert('A sablonok tábla még nem létezik az adatbázisban.\n\nKérlek futtasd le a migration-t:\n\n1. Nyisd meg a Supabase Dashboard-ot\n2. Menj a SQL Editor-ba\n3. Másold be a migration fájl tartalmát:\nsupabase/migrations/20250110_create_macrocycle_templates.sql\n4. Futtasd le a query-t')
+          toast.error('A sablonok tábla még nem létezik az adatbázisban.\n\nKérlek futtasd le a migration-t:\n\n1. Nyisd meg a Supabase Dashboard-ot\n2. Menj a SQL Editor-ba\n3. Másold be a migration fájl tartalmát:\nsupabase/migrations/20250110_create_macrocycle_templates.sql\n4. Futtasd le a query-t')
           setShowTemplateModal(false)
           setTemplateName('')
           setLoading(false)
@@ -481,11 +483,11 @@ export default function MacrocyclePlanner() {
 
       setShowTemplateModal(false)
       setTemplateName('')
-      alert('Sablon sikeresen mentve!')
+      toast.success('Sablon sikeresen mentve!')
       fetchTemplates()
     } catch (error) {
       console.error('Error saving template:', error)
-      alert(`Hiba történt a sablon mentése során!\n\n${error.message || 'Ismeretlen hiba'}`)
+      toast.error(`Hiba történt a sablon mentése során!\n\n${error.message || 'Ismeretlen hiba'}`)
     } finally {
       setLoading(false)
     }
@@ -493,7 +495,7 @@ export default function MacrocyclePlanner() {
 
   const loadTemplate = async (template) => {
     if (!currentSeason) {
-      alert('Először válassz ki egy szezont!')
+      toast.error('Először válassz ki egy szezont!')
       return
     }
 
@@ -512,10 +514,10 @@ export default function MacrocyclePlanner() {
       })
 
       setShowLoadTemplateModal(false)
-      alert('Sablon sikeresen betöltve!')
+      toast.success('Sablon sikeresen betöltve!')
     } catch (error) {
       console.error('Error loading template:', error)
-      alert('Hiba történt a sablon betöltése során!')
+      toast.error('Hiba történt a sablon betöltése során!')
     }
   }
 
@@ -530,11 +532,11 @@ export default function MacrocyclePlanner() {
 
       if (error) throw error
 
-      alert('Sablon törölve!')
+      toast.success('Sablon törölve!')
       fetchTemplates()
     } catch (error) {
       console.error('Error deleting template:', error)
-      alert('Hiba történt a sablon törlése során!')
+      toast.error('Hiba történt a sablon törlése során!')
     }
   }
 
@@ -599,7 +601,7 @@ export default function MacrocyclePlanner() {
       setNewSeason({ name: '', start_date: '', end_date: '' })
     } catch (error) {
       console.error('Error creating season:', error)
-      alert('Hiba történt a szezon létrehozásakor')
+      toast.error('Hiba történt a szezon létrehozásakor')
     } finally {
       setLoading(false)
     }

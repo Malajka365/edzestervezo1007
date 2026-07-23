@@ -5,6 +5,7 @@ import AnamnesisForm from '../components/AnamnesisForm'
 import DocumentUpload from '../components/DocumentUpload'
 import AttendanceCalendar from '../components/AttendanceCalendar'
 import BodyDiagram from '../components/BodyDiagram'
+import toast from 'react-hot-toast'
 import {
   FileText,
   Calendar as CalendarIcon,
@@ -45,6 +46,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
       setAnamnesisData(data || [])
     } catch (error) {
       console.error('Error fetching anamnesis:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     }
   }
 
@@ -83,7 +85,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
     if (signedUrl) {
       window.open(signedUrl, '_blank')
     } else {
-      alert('❌ Hiba történt a fájl megnyitásakor!')
+      toast.error('Hiba történt a fájl megnyitásakor!')
     }
   }
 
@@ -98,11 +100,11 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
 
       if (error) throw error
 
-      alert('✅ Anamnézis törölve!')
+      toast.success('Anamnézis törölve!')
       fetchAnamnesisData()
     } catch (error) {
       console.error('Error deleting anamnesis:', error)
-      alert('❌ Hiba történt a törlés során!')
+      toast.error('Hiba történt a törlés során!')
     }
   }
 
@@ -123,11 +125,11 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
         .from('player-documents')
         .remove([filePath])
 
-      alert('✅ Dokumentum törölve!')
+      toast.success('Dokumentum törölve!')
       fetchDocuments()
     } catch (error) {
       console.error('Error deleting document:', error)
-      alert('❌ Hiba történt a törlés során!')
+      toast.error('Hiba történt a törlés során!')
     }
   }
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ROLES, MODULES, ACCESS_LEVELS } from '../lib/permissions'
 import { UserPlus, Trash2, Copy, X } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function TeamMembersPanel({ team, isOwner }) {
   const [members, setMembers] = useState([])
@@ -83,6 +84,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
       }
     } catch (error) {
       console.error('Error fetching team members:', error)
+      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
     }
@@ -103,7 +105,7 @@ export default function TeamMembersPanel({ team, isOwner }) {
       fetchMembersAndInvites()
     } catch (error) {
       console.error('Error generating invite:', error)
-      alert('Hiba történt a meghívó létrehozásakor')
+      toast.error('Hiba történt a meghívó létrehozásakor')
     }
   }
 
@@ -156,10 +158,10 @@ export default function TeamMembersPanel({ team, isOwner }) {
         .upsert(rows, { onConflict: 'team_id,role,module_key' })
 
       if (error) throw error
-      alert('Jogosultságok elmentve!')
+      toast.success('Jogosultságok elmentve!')
     } catch (error) {
       console.error('Error saving permissions:', error)
-      alert('Hiba történt a mentés során')
+      toast.error('Hiba történt a mentés során')
     } finally {
       setSavingPermissions(false)
     }
