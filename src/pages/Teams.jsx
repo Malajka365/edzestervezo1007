@@ -286,63 +286,10 @@ export default function Teams() {
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-      {/* Teams Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {teams.map((team) => (
-          <div
-            key={team.id}
-            className={`card cursor-pointer transition-all ${
-              selectedTeam?.id === team.id
-                ? 'border-primary-500 ring-2 ring-primary-500/50'
-                : 'hover:border-slate-600'
-            }`}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                <div className="w-12 h-12 bg-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-bold text-white truncate">{team.name}</h3>
-                  {team.sport && (
-                    <p className="text-sm text-slate-400 truncate">{team.sport}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={() => openEditTeam(team)}
-                  className="p-2 text-slate-400 hover:text-primary-400 hover:bg-slate-700 rounded transition-colors"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDeleteTeam(team.id)}
-                  className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            {team.description && (
-              <p className="text-sm text-slate-300 mb-3 line-clamp-2">{team.description}</p>
-            )}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-700">
-              <span className="text-xs text-slate-400">
-                {new Date(team.created_at).toLocaleDateString('hu-HU')}
-              </span>
-              {selectedTeam?.id === team.id && (
-                <span className="text-xs text-primary-400 font-semibold">Kiválasztva</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Players Section */}
       {selectedTeam && (
         <div className="card">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
             <div>
               <h3 className="text-xl font-bold text-white flex items-center">
                 <Users className="w-5 h-5 mr-2 text-primary-400" />
@@ -350,15 +297,35 @@ export default function Teams() {
               </h3>
               <p className="text-sm text-slate-400 mt-1">{players.length} játékos</p>
             </div>
-            {canEditPlayers && (
+            {/* A kiválasztott csapat szerkesztése/törlése + új játékos.
+                Korábban külön csapat-rács tetején voltak; ide olvasztva, mert
+                a csapatváltás a fejléc jobb felső TeamSelector dropdownjából megy. */}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <button
-                onClick={() => setShowPlayerModal(true)}
-                className="btn-primary flex items-center space-x-2"
+                onClick={() => openEditTeam(selectedTeam)}
+                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm transition-colors"
+                title="Csapat szerkesztése"
               >
-                <UserPlus className="w-5 h-5" />
-                <span>Új Játékos</span>
+                <Edit2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Csapat</span>
               </button>
-            )}
+              <button
+                onClick={() => handleDeleteTeam(selectedTeam.id)}
+                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-red-900 text-slate-200 hover:text-red-300 rounded-lg text-sm transition-colors"
+                title="Csapat törlése"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              {canEditPlayers && (
+                <button
+                  onClick={() => setShowPlayerModal(true)}
+                  className="btn-primary flex items-center space-x-2"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  <span>Új Játékos</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Search Bar */}
