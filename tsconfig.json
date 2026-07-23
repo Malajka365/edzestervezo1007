@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    /* Incremental adoption: allow existing .js/.jsx to be imported and built,
+       but do NOT type-check them (checkJs: false) so the 60+ legacy files
+       stay noise-free. New .ts/.tsx files ARE type-checked, under strict. */
+    "allowJs": true,
+    "checkJs": false,
+
+    /* Vite build target */
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "useDefineForClassFields": true,
+
+    /* Modules — matches Vite's bundler resolution */
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+
+    /* React 18 JSX (new transform, no need to import React) */
+    "jsx": "react-jsx",
+
+    /* Type-check only — Vite/esbuild does the actual transpile/emit */
+    "noEmit": true,
+
+    /* Strictness (applies to .ts/.tsx only, since checkJs is off) */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    /* Interop */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    /* Path alias, matches vite.config.js resolve.alias '@' -> ./src */
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}
