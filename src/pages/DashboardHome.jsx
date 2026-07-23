@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { Settings } from 'lucide-react'
 import { useTeams } from '../context/TeamContext'
@@ -9,6 +10,7 @@ import {
 } from '../lib/dashboardWidgets'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
+import CustomizeEditor from './dashboard-home/CustomizeEditor'
 
 // Index route content for /dashboard: slim welcome line + a customizable grid
 // of live-data widgets. The old module quick-access grid and next-steps card
@@ -23,10 +25,12 @@ export default function DashboardHome() {
   const { session } = useOutletContext()
   const { selectedTeam, currentUserRole, currentUserPermissions, permissionsLoading } = useTeams()
 
-  const { prefs, loading: prefsLoading } = useDashboardPrefs(
+  const { prefs, loading: prefsLoading, savePrefs } = useDashboardPrefs(
     session?.user?.id,
     selectedTeam?.id
   )
+
+  const [editorOpen, setEditorOpen] = useState(false)
 
   const loading = permissionsLoading || prefsLoading
 
@@ -35,9 +39,8 @@ export default function DashboardHome() {
     prefs ?? getDefaultWidgets(currentUserRole, currentUserPermissions)
 
   // Amit a felhasználó egyáltalán láthat (jogosultság szerint).
-  const allowedKeys = new Set(
-    filterAllowedWidgets(currentUserPermissions).map((w) => w.key)
-  )
+  const allowedWidgets = filterAllowedWidgets(currentUserPermissions)
+  const allowedKeys = new Set(allowedWidgets.map((w) => w.key))
 
   // Látható + engedélyezett + a registryben létező widgetek, sorrendben.
   const widgetsToRender = sourceList.filter(
@@ -55,9 +58,8 @@ export default function DashboardHome() {
           </p>
           <button
             type="button"
-            disabled
-            title="Hamarosan"
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-400 bg-slate-800 border border-slate-700 rounded-lg cursor-not-allowed flex-shrink-0"
+            onClick={() => setEditorOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-200 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 hover:text-white transition-colors flex-shrink-0"
           >
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Testreszabás</span>
@@ -82,6 +84,17 @@ export default function DashboardHome() {
           </div>
         )}
       </div>
+
+      {editorOpen && (
+        <CustomizeEditor
+          sourceList={sourceList}
+          allowedWidgets={allowedWidgets}
+          role={currentUserRole}
+          permissions={currentUserPermissions}
+          savePrefs={savePrefs}
+          onClose={() => setEditorOpen(false)}
+        />
+      )}
     </main>
   )
 }
