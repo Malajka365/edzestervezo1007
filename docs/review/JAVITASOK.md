@@ -50,3 +50,16 @@ Részletes jelentések: [fix-reports/](fix-reports/)
 |---|---|---|---|
 | Error boundary — komponens-hiba barátságos fallback-kel (nem fehér képernyő) | ✅ KÉSZ | `b0fdba2` | ErrorBoundary komponens az App route-ok körül |
 | F8 — URL-alapú routing minden modulra (linkelhető, működő Vissza gomb) | ✅ KÉSZ | `91c8107` | nested react-router route-ok + Outlet layout; Opus review CLEAN (NavLink end + TeamProvider-Outlet igazolva) + élő teszt (direct URL, Vissza, mobil) |
+
+## 3. kör — tesztek, biztonság, hátralévők (G-fázisok)
+
+| Fázis | Feladat | Státusz | Commit | Megjegyzés |
+|---|---|---|---|---|
+| G1a | Vitest + Testing Library infra | ✅ KÉSZ | `d45de09` | + shadow vite.config.ts eltávolítva |
+| G1b | Unit tesztek (permissions, attendance) — 44 teszt | ✅ KÉSZ | `d5a831d` | |
+| G1c | Komponens-tesztek (ConfirmDialog, ErrorBoundary, EmptyState, Auth) — 19 teszt | ✅ KÉSZ | `14b5346` | |
+| G1-rev | Mutációs teszt-minőség review | ✅ STRONG | — | 7/7 szándékos törés elkapva, 0 hamis zöld |
+| G2a | Jelszó-szabály: min 10 kar + visszajelzés | ⏳ | — | |
+| G2b | Meghívó e-mail-címhez kötése | ⏳ | — | |
+| G3 | Data-hookok (F6 Step 2) | ⏳ | — | |
+| G4 | TypeScript infra | ⏳ | — | |
