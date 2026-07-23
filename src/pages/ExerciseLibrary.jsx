@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
 import {
@@ -25,14 +24,24 @@ import TeamSelector from '../components/TeamSelector'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import CreateExerciseModal from './exercise-library/CreateExerciseModal'
 import EditExerciseModal from './exercise-library/EditExerciseModal'
-import toast from 'react-hot-toast'
+import useExerciseLibraryData from './exercise-library/useExerciseLibraryData'
 
 export default function ExerciseLibrary() {
   const { selectedTeam, currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'exercises')
-  const [exercises, setExercises] = useState([])
+  // Data layer: exercises + favorites list + all fetch/create/update/delete/
+  // favorite ops live in the hook. UI state (filters, forms, modals, confirm)
+  // stays here.
+  const {
+    exercises,
+    favorites,
+    loading,
+    createExercise: createExerciseOp,
+    updateExercise: updateExerciseOp,
+    deleteExercise: deleteExerciseOp,
+    toggleFavorite,
+  } = useExerciseLibraryData()
   const [filteredExercises, setFilteredExercises] = useState([])
-  const [favorites, setFavorites] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
@@ -42,7 +51,6 @@ export default function ExerciseLibrary() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
-  const [loading, setLoading] = useState(false)
   const [confirmState, setConfirmState] = useState(null)
   const [expandedGroups, setExpandedGroups] = useState({})
   const [newExercise, setNewExercise] = useState({
@@ -76,44 +84,8 @@ export default function ExerciseLibrary() {
   ]
 
   useEffect(() => {
-    fetchExercises()
-  }, [])
-
-  useEffect(() => {
     filterExercises()
   }, [exercises, favorites, searchTerm, selectedMuscleGroup, selectedDifficulty, selectedType, showFavoritesOnly])
-
-  const fetchExercises = async () => {
-    setLoading(true)
-    try {
-      // Fetch exercises
-      const { data, error } = await supabase
-        .from('training_exercises')
-        .select('*')
-        .order('muscle_group', { ascending: true })
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      
-      // Fetch user's favorites
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: favData } = await supabase
-          .from('user_exercise_favorites')
-          .select('exercise_id')
-          .eq('user_id', user.id)
-        
-        setFavorites(favData?.map(f => f.exercise_id) || [])
-      }
-      
-      setExercises(data || [])
-    } catch (error) {
-      console.error('Error fetching exercises:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const filterExercises = () => {
     let filtered = exercises
@@ -149,32 +121,11 @@ export default function ExerciseLibrary() {
     setFilteredExercises(filtered)
   }
 
+  // Thin wrapper: calls the hook op with the form, then resets form + closes the
+  // modal on success only (success-flag pattern).
   const createExercise = async () => {
-    if (!newExercise.name.trim()) {
-      toast.error('A gyakorlat neve kötelező!')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const { error } = await supabase
-        .from('training_exercises')
-        .insert({
-          name: newExercise.name,
-          muscle_group: newExercise.muscle_group,
-          secondary_muscles: newExercise.secondary_muscles,
-          difficulty: newExercise.difficulty,
-          type: newExercise.type,
-          category: 'strength',
-          equipment: newExercise.equipment,
-          description: newExercise.description,
-          instructions: newExercise.instructions,
-          tips: newExercise.tips,
-          parameters: newExercise.parameters
-        })
-
-      if (error) throw error
-
+    const ok = await createExerciseOp(newExercise)
+    if (ok) {
       // Reset form
       setNewExercise({
         name: '',
@@ -188,71 +139,16 @@ export default function ExerciseLibrary() {
         tips: [],
         parameters: { sets: 3, reps: '10-12', rest: '60s' }
       })
-
       setShowCreateModal(false)
-      fetchExercises()
-      toast.success('Gyakorlat sikeresen létrehozva!')
-    } catch (error) {
-      console.error('Error creating exercise:', error)
-      toast.error('Hiba történt a gyakorlat létrehozása során!')
-    } finally {
-      setLoading(false)
     }
   }
 
-  const toggleFavorite = async (exerciseId) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const isFavorite = favorites.includes(exerciseId)
-
-      if (isFavorite) {
-        // Remove from favorites
-        const { error } = await supabase
-          .from('user_exercise_favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('exercise_id', exerciseId)
-
-        if (error) throw error
-        setFavorites(favorites.filter(id => id !== exerciseId))
-      } else {
-        // Add to favorites
-        const { error } = await supabase
-          .from('user_exercise_favorites')
-          .insert({
-            user_id: user.id,
-            exercise_id: exerciseId
-          })
-
-        if (error) throw error
-        setFavorites([...favorites, exerciseId])
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error)
-      toast.error('Hiba történt a kedvenc jelölés során!')
-    }
-  }
-
+  // Thin wrapper: opens the ConfirmDialog; the hook op does the actual delete.
   const deleteExercise = (exerciseId) => {
     setConfirmState({
       message: 'Biztosan törölni szeretnéd ezt a gyakorlatot?',
       action: async () => {
-        try {
-          const { error } = await supabase
-            .from('training_exercises')
-            .delete()
-            .eq('id', exerciseId)
-
-          if (error) throw error
-
-          fetchExercises()
-          toast.success('Gyakorlat sikeresen törölve!')
-        } catch (error) {
-          console.error('Error deleting exercise:', error)
-          toast.error('Hiba történt a törlés során!')
-        }
+        await deleteExerciseOp(exerciseId)
       },
     })
   }
@@ -268,40 +164,13 @@ export default function ExerciseLibrary() {
     setShowEditModal(true)
   }
 
+  // Thin wrapper: calls the hook op with editingExercise, then closes the modal +
+  // clears editingExercise on success only (success-flag pattern).
   const updateExercise = async () => {
-    if (!editingExercise.name.trim()) {
-      toast.error('A gyakorlat neve kötelező!')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const { error } = await supabase
-        .from('training_exercises')
-        .update({
-          name: editingExercise.name,
-          muscle_group: editingExercise.muscle_group,
-          secondary_muscles: editingExercise.secondary_muscles,
-          difficulty: editingExercise.difficulty,
-          type: editingExercise.type,
-          equipment: editingExercise.equipment,
-          description: editingExercise.description,
-          instructions: editingExercise.instructions,
-          tips: editingExercise.tips
-        })
-        .eq('id', editingExercise.id)
-
-      if (error) throw error
-
+    const ok = await updateExerciseOp(editingExercise)
+    if (ok) {
       setShowEditModal(false)
       setEditingExercise(null)
-      fetchExercises()
-      toast.success('Gyakorlat sikeresen frissítve!')
-    } catch (error) {
-      console.error('Error updating exercise:', error)
-      toast.error('Hiba történt a frissítés során!')
-    } finally {
-      setLoading(false)
     }
   }
 
