@@ -182,7 +182,7 @@ export default function DocumentUpload({ player, teamId, onUploaded }) {
                   onChange={(e) => setFormData({...formData, category: e.target.value})}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                 >
-                  <option value="anamnézis">Amnézis</option>
+                  <option value="anamnézis">Anamnézis</option>
                   <option value="lelet">Lelet</option>
                   <option value="rtg">RTG</option>
                   <option value="mri">MRI</option>

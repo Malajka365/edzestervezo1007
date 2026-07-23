@@ -118,7 +118,7 @@ export default function Rehabilitation() {
 
   const playerTabs = [
     { id: 'overview', name: 'Áttekintés', icon: User },
-    { id: 'anamnesis', name: 'Amnézis', icon: ClipboardList },
+    { id: 'anamnesis', name: 'Anamnézis', icon: ClipboardList },
     { id: 'documents', name: 'Dokumentumok', icon: FileText },
     { id: 'attendance', name: 'Jelenlét', icon: CalendarIcon },
   ]
@@ -229,7 +229,7 @@ export default function Rehabilitation() {
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">Amnézissal</p>
+              <p className="text-sm text-slate-400 mb-1">Anamnézissel</p>
               <p className="text-3xl font-bold text-white">{stats.withAnamnesis}</p>
             </div>
             <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">

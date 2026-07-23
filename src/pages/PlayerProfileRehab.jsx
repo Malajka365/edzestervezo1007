@@ -88,7 +88,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
   }
 
   const deleteAnamnesis = async (anamnesisId) => {
-    if (!confirm('Biztosan törölni szeretnéd ezt az amnézist?')) return
+    if (!confirm('Biztosan törölni szeretnéd ezt az anamnézist?')) return
 
     try {
       const { error } = await supabase
@@ -98,7 +98,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
 
       if (error) throw error
 
-      alert('✅ Amnézis törölve!')
+      alert('✅ Anamnézis törölve!')
       fetchAnamnesisData()
     } catch (error) {
       console.error('Error deleting anamnesis:', error)
@@ -131,7 +131,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
     }
   }
 
-  // Amnézis kiválasztás kezelése
+  // Anamnézis kiválasztás kezelése
   const toggleAnamnesisSelection = (anamnesisId) => {
     setSelectedAnamnesisIds(prev => {
       if (prev.includes(anamnesisId)) {
@@ -142,7 +142,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
     })
   }
 
-  // Kiválasztott amnézisek pain_locations összevonása
+  // Kiválasztott anamnézisek pain_locations összevonása
   const getMergedPainPoints = () => {
     const selectedAnamneses = anamnesisData.filter(a => selectedAnamnesisIds.includes(a.id))
     const allPoints = []
@@ -152,9 +152,9 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
         anamnesis.pain_locations.forEach((point, index) => {
           allPoints.push({
             ...point,
-            // Egyedi ID generálása az amnézis ID és pont index kombinációjából
+            // Egyedi ID generálása az anamnézis ID és pont index kombinációjából
             id: `${anamnesis.id}-${point.id || index}`,
-            // Hozzáadjuk az amnézis dátumát azonosításhoz
+            // Hozzáadjuk az anamnézis dátumát azonosításhoz
             anamnesisDate: anamnesis.admission_date
           })
         })
@@ -177,7 +177,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
               </p>
             </div>
             <div className="card">
-              <h3 className="text-sm text-slate-400 mb-2">Amnézis felvételek</h3>
+              <h3 className="text-sm text-slate-400 mb-2">Anamnézis felvételek</h3>
               <p className="text-xl font-bold text-white">{anamnesisData.length}</p>
             </div>
             <div className="card">
@@ -215,13 +215,13 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
             </div>
           )}
 
-          {/* Korábbi Amnézisek és Body Diagram */}
+          {/* Korábbi Anamnézisek és Body Diagram */}
           {anamnesisData.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Korábbi Amnézisek Lista */}
+              {/* Korábbi Anamnézisek Lista */}
               <div className="card">
                 <h3 className="text-xl font-bold text-white mb-4">
-                  Korábbi amnézisek
+                  Korábbi anamnézisek
                   {selectedAnamnesisIds.length > 0 && (
                     <span className="ml-2 text-sm text-slate-400">
                       ({selectedAnamnesisIds.length} kiválasztva)
@@ -295,7 +295,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
               <h3 className="text-xl font-bold text-white mb-4">Fájdalom lokalizáció</h3>
               {selectedAnamnesisIds.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-slate-400">Jelölj be legalább egy amnézist a megjelenítéshez</p>
+                  <p className="text-slate-400">Jelölj be legalább egy anamnézist a megjelenítéshez</p>
                 </div>
               ) : (
                 <div className="relative">
@@ -306,7 +306,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
                   />
                   <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
                     <p className="text-xs text-slate-400 text-center">
-                      A kiválasztott {selectedAnamnesisIds.length} amnézis összes fájdalompontja látható
+                      A kiválasztott {selectedAnamnesisIds.length} anamnézis összes fájdalompontja látható
                     </p>
                   </div>
                 </div>

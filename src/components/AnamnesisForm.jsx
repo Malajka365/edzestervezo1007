@@ -122,7 +122,7 @@ export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClo
         if (error) throw error
       }
 
-      alert('✅ Amnézis sikeresen mentve!')
+      alert('✅ Anamnézis sikeresen mentve!')
       onSaved?.()
       
       // Embedded módban új üres form betöltése
@@ -191,7 +191,7 @@ export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClo
         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700">
           {/* Bal: Cím */}
           <h2 className="text-lg font-bold text-white">
-            {existingAnamnesis ? 'Amnézis szerkesztése' : 'Új amnézis'}
+            {existingAnamnesis ? 'Anamnézis szerkesztése' : 'Új anamnézis'}
           </h2>
           
           {/* Közép: Tab Navigation */}
