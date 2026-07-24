@@ -13,22 +13,27 @@ import toast from 'react-hot-toast'
  *
  * The exercise rows now also carry the GIF-catalog fields (name_en, modality,
  * gif_path, ...) and a detailed muscle layer via the `exercise_muscles` join
- * table (fetched on demand with fetchExerciseMuscles for the detail view).
+ * table. The list query stays slim; the full row is fetched on demand with
+ * fetchExerciseDetail, and the muscle layer is preloaded once as an index
+ * (musclesByExercise / muscleSearchByExercise) instead of per-exercise.
  */
 export default function useExerciseLibraryData() {
   const [exercises, setExercises] = useState([])
   const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(false)
+  const [muscles, setMuscles] = useState([])
+  const [equipmentTypes, setEquipmentTypes] = useState([])
+  const [musclesByExercise, setMusclesByExercise] = useState({})
+  const [muscleSearchByExercise, setMuscleSearchByExercise] = useState({})
 
   // Data fetch: loads training_exercises + the current user's favorites.
   const fetchExercises = async () => {
     setLoading(true)
     try {
-      // Fetch exercises
+      // Fetch exercises (slim: only the columns the list view needs)
       const { data, error } = await supabase
         .from('training_exercises')
-        .select('*')
-        .order('muscle_group', { ascending: true })
+        .select('id, slug, name, name_en, muscle_group, secondary_muscles, equipment, difficulty, modality, gif_path')
         .order('name', { ascending: true })
 
       if (error) throw error
@@ -45,6 +50,28 @@ export default function useExerciseLibraryData() {
       }
 
       setExercises(data || [])
+
+      // Izom-index: egy lekérdezés az egész könyvtárra.
+      const { data: emData } = await supabase
+        .from('exercise_muscles')
+        .select('exercise_id, role, muscles(code, name_latin, name_hu, name_en, muscle_group)')
+      const byEx = {}
+      const searchByEx = {}
+      for (const row of emData || []) {
+        const m = row.muscles
+        if (!m) continue
+        ;(byEx[row.exercise_id] ||= []).push({ code: m.code, role: row.role, name_hu: m.name_hu, name_latin: m.name_latin, muscle_group: m.muscle_group })
+        searchByEx[row.exercise_id] = ((searchByEx[row.exercise_id] || '') + ' ' + m.name_hu + ' ' + m.name_latin).toLowerCase()
+      }
+      setMusclesByExercise(byEx)
+      setMuscleSearchByExercise(searchByEx)
+
+      const [{ data: mus }, { data: eq }] = await Promise.all([
+        supabase.from('muscles').select('code, name_hu, name_latin, name_en, muscle_group').order('muscle_group'),
+        supabase.from('equipment_types').select('code, name_hu').order('name_hu'),
+      ])
+      setMuscles(mus || [])
+      setEquipmentTypes(eq || [])
     } catch (error) {
       console.error('Error fetching exercises:', error)
       toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
@@ -53,34 +80,36 @@ export default function useExerciseLibraryData() {
     }
   }
 
-  // A kiválasztott gyakorlat részletes izmai (fő mozgató / segéd / stabilizáló),
-  // latin névvel — az exercise_muscles + muscles táblákból. Csak a részletnézet hívja.
-  const fetchExerciseMuscles = async (exerciseId) => {
-    if (!exerciseId) return []
-    try {
-      const { data, error } = await supabase
-        .from('exercise_muscles')
-        .select('role, muscles(code, name_latin, name_hu, name_en, muscle_group)')
-        .eq('exercise_id', exerciseId)
+  // A teljes sor a részletnézethez (a karcsú listából hiányzó mezők).
+  const fetchExerciseDetail = async (id) => {
+    if (!id) return null
+    const { data, error } = await supabase
+      .from('training_exercises').select('*').eq('id', id).single()
+    if (error) { console.error('Error fetching exercise detail:', error); return null }
+    return data
+  }
+
+  // A gyakorlat részletes izmainak mentése: teljes csere (törlés + beszúrás).
+  const saveExerciseMuscles = async (exerciseId, rows) => {
+    await supabase.from('exercise_muscles').delete().eq('exercise_id', exerciseId)
+    if (rows && rows.length) {
+      const payload = rows.map((r) => ({ exercise_id: exerciseId, muscle_code: r.muscle_code, role: r.role }))
+      const { error } = await supabase.from('exercise_muscles').insert(payload)
       if (error) throw error
-      return data || []
-    } catch (error) {
-      console.error('Error fetching exercise muscles:', error)
-      return []
     }
   }
 
-  // Create a new exercise. Takes the newExercise form as an arg. Returns true on
-  // success (component resets form + closes modal), false otherwise.
+  // Create a new exercise. Takes the newExercise form as an arg. Returns the new
+  // row's id on success (component resets form + closes modal), null otherwise.
   const createExercise = async (newExercise) => {
     if (!newExercise.name.trim()) {
       toast.error('A gyakorlat neve kötelező!')
-      return false
+      return null
     }
 
     setLoading(true)
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('training_exercises')
         .insert({
           name: newExercise.name,
@@ -98,16 +127,17 @@ export default function useExerciseLibraryData() {
           tips: newExercise.tips,
           parameters: newExercise.parameters
         })
+        .select('id').single()
 
       if (error) throw error
 
       fetchExercises()
       toast.success('Gyakorlat sikeresen létrehozva!')
-      return true
+      return data.id
     } catch (error) {
       console.error('Error creating exercise:', error)
       toast.error('Hiba történt a gyakorlat létrehozása során!')
-      return false
+      return null
     } finally {
       setLoading(false)
     }
@@ -218,9 +248,14 @@ export default function useExerciseLibraryData() {
     exercises,
     favorites,
     loading,
+    muscles,
+    equipmentTypes,
+    musclesByExercise,
+    muscleSearchByExercise,
     // operations
     fetchExercises,
-    fetchExerciseMuscles,
+    fetchExerciseDetail,
+    saveExerciseMuscles,
     createExercise,
     updateExercise,
     deleteExercise,
