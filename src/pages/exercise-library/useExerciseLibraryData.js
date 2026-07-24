@@ -11,20 +11,9 @@ import toast from 'react-hot-toast'
  *
  * Owns state: exercises, favorites, loading.
  *
- * Reads NO component UI state (searchTerm, selectedMuscleGroup,
- * selectedDifficulty, selectedType, showFavoritesOnly, forms, modals,
- * editingExercise, newExercise, confirmState). Form data is passed in as an
- * explicit argument to the write ops.
- *
- * Auth: the ORIGINAL page had no `session` prop (rendered as `<ExerciseLibrary />`)
- * and resolved the current user via `supabase.auth.getUser()` inside
- * fetchExercises and toggleFavorite. Preserved exactly — the hook keeps those
- * getUser() calls rather than taking a session param, so there is zero behavior
- * change and no new coupling.
- *
- * Write ops that trigger a modal close (createExercise, updateExercise) return a
- * boolean success flag so the component closes/resets UI on success only (same
- * pattern the reviewer validated in useMacrocycleData / useMeasurementsData).
+ * The exercise rows now also carry the GIF-catalog fields (name_en, modality,
+ * gif_path, ...) and a detailed muscle layer via the `exercise_muscles` join
+ * table (fetched on demand with fetchExerciseMuscles for the detail view).
  */
 export default function useExerciseLibraryData() {
   const [exercises, setExercises] = useState([])
@@ -64,9 +53,25 @@ export default function useExerciseLibraryData() {
     }
   }
 
+  // A kiválasztott gyakorlat részletes izmai (fő mozgató / segéd / stabilizáló),
+  // latin névvel — az exercise_muscles + muscles táblákból. Csak a részletnézet hívja.
+  const fetchExerciseMuscles = async (exerciseId) => {
+    if (!exerciseId) return []
+    try {
+      const { data, error } = await supabase
+        .from('exercise_muscles')
+        .select('role, muscles(code, name_latin, name_hu, name_en, muscle_group)')
+        .eq('exercise_id', exerciseId)
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Error fetching exercise muscles:', error)
+      return []
+    }
+  }
+
   // Create a new exercise. Takes the newExercise form as an arg. Returns true on
-  // success (component resets form + closes modal), false otherwise. Validation
-  // failure keeps the modal open and toggles no loading state (matches original).
+  // success (component resets form + closes modal), false otherwise.
   const createExercise = async (newExercise) => {
     if (!newExercise.name.trim()) {
       toast.error('A gyakorlat neve kötelező!')
@@ -79,12 +84,15 @@ export default function useExerciseLibraryData() {
         .from('training_exercises')
         .insert({
           name: newExercise.name,
+          name_en: newExercise.name_en || null,
           muscle_group: newExercise.muscle_group,
           secondary_muscles: newExercise.secondary_muscles,
           difficulty: newExercise.difficulty,
           type: newExercise.type,
+          modality: newExercise.modality || null,
           category: 'strength',
           equipment: newExercise.equipment,
+          gif_path: newExercise.gif_path || null,
           description: newExercise.description,
           instructions: newExercise.instructions,
           tips: newExercise.tips,
@@ -119,11 +127,14 @@ export default function useExerciseLibraryData() {
         .from('training_exercises')
         .update({
           name: editingExercise.name,
+          name_en: editingExercise.name_en || null,
           muscle_group: editingExercise.muscle_group,
           secondary_muscles: editingExercise.secondary_muscles,
           difficulty: editingExercise.difficulty,
           type: editingExercise.type,
+          modality: editingExercise.modality || null,
           equipment: editingExercise.equipment,
+          gif_path: editingExercise.gif_path || null,
           description: editingExercise.description,
           instructions: editingExercise.instructions,
           tips: editingExercise.tips
@@ -163,12 +174,7 @@ export default function useExerciseLibraryData() {
     }
   }
 
-  // Toggle a favorite. Preserves the original SNAPSHOT-read logic exactly: it
-  // reads the current `favorites` snapshot to decide insert-vs-delete, then
-  // writes the derived array back (non-functional setState). The original used
-  // this same snapshot form; each favorites change re-renders the component,
-  // re-runs the hook, and rebinds this closure over fresh `favorites` — so the
-  // behavior is identical to the pre-extraction component.
+  // Toggle a favorite (unchanged snapshot-read logic).
   const toggleFavorite = async (exerciseId) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -177,7 +183,6 @@ export default function useExerciseLibraryData() {
       const isFavorite = favorites.includes(exerciseId)
 
       if (isFavorite) {
-        // Remove from favorites
         const { error } = await supabase
           .from('user_exercise_favorites')
           .delete()
@@ -187,7 +192,6 @@ export default function useExerciseLibraryData() {
         if (error) throw error
         setFavorites(favorites.filter(id => id !== exerciseId))
       } else {
-        // Add to favorites
         const { error } = await supabase
           .from('user_exercise_favorites')
           .insert({
@@ -204,8 +208,6 @@ export default function useExerciseLibraryData() {
     }
   }
 
-  // Load on mount (was the component's fetchExercises() effect). Safe to own here:
-  // fetchExercises takes no args and reads no component UI state.
   useEffect(() => {
     fetchExercises()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,6 +220,7 @@ export default function useExerciseLibraryData() {
     loading,
     // operations
     fetchExercises,
+    fetchExerciseMuscles,
     createExercise,
     updateExercise,
     deleteExercise,

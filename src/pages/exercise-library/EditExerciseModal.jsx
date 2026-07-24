@@ -1,4 +1,5 @@
 import { X, Plus } from 'lucide-react'
+import { MUSCLE_GROUPS, MODALITIES } from '../../lib/exerciseTaxonomy'
 
 export default function EditExerciseModal({
   setShowEditModal,
@@ -26,16 +27,28 @@ export default function EditExerciseModal({
 
             {/* Modal Content - Same as Create Modal but with editingExercise */}
             <div className="p-6 space-y-6">
-              {/* Name */}
+              {/* Name (HU) */}
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Gyakorlat neve *
+                  Gyakorlat neve (magyar) *
                 </label>
                 <input
                   type="text"
                   value={editingExercise.name}
                   onChange={(e) => setEditingExercise({ ...editingExercise, name: e.target.value })}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              {/* Name (EN) */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Angol név</label>
+                <input
+                  type="text"
+                  value={editingExercise.name_en || ''}
+                  onChange={(e) => setEditingExercise({ ...editingExercise, name_en: e.target.value })}
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="pl. Bench Press"
                 />
               </div>
 
@@ -48,12 +61,9 @@ export default function EditExerciseModal({
                     onChange={(e) => setEditingExercise({ ...editingExercise, muscle_group: e.target.value })}
                     className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="chest">Mellkas</option>
-                    <option value="back">Hát</option>
-                    <option value="shoulders">Váll</option>
-                    <option value="arms">Kar</option>
-                    <option value="legs">Láb</option>
-                    <option value="core">Törzs</option>
+                    {MUSCLE_GROUPS.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -71,18 +81,45 @@ export default function EditExerciseModal({
                 </div>
               </div>
 
-              {/* Type */}
+              {/* Modality & Type */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Modalitás</label>
+                  <select
+                    value={editingExercise.modality || 'erosites'}
+                    onChange={(e) => setEditingExercise({ ...editingExercise, modality: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    {MODALITIES.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Típus</label>
+                  <select
+                    value={editingExercise.type}
+                    onChange={(e) => setEditingExercise({ ...editingExercise, type: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="gym">Edzőterem</option>
+                    <option value="both">Mindkettő</option>
+                    <option value="ball">Labdás</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* GIF path */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Típus</label>
-                <select
-                  value={editingExercise.type}
-                  onChange={(e) => setEditingExercise({ ...editingExercise, type: e.target.value })}
+                <label className="block text-sm font-medium text-white mb-2">GIF útvonal (Storage)</label>
+                <input
+                  type="text"
+                  value={editingExercise.gif_path || ''}
+                  onChange={(e) => setEditingExercise({ ...editingExercise, gif_path: e.target.value })}
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="gym">Edzőterem</option>
-                  <option value="both">Mindkettő</option>
-                  <option value="ball">Labdás</option>
-                </select>
+                  placeholder="pl. mell/bench-press.gif"
+                />
               </div>
 
               {/* Description */}
@@ -227,10 +264,10 @@ export default function EditExerciseModal({
 
               {/* Secondary Muscles */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Másodlagos izmok</label>
+                <label className="block text-sm font-medium text-white mb-2">Másodlagos izomcsoportok</label>
                 <input
                   type="text"
-                  placeholder="pl. triceps, shoulders (vesszővel elválasztva)"
+                  placeholder="pl. tricepsz, vall (vesszővel elválasztva)"
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   onBlur={(e) => {
                     const muscles = e.target.value.split(',').map(m => m.trim()).filter(m => m)
