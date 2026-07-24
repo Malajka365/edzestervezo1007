@@ -33,7 +33,7 @@ import {
   ROLE_LABELS,
   ROLE_ORDER,
 } from '../lib/exerciseTaxonomy'
-import { exerciseGifUrl } from '../lib/exerciseMedia'
+import { exerciseGifUrl, exerciseThumbUrl } from '../lib/exerciseMedia'
 
 // A 12 izomcsoporthoz ikon (csak már importált lucide ikonokat használunk).
 const GROUP_ICONS = {
@@ -381,20 +381,23 @@ export default function ExerciseLibrary() {
               {isExpanded && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0">
                   {groupExercises.map(exercise => {
-                    const thumbUrl = exerciseGifUrl(exercise.gif_path)
+                    const gifUrl = exerciseGifUrl(exercise.gif_path)
+                    const thumbUrl = exerciseThumbUrl(exercise.gif_path)
                     return (
                     <div
                       key={exercise.id}
                       className="bg-slate-700/50 rounded-lg overflow-hidden hover:bg-slate-700 transition-all cursor-pointer border border-slate-600 hover:border-primary-500"
                       onClick={() => openDetail(exercise)}
                     >
-                      {/* GIF thumbnail */}
-                      {thumbUrl && (
+                      {/* Kártya-kép: kis statikus thumbnail (gyors); ha nincs thumb,
+                          a nagy GIF-re esik vissza. */}
+                      {gifUrl && (
                         <div className="w-full aspect-video bg-slate-900 overflow-hidden">
                           <img
-                            src={thumbUrl}
+                            src={thumbUrl || gifUrl}
                             alt={exercise.name}
                             loading="lazy"
+                            onError={(e) => { if (gifUrl && e.currentTarget.src !== gifUrl) e.currentTarget.src = gifUrl }}
                             className="w-full h-full object-contain"
                           />
                         </div>

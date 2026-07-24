@@ -11,6 +11,15 @@ export function exerciseGifUrl(gifPath) {
   return data?.publicUrl || null
 }
 
+// Kis, statikus thumbnail a kártyákhoz: a GIF első kockájából készült WEBP a
+// bucket 'thumbs/' prefixében (pl. mell/bench-press.gif -> thumbs/mell/bench-press.webp).
+// A kártya erre esik vissza a nagy GIF helyett; ha nincs thumb, a UI a GIF-et tölti.
+export function exerciseThumbUrl(gifPath) {
+  if (!gifPath) return null
+  const webp = gifPath.replace(/\.[^.]+$/, '.webp')
+  return exerciseGifUrl(`thumbs/${webp}`)
+}
+
 const ALLOWED_MIME = ['image/gif', 'image/png', 'image/jpeg']
 const MAX_BYTES = 8 * 1024 * 1024
 const EXT_BY_MIME = { 'image/gif': 'gif', 'image/png': 'png', 'image/jpeg': 'jpg' }
