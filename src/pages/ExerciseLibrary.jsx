@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
 import {
@@ -23,6 +23,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import CreateExerciseModal from './exercise-library/CreateExerciseModal'
 import EditExerciseModal from './exercise-library/EditExerciseModal'
 import useExerciseLibraryData from './exercise-library/useExerciseLibraryData'
+import { filterExercises } from './exercise-library/filterExercises'
 import {
   MUSCLE_GROUPS,
   MODALITIES,
@@ -48,19 +49,25 @@ export default function ExerciseLibrary() {
     exercises,
     favorites,
     loading,
-    fetchExerciseMuscles,
+    muscles,
+    equipmentTypes,
+    musclesByExercise,
+    muscleSearchByExercise,
+    fetchExercises,
+    fetchExerciseDetail,
+    saveExerciseMuscles,
     createExercise: createExerciseOp,
     updateExercise: updateExerciseOp,
     deleteExercise: deleteExerciseOp,
     toggleFavorite,
   } = useExerciseLibraryData()
-  const [filteredExercises, setFilteredExercises] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('all')
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('mell') // volt 'all'
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
-  const [selectedType, setSelectedType] = useState('all')
   const [selectedModality, setSelectedModality] = useState('all')
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(60)
+  const [detailMuscles, setDetailMuscles] = useState([]) // a modal részletes izmai
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [selectedExerciseMuscles, setSelectedExerciseMuscles] = useState([])
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -84,10 +91,7 @@ export default function ExerciseLibrary() {
     parameters: { sets: 3, reps: '10-12', rest: '60s' }
   })
 
-  const muscleGroups = [
-    { id: 'all', name: 'Összes', icon: Activity, color: 'bg-slate-600' },
-    ...MUSCLE_GROUPS.map(g => ({ ...g, icon: GROUP_ICONS[g.id] || Activity })),
-  ]
+  const muscleGroups = MUSCLE_GROUPS.map((g) => ({ ...g, icon: GROUP_ICONS[g.id] || Activity }))
 
   const difficultyLevels = [
     { id: 'all', name: 'Összes', color: 'text-slate-400' },
@@ -96,64 +100,26 @@ export default function ExerciseLibrary() {
     { id: 'advanced', name: 'Profi', color: 'text-red-400' },
   ]
 
-  useEffect(() => {
-    filterExercises()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercises, favorites, searchTerm, selectedMuscleGroup, selectedDifficulty, selectedType, selectedModality, showFavoritesOnly])
+  const filtered = useMemo(() => filterExercises(exercises, {
+    searchTerm, muscleGroup: selectedMuscleGroup, difficulty: selectedDifficulty,
+    modality: selectedModality, favoritesOnly: showFavoritesOnly, favorites, muscleSearchByExercise,
+  }), [exercises, searchTerm, selectedMuscleGroup, selectedDifficulty, selectedModality, showFavoritesOnly, favorites, muscleSearchByExercise])
 
-  // A kiválasztott gyakorlat részletes izmainak betöltése.
-  useEffect(() => {
-    let active = true
-    if (selectedExercise?.id) {
-      fetchExerciseMuscles(selectedExercise.id).then(rows => {
-        if (active) setSelectedExerciseMuscles(rows)
-      })
-    } else {
-      setSelectedExerciseMuscles([])
-    }
-    return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedExercise])
+  const visible = filtered.slice(0, visibleCount)
 
-  const filterExercises = () => {
-    let filtered = exercises
+  useEffect(() => { setVisibleCount(60) }, [searchTerm, selectedMuscleGroup, selectedDifficulty, selectedModality, showFavoritesOnly])
 
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase()
-      filtered = filtered.filter(ex =>
-        ex.name?.toLowerCase().includes(q) ||
-        ex.name_en?.toLowerCase().includes(q) ||
-        ex.description?.toLowerCase().includes(q)
-      )
-    }
-
-    if (selectedMuscleGroup !== 'all') {
-      filtered = filtered.filter(ex => normalizeMuscleGroup(ex.muscle_group) === selectedMuscleGroup)
-    }
-
-    if (selectedDifficulty !== 'all') {
-      filtered = filtered.filter(ex => ex.difficulty === selectedDifficulty)
-    }
-
-    if (selectedType !== 'all') {
-      filtered = filtered.filter(ex => ex.type === selectedType)
-    }
-
-    if (selectedModality !== 'all') {
-      // A régi, modality nélküli gyakorlatokat erősítésnek tekintjük.
-      filtered = filtered.filter(ex => (ex.modality || 'erosites') === selectedModality)
-    }
-
-    if (showFavoritesOnly) {
-      filtered = filtered.filter(ex => favorites.includes(ex.id))
-    }
-
-    setFilteredExercises(filtered)
+  const openDetail = async (ex) => {
+    const full = await fetchExerciseDetail(ex.id)
+    setSelectedExercise(full || ex)
+    setSelectedExerciseMuscles(musclesByExercise[ex.id] || [])
   }
 
   const createExercise = async () => {
-    const ok = await createExerciseOp(newExercise)
-    if (ok) {
+    const id = await createExerciseOp(newExercise)
+    if (id) {
+      await saveExerciseMuscles(id, detailMuscles)
+      fetchExercises()
       setNewExercise({
         name: '',
         name_en: '',
@@ -169,6 +135,7 @@ export default function ExerciseLibrary() {
         tips: [],
         parameters: { sets: 3, reps: '10-12', rest: '60s' }
       })
+      setDetailMuscles([])
       setShowCreateModal(false)
     }
   }
@@ -190,14 +157,18 @@ export default function ExerciseLibrary() {
       tips: exercise.tips || [],
       secondary_muscles: exercise.secondary_muscles || []
     })
+    setDetailMuscles((musclesByExercise[exercise.id] || []).map((m) => ({ muscle_code: m.code, role: m.role })))
     setShowEditModal(true)
   }
 
   const updateExercise = async () => {
     const ok = await updateExerciseOp(editingExercise)
     if (ok) {
+      await saveExerciseMuscles(editingExercise.id, detailMuscles)
+      fetchExercises()
       setShowEditModal(false)
       setEditingExercise(null)
+      setDetailMuscles([])
     }
   }
 
@@ -210,7 +181,7 @@ export default function ExerciseLibrary() {
 
   const groupExercisesByMuscleGroup = () => {
     const grouped = {}
-    filteredExercises.forEach(ex => {
+    visible.forEach(ex => {
       const group = normalizeMuscleGroup(ex.muscle_group) || 'other'
       if (!grouped[group]) {
         grouped[group] = []
@@ -247,7 +218,8 @@ export default function ExerciseLibrary() {
             <div className="min-w-0">
               <h1 className="text-xl font-bold text-white">Gyakorlat Könyvtár</h1>
               <p className="text-sm text-slate-400 hidden sm:block">
-                {filteredExercises.length} gyakorlat
+                {filtered.length} gyakorlat
+                {filtered.length > visible.length && ` (látszik: ${visible.length})`}
               </p>
             </div>
           </div>
@@ -255,7 +227,7 @@ export default function ExerciseLibrary() {
           {canEdit && (
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => { setDetailMuscles([]); setShowCreateModal(true) }}
                 className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
                 title="Új gyakorlat"
               >
@@ -401,7 +373,7 @@ export default function ExerciseLibrary() {
                     <div
                       key={exercise.id}
                       className="bg-slate-700/50 rounded-lg overflow-hidden hover:bg-slate-700 transition-all cursor-pointer border border-slate-600 hover:border-primary-500"
-                      onClick={() => setSelectedExercise(exercise)}
+                      onClick={() => openDetail(exercise)}
                     >
                       {/* GIF thumbnail */}
                       {thumbUrl && (
@@ -493,6 +465,17 @@ export default function ExerciseLibrary() {
           )
         })}
       </div>
+
+      {filtered.length > visible.length && (
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={() => setVisibleCount((c) => c + 60)}
+            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
+          >
+            Továbbiak ({filtered.length - visible.length})
+          </button>
+        </div>
+      )}
 
       {/* Exercise Detail Modal */}
       {selectedExercise && (
@@ -677,7 +660,7 @@ export default function ExerciseLibrary() {
       )}
 
       {/* Empty State */}
-      {!loading && filteredExercises.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div className="card text-center py-12">
           <Dumbbell className="w-16 h-16 text-slate-600 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">Nincs találat</h3>
@@ -685,9 +668,9 @@ export default function ExerciseLibrary() {
           <button
             onClick={() => {
               setSearchTerm('')
-              setSelectedMuscleGroup('all')
+              setSelectedMuscleGroup('mell')
               setSelectedDifficulty('all')
-              setSelectedType('all')
+              setSelectedModality('all')
               setShowFavoritesOnly(false)
             }}
             className="btn btn-secondary"
@@ -705,6 +688,10 @@ export default function ExerciseLibrary() {
           setNewExercise={setNewExercise}
           createExercise={createExercise}
           loading={loading}
+          equipmentTypes={equipmentTypes}
+          muscles={muscles}
+          detailMuscles={detailMuscles}
+          setDetailMuscles={setDetailMuscles}
         />
       )}
 
@@ -716,6 +703,10 @@ export default function ExerciseLibrary() {
           setEditingExercise={setEditingExercise}
           updateExercise={updateExercise}
           loading={loading}
+          equipmentTypes={equipmentTypes}
+          muscles={muscles}
+          detailMuscles={detailMuscles}
+          setDetailMuscles={setDetailMuscles}
         />
       )}
 
