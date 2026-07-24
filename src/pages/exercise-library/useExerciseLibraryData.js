@@ -51,10 +51,20 @@ export default function useExerciseLibraryData() {
 
       setExercises(data || [])
 
-      // Izom-index: egy lekérdezés az egész könyvtárra.
-      const { data: emData } = await supabase
-        .from('exercise_muscles')
-        .select('exercise_id, role, muscles(code, name_latin, name_hu, name_en, muscle_group)')
+      // Izom-index az egész könyvtárra. A PostgREST alapból max 1000 sort ad
+      // vissza, ezért lapozva húzzuk be az összes exercise_muscles sort (~4000+),
+      // különben a legtöbb gyakorlat izmai kimaradnának (és az izom-keresés is).
+      const emData = []
+      const EM_PAGE = 1000
+      for (let from = 0; ; from += EM_PAGE) {
+        const { data: chunk, error: emErr } = await supabase
+          .from('exercise_muscles')
+          .select('exercise_id, role, muscles(code, name_latin, name_hu, name_en, muscle_group)')
+          .range(from, from + EM_PAGE - 1)
+        if (emErr) throw emErr
+        emData.push(...(chunk || []))
+        if (!chunk || chunk.length < EM_PAGE) break
+      }
       const byEx = {}
       const searchByEx = {}
       for (const row of emData || []) {

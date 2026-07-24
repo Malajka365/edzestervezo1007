@@ -558,8 +558,8 @@ export default function ExerciseLibrary() {
                         <div className="space-y-1">
                           {items.map((it, idx) => (
                             <div key={idx} className="flex items-baseline gap-2">
-                              <span className="text-slate-200">{it.muscles?.name_hu}</span>
-                              <span className="text-slate-500 text-sm italic">{it.muscles?.name_latin}</span>
+                              <span className="text-slate-200">{it.name_hu}</span>
+                              <span className="text-slate-500 text-sm italic">{it.name_latin}</span>
                             </div>
                           ))}
                         </div>
