@@ -25,6 +25,7 @@ import EditExerciseModal from './exercise-library/EditExerciseModal'
 import useExerciseLibraryData from './exercise-library/useExerciseLibraryData'
 import {
   MUSCLE_GROUPS,
+  MODALITIES,
   normalizeMuscleGroup,
   MODALITY_LABELS,
   ROLE_LABELS,
@@ -58,6 +59,7 @@ export default function ExerciseLibrary() {
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('all')
   const [selectedDifficulty, setSelectedDifficulty] = useState('all')
   const [selectedType, setSelectedType] = useState('all')
+  const [selectedModality, setSelectedModality] = useState('all')
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [selectedExerciseMuscles, setSelectedExerciseMuscles] = useState([])
@@ -97,7 +99,7 @@ export default function ExerciseLibrary() {
   useEffect(() => {
     filterExercises()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercises, favorites, searchTerm, selectedMuscleGroup, selectedDifficulty, selectedType, showFavoritesOnly])
+  }, [exercises, favorites, searchTerm, selectedMuscleGroup, selectedDifficulty, selectedType, selectedModality, showFavoritesOnly])
 
   // A kiválasztott gyakorlat részletes izmainak betöltése.
   useEffect(() => {
@@ -135,6 +137,11 @@ export default function ExerciseLibrary() {
 
     if (selectedType !== 'all') {
       filtered = filtered.filter(ex => ex.type === selectedType)
+    }
+
+    if (selectedModality !== 'all') {
+      // A régi, modality nélküli gyakorlatokat erősítésnek tekintjük.
+      filtered = filtered.filter(ex => (ex.modality || 'erosites') === selectedModality)
     }
 
     if (showFavoritesOnly) {
@@ -321,32 +328,27 @@ export default function ExerciseLibrary() {
             ))}
           </div>
 
-          {/* Type */}
-          <div className="flex gap-2">
+          {/* Modality — erősítés / kalisztenika / funkcionális-HIIT / nyújtás */}
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setSelectedType('all')}
+              onClick={() => setSelectedModality('all')}
               className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedType === 'all' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                selectedModality === 'all' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
               Összes
             </button>
-            <button
-              onClick={() => setSelectedType('gym')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedType === 'gym' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
-              Edzőterem
-            </button>
-            <button
-              onClick={() => setSelectedType('both')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedType === 'both' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
-              Mindkettő
-            </button>
+            {MODALITIES.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedModality(m.id)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  selectedModality === m.id ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {m.name}
+              </button>
+            ))}
           </div>
 
           {/* Favorites */}
