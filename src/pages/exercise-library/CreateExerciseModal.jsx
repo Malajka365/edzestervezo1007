@@ -1,5 +1,8 @@
 import { X, Plus } from 'lucide-react'
 import { MUSCLE_GROUPS, MODALITIES } from '../../lib/exerciseTaxonomy'
+import MediaUpload from './MediaUpload'
+import ChipMultiSelect from './ChipMultiSelect'
+import MusclePicker from './MusclePicker'
 
 export default function CreateExerciseModal({
   setShowCreateModal,
@@ -7,6 +10,10 @@ export default function CreateExerciseModal({
   setNewExercise,
   createExercise,
   loading,
+  equipmentTypes,
+  muscles,
+  detailMuscles,
+  setDetailMuscles,
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -101,36 +108,14 @@ export default function CreateExerciseModal({
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    Típus
-                  </label>
-                  <select
-                    value={newExercise.type}
-                    onChange={(e) => setNewExercise({ ...newExercise, type: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="gym">Edzőterem</option>
-                    <option value="both">Mindkettő</option>
-                    <option value="ball">Labdás</option>
-                  </select>
-                </div>
               </div>
 
-              {/* GIF path */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  GIF útvonal (Storage)
-                </label>
-                <input
-                  type="text"
-                  value={newExercise.gif_path || ''}
-                  onChange={(e) => setNewExercise({ ...newExercise, gif_path: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="pl. mell/bench-press.gif"
-                />
-              </div>
+              {/* GIF / media */}
+              <MediaUpload
+                value={newExercise.gif_path}
+                onChange={(path) => setNewExercise({ ...newExercise, gif_path: path })}
+                slugBase={newExercise.name_en || newExercise.name}
+              />
 
               {/* Description */}
               <div>
@@ -151,36 +136,12 @@ export default function CreateExerciseModal({
                 <label className="block text-sm font-medium text-white mb-2">
                   Szükséges eszközök
                 </label>
-                <input
-                  type="text"
-                  placeholder="pl. barbell, dumbbells (vesszővel elválasztva)"
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  onBlur={(e) => {
-                    const equipment = e.target.value.split(',').map(eq => eq.trim()).filter(eq => eq)
-                    setNewExercise({ ...newExercise, equipment })
-                  }}
+                <ChipMultiSelect
+                  options={(equipmentTypes || []).map((e) => ({ value: e.code, label: e.name_hu }))}
+                  value={newExercise.equipment}
+                  onChange={(v) => setNewExercise({ ...newExercise, equipment: v })}
+                  placeholder="Eszköz hozzáadása..."
                 />
-                {newExercise.equipment.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newExercise.equipment.map((eq, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-slate-600 text-xs text-slate-300 rounded flex items-center gap-1"
-                      >
-                        {eq}
-                        <button
-                          onClick={() => {
-                            const newEquipment = newExercise.equipment.filter((_, i) => i !== idx)
-                            setNewExercise({ ...newExercise, equipment: newEquipment })
-                          }}
-                          className="hover:text-red-400"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Instructions */}
@@ -286,37 +247,16 @@ export default function CreateExerciseModal({
                 <label className="block text-sm font-medium text-white mb-2">
                   Másodlagos izomcsoportok
                 </label>
-                <input
-                  type="text"
-                  placeholder="pl. tricepsz, vall (vesszővel elválasztva)"
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  onBlur={(e) => {
-                    const muscles = e.target.value.split(',').map(m => m.trim()).filter(m => m)
-                    setNewExercise({ ...newExercise, secondary_muscles: muscles })
-                  }}
+                <ChipMultiSelect
+                  options={MUSCLE_GROUPS.map((g) => ({ value: g.id, label: g.name }))}
+                  value={newExercise.secondary_muscles}
+                  onChange={(v) => setNewExercise({ ...newExercise, secondary_muscles: v })}
+                  placeholder="Csoport hozzáadása..."
                 />
-                {newExercise.secondary_muscles.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newExercise.secondary_muscles.map((muscle, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-slate-600 text-xs text-slate-300 rounded flex items-center gap-1 capitalize"
-                      >
-                        {muscle}
-                        <button
-                          onClick={() => {
-                            const newMuscles = newExercise.secondary_muscles.filter((_, i) => i !== idx)
-                            setNewExercise({ ...newExercise, secondary_muscles: newMuscles })
-                          }}
-                          className="hover:text-red-400"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
+
+              {/* Detail Muscles */}
+              <MusclePicker muscles={muscles || []} value={detailMuscles} onChange={setDetailMuscles} />
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-slate-700">
