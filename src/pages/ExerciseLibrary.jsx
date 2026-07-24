@@ -545,26 +545,37 @@ export default function ExerciseLibrary() {
                 </div>
               )}
 
-              {/* Konkrét izmok (latin, szerep szerint) */}
+              {/* Konkrét izmok (latin, szerep szerint) — szerepenként külön,
+                  színkódolt kártyában, hogy jól elváljanak egymástól. */}
               {musclesByRole.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-3">Résztvevő izmok</h3>
-                  <div className="space-y-3">
-                    {musclesByRole.map(({ role, items }) => (
-                      <div key={role}>
-                        <p className="text-xs uppercase tracking-wide text-slate-400 mb-1">
-                          {ROLE_LABELS[role]}
-                        </p>
-                        <div className="space-y-1">
-                          {items.map((it, idx) => (
-                            <div key={idx} className="flex items-baseline gap-2">
-                              <span className="text-slate-200">{it.name_hu}</span>
-                              <span className="text-slate-500 text-sm italic">{it.name_latin}</span>
-                            </div>
-                          ))}
+                  <div className="space-y-2.5">
+                    {musclesByRole.map(({ role, items }) => {
+                      const roleStyle = {
+                        primary: { bar: 'bg-red-500', label: 'text-red-400' },
+                        secondary: { bar: 'bg-amber-500', label: 'text-amber-400' },
+                        stabilizer: { bar: 'bg-sky-500', label: 'text-sky-400' },
+                      }[role] || { bar: 'bg-slate-500', label: 'text-slate-400' }
+                      return (
+                        <div key={role} className="flex gap-3 rounded-lg bg-slate-700/40 p-3">
+                          <span className={`w-1 rounded-full flex-shrink-0 ${roleStyle.bar}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${roleStyle.label}`}>
+                              {ROLE_LABELS[role]}
+                            </p>
+                            <ul className="space-y-1.5">
+                              {items.map((it, idx) => (
+                                <li key={idx} className="flex flex-wrap items-baseline gap-x-2">
+                                  <span className="text-slate-100">{it.name_hu}</span>
+                                  <span className="text-slate-500 text-sm italic">{it.name_latin}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
