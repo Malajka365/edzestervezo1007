@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import toast from 'react-hot-toast'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
 import {
@@ -118,25 +119,31 @@ export default function ExerciseLibrary() {
   const createExercise = async () => {
     const id = await createExerciseOp(newExercise)
     if (id) {
-      await saveExerciseMuscles(id, detailMuscles)
-      fetchExercises()
-      setNewExercise({
-        name: '',
-        name_en: '',
-        muscle_group: 'mell',
-        secondary_muscles: [],
-        difficulty: 'beginner',
-        type: 'gym',
-        modality: 'erosites',
-        gif_path: '',
-        equipment: [],
-        description: '',
-        instructions: [],
-        tips: [],
-        parameters: { sets: 3, reps: '10-12', rest: '60s' }
-      })
-      setDetailMuscles([])
-      setShowCreateModal(false)
+      try {
+        await saveExerciseMuscles(id, detailMuscles)
+      } catch (error) {
+        console.error('Error saving exercise muscles:', error)
+        toast.error('A gyakorlat mentve, de a részletes izmok mentése nem sikerült.')
+      } finally {
+        fetchExercises()
+        setNewExercise({
+          name: '',
+          name_en: '',
+          muscle_group: 'mell',
+          secondary_muscles: [],
+          difficulty: 'beginner',
+          type: 'gym',
+          modality: 'erosites',
+          gif_path: '',
+          equipment: [],
+          description: '',
+          instructions: [],
+          tips: [],
+          parameters: { sets: 3, reps: '10-12', rest: '60s' }
+        })
+        setDetailMuscles([])
+        setShowCreateModal(false)
+      }
     }
   }
 
@@ -164,11 +171,17 @@ export default function ExerciseLibrary() {
   const updateExercise = async () => {
     const ok = await updateExerciseOp(editingExercise)
     if (ok) {
-      await saveExerciseMuscles(editingExercise.id, detailMuscles)
-      fetchExercises()
-      setShowEditModal(false)
-      setEditingExercise(null)
-      setDetailMuscles([])
+      try {
+        await saveExerciseMuscles(editingExercise.id, detailMuscles)
+      } catch (error) {
+        console.error('Error saving exercise muscles:', error)
+        toast.error('A gyakorlat mentve, de a részletes izmok mentése nem sikerült.')
+      } finally {
+        fetchExercises()
+        setShowEditModal(false)
+        setEditingExercise(null)
+        setDetailMuscles([])
+      }
     }
   }
 

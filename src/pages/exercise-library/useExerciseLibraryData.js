@@ -33,7 +33,7 @@ export default function useExerciseLibraryData() {
       // Fetch exercises (slim: only the columns the list view needs)
       const { data, error } = await supabase
         .from('training_exercises')
-        .select('id, slug, name, name_en, muscle_group, secondary_muscles, equipment, difficulty, modality, gif_path')
+        .select('id, slug, name, name_en, muscle_group, secondary_muscles, equipment, difficulty, modality, gif_path, description')
         .order('name', { ascending: true })
 
       if (error) throw error
@@ -131,7 +131,6 @@ export default function useExerciseLibraryData() {
 
       if (error) throw error
 
-      fetchExercises()
       toast.success('Gyakorlat sikeresen létrehozva!')
       return data.id
     } catch (error) {
@@ -173,7 +172,6 @@ export default function useExerciseLibraryData() {
 
       if (error) throw error
 
-      fetchExercises()
       toast.success('Gyakorlat sikeresen frissítve!')
       return true
     } catch (error) {
