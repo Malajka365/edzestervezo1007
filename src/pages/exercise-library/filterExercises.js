@@ -8,10 +8,9 @@ export function filterExercises(exercises, opts) {
     favoritesOnly = false, favorites = [], muscleSearchByExercise = {},
   } = opts || {}
 
-  const getBlob = (id) =>
-    muscleSearchByExercise instanceof Map
-      ? (muscleSearchByExercise.get(id) || '')
-      : (muscleSearchByExercise[id] || '')
+  // Az izom-index: gyakorlat-azonosító → a hozzá tartozó izmok (magyar + latin)
+  // neveiből képzett kereső-szöveg. Mindig sima objektum (lásd useExerciseLibraryData).
+  const getBlob = (id) => muscleSearchByExercise[id] || ''
 
   const q = searchTerm.trim().toLowerCase()
   let out = exercises

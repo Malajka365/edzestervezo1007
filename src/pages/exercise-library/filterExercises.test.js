@@ -46,14 +46,6 @@ describe('filterExercises — rátét szűrők', () => {
   })
 })
 
-describe('filterExercises — izom-index Map alakban', () => {
-  it('Map-ként átadott izom-indexszel is talál', () => {
-    const asMap = new Map([[2, 'széles hátizom latissimus dorsi']])
-    const r = filterExercises(EX, { ...base, searchTerm: 'latissimus', muscleSearchByExercise: asMap })
-    expect(r.map((e) => e.id)).toEqual([2])
-  })
-})
-
 describe('filterExercises — hiányzó modality', () => {
   const LEGACY = [
     { id: 9, name: 'Régi gyakorlat', name_en: 'Legacy move', muscle_group: 'mell', difficulty: 'beginner', modality: null },
