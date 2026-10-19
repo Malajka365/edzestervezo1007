@@ -40,7 +40,14 @@ export default function MusclePicker({ muscles, value, onChange }) {
                   <option key={role} value={role}>{ROLE_LABELS[role]}</option>
                 ))}
               </select>
-              <button type="button" onClick={() => remove(r.muscle_code)} className="text-slate-400 hover:text-red-400">×</button>
+              <button
+                type="button"
+                onClick={() => remove(r.muscle_code)}
+                aria-label={`${nameOf(r.muscle_code)} eltávolítása`}
+                className="text-slate-400 hover:text-red-400"
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>

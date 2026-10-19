@@ -20,9 +20,12 @@ export function exerciseThumbUrl(gifPath) {
   return exerciseGifUrl(`thumbs/${webp}`)
 }
 
-const ALLOWED_MIME = ['image/gif', 'image/png', 'image/jpeg']
 const MAX_BYTES = 8 * 1024 * 1024
+// A támogatott MIME-ok és a hozzájuk tartozó kiterjesztés EGY forrásból jön: ha
+// két külön lista lenne, elcsúszhatnának, és az upload `undefined` kiterjesztéssel
+// építené az útvonalat.
 const EXT_BY_MIME = { 'image/gif': 'gif', 'image/png': 'png', 'image/jpeg': 'jpg' }
+const ALLOWED_MIME = Object.keys(EXT_BY_MIME)
 
 export function slugify(str) {
   return (str || '')

@@ -21,7 +21,14 @@ export default function ChipMultiSelect({ options, value, onChange, placeholder 
           {selected.map((code) => (
             <span key={code} className="px-2 py-1 bg-slate-600 text-xs text-slate-200 rounded flex items-center gap-1">
               {labelOf(code)}
-              <button type="button" onClick={() => remove(code)} className="hover:text-red-400">×</button>
+              <button
+                type="button"
+                onClick={() => remove(code)}
+                aria-label={`${labelOf(code)} eltávolítása`}
+                className="hover:text-red-400"
+              >
+                ×
+              </button>
             </span>
           ))}
         </div>

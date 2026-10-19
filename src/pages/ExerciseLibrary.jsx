@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
@@ -110,8 +110,14 @@ export default function ExerciseLibrary() {
 
   useEffect(() => { setVisibleCount(60) }, [searchTerm, selectedMuscleGroup, selectedDifficulty, selectedModality, showFavoritesOnly])
 
+  // Gyors A → B kattintásnál A késve beérkező válasza felülírhatná a már megnyitott
+  // B részletnézetet, ezért csak a legutobbi kérés eredményét engedjük be.
+  const detailRequestRef = useRef(0)
+
   const openDetail = async (ex) => {
+    const requestId = ++detailRequestRef.current
     const full = await fetchExerciseDetail(ex.id)
+    if (requestId !== detailRequestRef.current) return
     setSelectedExercise(full || ex)
     setSelectedExerciseMuscles(musclesByExercise[ex.id] || [])
   }
