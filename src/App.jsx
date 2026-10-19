@@ -41,13 +41,22 @@ const queryClient = new QueryClient({
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [connError, setConnError] = useState(null)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-    })
+    // Get initial session. Ha a backend nem érhető el (leállított/törölt Supabase
+    // projekt, hálózati hiba), a promise elhasal — .catch nélkül a `loading` örökre
+    // igaz maradna, és az app a töltő-spinneren ragadna.
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session)
+      })
+      .catch((err) => {
+        console.error('Nem sikerült lekérni a munkamenetet:', err)
+        setConnError(err)
+      })
+      .finally(() => setLoading(false))
 
     // Listen for auth changes
     const {
@@ -61,6 +70,24 @@ function App() {
 
   if (loading) {
     return <LoadingSpinner />
+  }
+
+  // A backend nem válaszolt: egyértelmű hibaképernyő a végtelen spinner helyett.
+  if (connError) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="card max-w-md w-full text-center">
+          <h1 className="text-xl font-bold text-white mb-2">Nem érhető el a szerver</h1>
+          <p className="text-slate-400 mb-6">
+            Az alkalmazás nem tudott csatlakozni az adatbázishoz. Ellenőrizd az
+            internetkapcsolatot és a Supabase projekt állapotát (VITE_SUPABASE_URL).
+          </p>
+          <button onClick={() => window.location.reload()} className="btn-primary">
+            Újratöltés
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
