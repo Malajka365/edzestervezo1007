@@ -35,3 +35,6 @@ dist-ssr
 
 # Supabase backup letöltések (játékos egészségügyi adatok - SOHA nem kerülhet gitbe)
 sb_letoltes/
+
+# Claude Code session-local config
+.claude/
