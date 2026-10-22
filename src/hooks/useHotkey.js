@@ -18,7 +18,8 @@ export function useHotkey(combo, handler) {
 
     const onKeyDown = (e) => {
       if (e.target instanceof HTMLElement && e.target.isContentEditable) return
-      if (e.key.toLowerCase() !== key) return
+      // A böngésző autofill keydown eseményeinek nincs `key` mezője.
+      if (typeof e.key !== 'string' || e.key.toLowerCase() !== key) return
 
       const wantsMod = modifiers.has('mod')
       const hasMod = mac ? e.metaKey : e.ctrlKey

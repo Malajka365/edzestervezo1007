@@ -59,9 +59,10 @@ describe('stored mode', () => {
 })
 
 describe('effectiveMode', () => {
-  it('forces dark while the theme switch is disabled', () => {
-    expect(THEME_SWITCH_ENABLED).toBe(false)
-    expect(effectiveMode('light')).toBe('dark')
-    expect(effectiveMode('system')).toBe('dark')
+  it('passes the chosen mode through while the theme switch is enabled', () => {
+    expect(THEME_SWITCH_ENABLED).toBe(true)
+    expect(effectiveMode('light')).toBe('light')
+    expect(effectiveMode('dark')).toBe('dark')
+    expect(effectiveMode('system')).toBe('system')
   })
 })

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { supabase } from './lib/supabase'
+import { useTheme } from './hooks/useTheme'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import JoinTeam from './pages/JoinTeam'
@@ -41,6 +42,9 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  // A téma az egész appra érvényes (Auth, csatlakozás, irányítópult): itt él a
+  // rendszer-téma követése, a kapcsoló (UserMenu) csak módot vált.
+  useTheme()
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [connError, setConnError] = useState(null)

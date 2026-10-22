@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  THEME_STORAGE_KEY,
   applyTheme,
   effectiveMode,
   readStoredMode,
@@ -8,6 +9,7 @@ import {
 } from '../lib/theme'
 
 const DARK_QUERY = '(prefers-color-scheme: dark)'
+const THEME_CHANGE_EVENT = 'tf-theme-change'
 
 function systemPrefersDark() {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -39,9 +41,25 @@ export function useTheme() {
     applyTheme(resolved)
   }, [resolved])
 
+  // Több példány is él (az App gyökerében és a téma kapcsolóban): a módváltást
+  // eseménnyel osztjuk meg, a más lapon történt módosítást a storage eseménnyel követjük.
+  useEffect(() => {
+    const onChange = (event) => setModeState(event.detail)
+    const onStorage = (event) => {
+      if (event.key === THEME_STORAGE_KEY || event.key === null) setModeState(readStoredMode())
+    }
+    window.addEventListener(THEME_CHANGE_EVENT, onChange)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(THEME_CHANGE_EVENT, onChange)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [])
+
   const setMode = useCallback((next) => {
     writeStoredMode(next)
     setModeState(next)
+    window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, { detail: next }))
   }, [])
 
   return { mode, resolved, setMode }

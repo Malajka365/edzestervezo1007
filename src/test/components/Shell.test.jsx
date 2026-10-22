@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
@@ -75,14 +75,41 @@ describe('UserMenu', () => {
     expect(screen.getByText('Csapattag')).toBeInTheDocument()
   })
 
-  it('a menüben profil link és kijelentkezés van, téma kapcsoló nélkül', async () => {
+  it('a menüben profil link, téma kapcsoló és kijelentkezés van', async () => {
     renderWithContext(<UserMenu session={session} />)
 
     await userEvent.click(screen.getByRole('button', { name: /edzo@example.com/ }))
 
     expect(screen.getByRole('link', { name: 'Profil' })).toHaveAttribute('href', '/dashboard/profil')
     expect(screen.getByRole('button', { name: 'Kijelentkezés' })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Téma' })).not.toBeInTheDocument()
+
+    const themeGroup = screen.getByRole('group', { name: 'Téma' })
+    expect(within(themeGroup).getByRole('button', { name: 'Rendszer' })).toBeInTheDocument()
+    expect(within(themeGroup).getByRole('button', { name: 'Világos' })).toBeInTheDocument()
+    expect(within(themeGroup).getByRole('button', { name: 'Sötét' })).toBeInTheDocument()
+  })
+
+  describe('téma kapcsoló', () => {
+    beforeEach(() => {
+      localStorage.clear()
+      delete document.documentElement.dataset.theme
+    })
+
+    afterEach(() => {
+      localStorage.clear()
+      delete document.documentElement.dataset.theme
+    })
+
+    it('a Világos választása beállítja a data-theme-et és eltárolja a módot', async () => {
+      renderWithContext(<UserMenu session={session} />)
+
+      await userEvent.click(screen.getByRole('button', { name: /edzo@example.com/ }))
+      await userEvent.click(screen.getByRole('button', { name: 'Világos' }))
+
+      expect(document.documentElement.dataset.theme).toBe('light')
+      expect(localStorage.getItem('tf-theme')).toBe('light')
+      expect(screen.getByRole('button', { name: 'Világos' })).toHaveAttribute('aria-pressed', 'true')
+    })
   })
 })
 

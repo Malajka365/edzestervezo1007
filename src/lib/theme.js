@@ -6,8 +6,8 @@
 export const THEME_STORAGE_KEY = 'tf-theme'
 export const THEME_MODES = ['system', 'light', 'dark']
 
-// A kapcsoló rejtett, az app kényszerítve sötét, amíg a Task 15 be nem kapcsolja.
-export const THEME_SWITCH_ENABLED = false
+// Ha hamis, a kapcsoló rejtett és az app kényszerítve sötét.
+export const THEME_SWITCH_ENABLED = true
 
 export function readStoredMode() {
   try {
