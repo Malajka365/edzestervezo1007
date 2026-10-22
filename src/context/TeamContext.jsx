@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
-const TeamContext = createContext()
+export const TeamContext = createContext()
 
 export function TeamProvider({ children, session }) {
   const [teams, setTeams] = useState([])

@@ -23,12 +23,13 @@ import {
   MapPin,
 } from 'lucide-react'
 import TeamSelector from '../components/TeamSelector'
+import CreateTeamModal from '../components/team/CreateTeamModal'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
 
 export default function Teams() {
-  const { teams, selectedTeam, createTeam, updateTeam, deleteTeam, isTeamOwner, currentUserPermissions } = useTeams()
+  const { teams, selectedTeam, updateTeam, deleteTeam, isTeamOwner, currentUserPermissions } = useTeams()
   const canEditPlayers = canEditModule(currentUserPermissions, 'players')
   const queryClient = useQueryClient()
   // Players now come from the shared, cached usePlayers query. Mutations below
@@ -36,6 +37,7 @@ export default function Teams() {
   const { data: players = [], isLoading: loadingPlayers } = usePlayers(selectedTeam?.id)
   const [confirmState, setConfirmState] = useState(null)
   const [showTeamModal, setShowTeamModal] = useState(false)
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false)
   const [showPlayerModal, setShowPlayerModal] = useState(false)
   const [showLocationsModal, setShowLocationsModal] = useState(false)
   const [editingTeam, setEditingTeam] = useState(null)
@@ -56,15 +58,6 @@ export default function Teams() {
   const invalidatePlayers = () => {
     if (selectedTeam) {
       queryClient.invalidateQueries({ queryKey: ['players', selectedTeam.id] })
-    }
-  }
-
-  const handleCreateTeam = async (e) => {
-    e.preventDefault()
-    const result = await createTeam(teamForm)
-    if (result.success) {
-      setShowTeamModal(false)
-      setTeamForm({ name: '', sport: '', description: '' })
     }
   }
 
@@ -267,7 +260,7 @@ export default function Teams() {
               </button>
             )}
             <button
-              onClick={() => setShowTeamModal(true)}
+              onClick={() => setShowCreateTeamModal(true)}
               className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
               title="Új Csapat"
             >
@@ -309,13 +302,15 @@ export default function Teams() {
                 <Edit2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Csapat</span>
               </button>
-              <button
-                onClick={() => handleDeleteTeam(selectedTeam.id)}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-red-900 text-slate-200 hover:text-red-300 rounded-lg text-sm transition-colors"
-                title="Csapat törlése"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {isTeamOwner && (
+                <button
+                  onClick={() => handleDeleteTeam(selectedTeam.id)}
+                  className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-red-900 text-slate-200 hover:text-red-300 rounded-lg text-sm transition-colors"
+                  title="Csapat törlése"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
               {canEditPlayers && (
                 <button
                   onClick={() => setShowPlayerModal(true)}
@@ -444,13 +439,16 @@ export default function Teams() {
         </div>
       )}
 
-      {/* Team Modal */}
+      {/* Új csapat */}
+      <CreateTeamModal open={showCreateTeamModal} onClose={() => setShowCreateTeamModal(false)} />
+
+      {/* Csapat szerkesztése */}
       {showTeamModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">
-                {editingTeam ? 'Csapat Szerkesztése' : 'Új Csapat'}
+                Csapat Szerkesztése
               </h3>
               <button
                 onClick={closeModal}
@@ -460,7 +458,7 @@ export default function Teams() {
               </button>
             </div>
 
-            <form onSubmit={editingTeam ? handleUpdateTeam : handleCreateTeam} className="space-y-4">
+            <form onSubmit={handleUpdateTeam} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Csapat neve *
@@ -504,7 +502,7 @@ export default function Teams() {
               <div className="flex items-center space-x-3 pt-4">
                 <button type="submit" className="flex-1 btn-primary flex items-center justify-center space-x-2">
                   <Save className="w-5 h-5" />
-                  <span>{editingTeam ? 'Mentés' : 'Létrehozás'}</span>
+                  <span>Mentés</span>
                 </button>
                 <button
                   type="button"
