@@ -14,8 +14,17 @@ import {
   Upload,
   Copy,
   Edit,
+  MoreHorizontal,
+  X,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
+import { usePopover } from '../components/shell/usePopover'
+import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
+import StatusPill from '../components/ui/StatusPill'
+import EmptyState from '../components/ui/EmptyState'
+import { Select } from '../components/ui/Field'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 import CreateSeasonModal from './macrocycle/CreateSeasonModal'
@@ -23,6 +32,53 @@ import EditSeasonModal from './macrocycle/EditSeasonModal'
 import DeleteSeasonModal from './macrocycle/DeleteSeasonModal'
 import SaveTemplateModal from './macrocycle/SaveTemplateModal'
 import LoadTemplateModal from './macrocycle/LoadTemplateModal'
+
+const MENU_ITEM =
+  'flex w-full items-center gap-2 rounded-[7px] px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+
+// "Továbbiak" túlcsordulás-menü: szezon szerkesztése/törlése és sablonok.
+function MoreMenu({ onEdit, onDelete, onSaveTemplate, onLoadTemplate }) {
+  const { open, close, toggle, ref } = usePopover()
+  const run = (action) => () => {
+    close()
+    action()
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <IconButton
+        icon={MoreHorizontal}
+        label="Továbbiak"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      />
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-40 mt-1 w-56 rounded-[10px] border border-line bg-surface p-1 shadow-xl"
+        >
+          <button type="button" role="menuitem" onClick={run(onEdit)} className={`${MENU_ITEM} text-fg`}>
+            <Edit className="h-4 w-4 text-muted" aria-hidden="true" />
+            Szezon szerkesztése
+          </button>
+          <button type="button" role="menuitem" onClick={run(onSaveTemplate)} className={`${MENU_ITEM} text-fg`}>
+            <Copy className="h-4 w-4 text-muted" aria-hidden="true" />
+            Sablon mentése
+          </button>
+          <button type="button" role="menuitem" onClick={run(onLoadTemplate)} className={`${MENU_ITEM} text-fg`}>
+            <Upload className="h-4 w-4 text-muted" aria-hidden="true" />
+            Sablon betöltése
+          </button>
+          <button type="button" role="menuitem" onClick={run(onDelete)} className={`${MENU_ITEM} text-bad`}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            Szezon törlése
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function MacrocyclePlanner() {
   const { selectedTeam, currentUserPermissions } = useTeams()
@@ -75,50 +131,55 @@ export default function MacrocyclePlanner() {
   const [activeCycleEdit, setActiveCycleEdit] = useState(null)
   const [cycleInput, setCycleInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('')
+  // null | { status: 'ok' | 'bad', text: string }
+  const [saveResult, setSaveResult] = useState(null)
+  const showSaveResult = (status, text) => {
+    setSaveResult({ status, text })
+    setTimeout(() => setSaveResult(null), 3000)
+  }
 
   // Training categories and options
   const trainingCategories = {
     opt_max_power: {
-      name: 'Max Power',
+      name: 'Max. teljesítmény',
       category: 'OPT',
       type: 'toggle',
-      color: 'bg-cyan-700',
+      color: 'bg-accent',
       order: 1,
     },
     opt_power: {
-      name: 'Power',
+      name: 'Robbanékony erő',
       category: 'OPT',
       type: 'toggle',
-      color: 'bg-cyan-500',
+      color: 'bg-accent/70',
       order: 2,
     },
     opt_max_strength: {
-      name: 'Max Strength',
+      name: 'Maximális erő',
       category: 'OPT',
       type: 'toggle',
-      color: 'bg-cyan-600',
+      color: 'bg-accent/85',
       order: 3,
     },
     opt_hypertrophy: {
-      name: 'Hypertrophy',
+      name: 'Hipertrófia',
       category: 'OPT',
       type: 'toggle',
-      color: 'bg-cyan-300',
+      color: 'bg-accent/25',
       order: 4,
     },
     opt_strength_endurance: {
-      name: 'Strength Endurance',
+      name: 'Erő-állóképesség',
       category: 'OPT',
       type: 'toggle',
-      color: 'bg-cyan-400',
+      color: 'bg-accent/40',
       order: 5,
     },
     opt_stabilization: {
-      name: 'Stabilization',
+      name: 'Stabilizáció',
       category: 'OPT',
       type: 'toggle',
-      color: 'bg-cyan-500',
+      color: 'bg-accent/55',
       order: 6,
     },
     correction: {
@@ -126,9 +187,9 @@ export default function MacrocyclePlanner() {
       type: 'dropdown',
       options: ['Igen', 'Nem', 'Részleges'],
       colors: {
-        'Igen': 'bg-green-500',
-        'Nem': 'bg-red-500',
-        'Részleges': 'bg-yellow-500',
+        'Igen': 'bg-ok-soft text-ok',
+        'Nem': 'bg-bad-soft text-bad',
+        'Részleges': 'bg-warn-soft text-warn',
       }
     },
     endurance: {
@@ -136,12 +197,12 @@ export default function MacrocyclePlanner() {
       type: 'dropdown',
       options: ['Aerob', 'Anaerob', 'HIIT', 'Tempo', 'Regeneráció', '-'],
       colors: {
-        'Aerob': 'bg-blue-400',
-        'Anaerob': 'bg-blue-600',
-        'HIIT': 'bg-red-500',
-        'Tempo': 'bg-orange-500',
-        'Regeneráció': 'bg-green-400',
-        '-': 'bg-slate-600',
+        'Aerob': 'bg-accent/35',
+        'Anaerob': 'bg-accent text-accent-fg',
+        'HIIT': 'bg-bad-soft text-bad',
+        'Tempo': 'bg-warn-soft text-warn',
+        'Regeneráció': 'bg-ok-soft text-ok',
+        '-': 'bg-surface-3 text-muted',
       }
     },
     saq: {
@@ -149,11 +210,11 @@ export default function MacrocyclePlanner() {
       type: 'dropdown',
       options: ['Speed', 'Agility', 'Quickness', 'Combo', '-'],
       colors: {
-        'Speed': 'bg-purple-500',
-        'Agility': 'bg-purple-400',
-        'Quickness': 'bg-purple-600',
-        'Combo': 'bg-purple-700',
-        '-': 'bg-slate-600',
+        'Speed': 'bg-accent/20',
+        'Agility': 'bg-accent/35',
+        'Quickness': 'bg-accent/50',
+        'Combo': 'bg-accent text-accent-fg',
+        '-': 'bg-surface-3 text-muted',
       }
     },
     contact: {
@@ -161,11 +222,11 @@ export default function MacrocyclePlanner() {
       type: 'dropdown',
       options: ['Alacsony', 'Közepes', 'Magas', 'Mérkőzés', '-'],
       colors: {
-        'Alacsony': 'bg-green-500',
-        'Közepes': 'bg-yellow-500',
-        'Magas': 'bg-orange-500',
-        'Mérkőzés': 'bg-red-600',
-        '-': 'bg-slate-600',
+        'Alacsony': 'bg-ok-soft text-ok',
+        'Közepes': 'bg-warn-soft text-warn',
+        'Magas': 'bg-bad-soft text-bad',
+        'Mérkőzés': 'bg-t-match text-on-status',
+        '-': 'bg-surface-3 text-muted',
       }
     },
     plyometrics: {
@@ -173,11 +234,11 @@ export default function MacrocyclePlanner() {
       type: 'dropdown',
       options: ['Alacsony', 'Közepes', 'Magas', 'Reaktív', '-'],
       colors: {
-        'Alacsony': 'bg-indigo-400',
-        'Közepes': 'bg-indigo-500',
-        'Magas': 'bg-indigo-600',
-        'Reaktív': 'bg-indigo-700',
-        '-': 'bg-slate-600',
+        'Alacsony': 'bg-accent/20',
+        'Közepes': 'bg-accent/35',
+        'Magas': 'bg-accent/50',
+        'Reaktív': 'bg-accent text-accent-fg',
+        '-': 'bg-surface-3 text-muted',
       }
     },
   }
@@ -186,38 +247,38 @@ export default function MacrocyclePlanner() {
   const dailyCategories = {
     match: {
       name: 'M',
-      fullName: 'Match',
-      color: 'bg-yellow-400',
+      fullName: 'Mérkőzés',
+      color: 'bg-t-match text-on-status',
     },
     home: {
       name: 'H',
-      fullName: 'Home',
-      color: 'bg-green-500',
+      fullName: 'Hazai',
+      color: 'bg-t-match/25',
     },
     away: {
-      name: 'A',
-      fullName: 'Away',
-      color: 'bg-green-600',
+      name: 'I',
+      fullName: 'Idegen',
+      color: 'bg-t-match/45',
     },
     start: {
-      name: 'S',
-      fullName: 'Start',
-      color: 'bg-cyan-400',
+      name: 'K',
+      fullName: 'Kezdés',
+      color: 'bg-accent/25',
     },
     end: {
-      name: 'E',
-      fullName: 'End',
-      color: 'bg-yellow-500',
+      name: 'V',
+      fullName: 'Vége',
+      color: 'bg-accent/50',
     },
     pause: {
       name: 'P',
-      fullName: 'Pause',
-      color: 'bg-orange-500',
+      fullName: 'Pihenő',
+      color: 'bg-t-rest text-on-status',
     },
     test: {
       name: 'T',
-      fullName: 'Test',
-      color: 'bg-cyan-500',
+      fullName: 'Teszt',
+      color: 'bg-accent text-accent-fg',
     },
   }
 
@@ -260,13 +321,12 @@ export default function MacrocyclePlanner() {
 
     setExporting(true)
     try {
-      const { default: html2canvas } = await import('html2canvas')
+      const { captureForPdf } = await import('../lib/pdfCapture')
       const { default: jsPDF } = await import('jspdf')
-      const canvas = await html2canvas(tableRef.current, {
+      const canvas = await captureForPdf(tableRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#1e293b',
       })
 
       const imgData = canvas.toDataURL('image/png')
@@ -354,25 +414,25 @@ export default function MacrocyclePlanner() {
 
   // Sync match with macrocycle planning
   const syncMatchWithMacrocycle = async (weekIdx, dayIdx, dailyKeys) => {
-    console.log('🔄 syncMatchWithMacrocycle called:', { weekIdx, dayIdx, dailyKeys, currentSeason: currentSeason?.id, selectedTeam: selectedTeam?.id })
+    console.log('syncMatchWithMacrocycle called:', { weekIdx, dayIdx, dailyKeys, currentSeason: currentSeason?.id, selectedTeam: selectedTeam?.id })
     
     if (!currentSeason || !selectedTeam) {
-      console.warn('⚠️ Missing currentSeason or selectedTeam')
+      console.warn('Missing currentSeason or selectedTeam')
       return
     }
     
     const matchDate = getDateFromWeekAndDay(weekIdx, dayIdx)
-    console.log('📅 Calculated date:', matchDate)
+    console.log('Calculated date:', matchDate)
     
     if (!matchDate) {
-      console.warn('⚠️ No match date calculated')
+      console.warn('No match date calculated')
       return
     }
     
     // Check if home or away is selected
     const hasHome = dailyKeys.includes('home')
     const hasAway = dailyKeys.includes('away')
-    console.log('🏠 Home/Away check:', { hasHome, hasAway })
+    console.log('Home/Away check:', { hasHome, hasAway })
     
     if (!hasHome && !hasAway) {
       // Delete match if no home/away selected
@@ -440,7 +500,7 @@ export default function MacrocyclePlanner() {
           throw insertError
         }
         
-        console.log('✅ Match created successfully:', newMatch)
+        console.log('Match created successfully:', newMatch)
       }
     } catch (error) {
       console.error('Error syncing match with macrocycle:', error)
@@ -532,13 +592,12 @@ export default function MacrocyclePlanner() {
 
   const handleManualSave = async () => {
     if (!currentSeason) {
-      setSaveMessage('Nincs kiválasztott szezon!')
-      setTimeout(() => setSaveMessage(''), 3000)
+      showSaveResult('bad', 'Nincs kiválasztott szezon')
       return
     }
 
     setIsSaving(true)
-    setSaveMessage('')
+    setSaveResult(null)
 
     try {
       // First, try to get existing record
@@ -575,12 +634,10 @@ export default function MacrocyclePlanner() {
         if (error) throw error
       }
 
-      setSaveMessage('✅ Sikeresen mentve!')
-      setTimeout(() => setSaveMessage(''), 3000)
+      showSaveResult('ok', 'Mentve')
     } catch (error) {
       console.error('Error saving planning:', error)
-      setSaveMessage('❌ Hiba történt a mentés során!')
-      setTimeout(() => setSaveMessage(''), 3000)
+      showSaveResult('bad', 'Mentés sikertelen')
     } finally {
       setIsSaving(false)
     }
@@ -592,11 +649,11 @@ export default function MacrocyclePlanner() {
     
     if (categoryData.type === 'toggle') {
       // Toggle type: return color if true, grey if false
-      return value ? categoryData.color : 'bg-slate-700'
+      return value ? categoryData.color : 'bg-surface-2'
     } else {
       // Dropdown type: return color based on value
-      if (!value) return 'bg-slate-700'
-      return categoryData?.colors[value] || 'bg-slate-600'
+      if (!value) return 'bg-surface-2'
+      return categoryData?.colors[value] || 'bg-surface-3'
     }
   }
 
@@ -612,179 +669,115 @@ export default function MacrocyclePlanner() {
     }
   }
 
+  const pageDescription = selectedTeam
+    ? `${selectedTeam.name} · Éves edzésterv és periodizáció`
+    : 'Éves edzésterv és periodizáció'
+
   if (!selectedTeam) {
     return (
-      <div className="h-screen flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Makrociklus Tervező</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Éves edzésterv és periodizáció</p>
-            </div>
-            <div className="flex-shrink-0">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
-        </div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        <PageHeader title="Szezonterv" description={pageDescription} />
+        <EmptyState
+          icon={Calendar}
+          title="Nincs kiválasztott csapat"
+          description="Válassz ki egy csapatot a folytatáshoz."
+        />
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím + Aktív Szezon */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Makrociklus Tervező</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Éves edzésterv és periodizáció</p>
-            </div>
-            
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Szezonterv"
+        description={pageDescription}
+        actions={
+          <>
             {seasons.length > 0 && currentSeason && (
-              <div className="flex items-center gap-3">
-                <select
-                  value={currentSeason?.id || ''}
-                  onChange={(e) => {
-                    const season = seasons.find(s => s.id === e.target.value)
-                    if (season) loadSeason(season)
-                  }}
-                  className="input-field text-sm"
-                >
-                  {seasons.map(season => (
-                    <option key={season.id} value={season.id}>
-                      {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })} - {new Date(season.end_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Középső gombok */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {canEdit && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="Új Szezon"
+              <Select
+                aria-label="Szezon"
+                value={currentSeason?.id || ''}
+                onChange={(e) => {
+                  const season = seasons.find(s => s.id === e.target.value)
+                  if (season) loadSeason(season)
+                }}
+                className="!w-auto max-w-[16rem]"
               >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Új Szezon</span>
-              </button>
+                {seasons.map(season => (
+                  <option key={season.id} value={season.id}>
+                    {season.name} ({new Date(season.start_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })} - {new Date(season.end_date).toLocaleDateString('hu-HU', { month: '2-digit', day: '2-digit' })})
+                  </option>
+                ))}
+              </Select>
+            )}
+
+            {canEdit && (
+              <Button icon={Plus} onClick={() => setShowCreateModal(true)}>
+                Új szezon
+              </Button>
             )}
 
             {currentSeason && (
               <>
+                <Button icon={FileDown} onClick={exportToPDF} disabled={exporting}>
+                  {exporting ? 'Exportálás...' : 'PDF'}
+                </Button>
                 {canEdit && (
-                  <button
-                    onClick={() => openEditModal(currentSeason)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-                    title="Szerkesztés"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span className="hidden sm:inline">Szerkesztés</span>
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    onClick={() => openDeleteModal(currentSeason)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
-                    title="Törlés"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Törlés</span>
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    onClick={() => setShowTemplateModal(true)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
-                    title="Sablon"
-                  >
-                    <Copy className="w-4 h-4" />
-                    <span className="hidden sm:inline">Sablon</span>
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    onClick={() => setShowLoadTemplateModal(true)}
-                    className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-                    title="Betöltés"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span className="hidden sm:inline">Betöltés</span>
-                  </button>
-                )}
-                <button
-                  onClick={exportToPDF}
-                  disabled={exporting}
-                  className="flex items-center space-x-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
-                  title="PDF"
-                >
-                  <FileDown className="w-4 h-4" />
-                  <span className="hidden sm:inline">{exporting ? 'Exportálás...' : 'PDF'}</span>
-                </button>
-                {canEdit && (
-                  <button
+                  <Button
+                    variant="primary"
+                    icon={Save}
                     onClick={handleManualSave}
-                    disabled={isSaving}
-                    className="flex items-center space-x-2 px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
-                    title="Mentés"
+                    loading={isSaving}
                   >
-                    <Save className="w-4 h-4" />
-                    <span className="hidden sm:inline">{isSaving ? 'Mentés...' : 'Mentés'}</span>
-                  </button>
+                    {isSaving ? 'Mentés...' : 'Mentés'}
+                  </Button>
                 )}
-                {saveMessage && (
-                  <span className={`text-sm font-medium whitespace-nowrap ${
-                    saveMessage.includes('✅') ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {saveMessage}
+                {saveResult && (
+                  <span role="status">
+                    <StatusPill status={saveResult.status}>{saveResult.text}</StatusPill>
                   </span>
+                )}
+                {canEdit && (
+                  <MoreMenu
+                    onEdit={() => openEditModal(currentSeason)}
+                    onDelete={() => openDeleteModal(currentSeason)}
+                    onSaveTemplate={() => setShowTemplateModal(true)}
+                    onLoadTemplate={() => setShowLoadTemplateModal(true)}
+                  />
                 )}
               </>
             )}
-          </div>
+          </>
+        }
+      />
 
-          {/* Jobb oldal: TeamSelector */}
-          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="space-y-6">
 
         {/* Macrocycle Table */}
       {currentSeason && macrocycleData.weeks.length > 0 && (
-        <div className="card" ref={tableRef}>
+        <div className="overflow-x-auto rounded-[14px]">
+        <div className="min-w-max rounded-[14px] border border-line bg-surface p-3 text-fg" ref={tableRef}>
           <div className="flex overflow-visible">
             {/* Vertical Section Labels */}
-            <div className="flex flex-col border-r-2 border-slate-600 bg-slate-900 sticky left-0 z-10 w-16">
+            <div className="flex flex-col border-r-2 border-line bg-bg sticky left-0 z-10 w-16">
               {/* Empty space for header rows */}
-              <div className="h-[40px] border-b border-slate-600"></div>
-              <div className="h-[40px] border-b border-slate-600"></div>
-              <div className="h-[40px] border-b-2 border-slate-600"></div>
+              <div className="h-[40px] border-b border-line"></div>
+              <div className="h-[40px] border-b border-line"></div>
+              <div className="h-[40px] border-b-2 border-line"></div>
               
               {/* OPT Section Label */}
-              <div className="relative border-b-2 border-primary-500" style={{ height: `${Object.entries(trainingCategories).filter(([k, c]) => c.category === 'OPT').length * 28}px` }}>
+              <div className="relative border-b-2 border-accent" style={{ height: `${Object.entries(trainingCategories).filter(([k, c]) => c.category === 'OPT').length * 28}px` }}>
                 <div className="absolute inset-0 flex items-center justify-center px-1">
-                  <span className="text-primary-400 font-bold text-lg tracking-wide" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                  <span className="text-accent font-bold text-lg tracking-wide" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
                     OPT
                   </span>
                 </div>
               </div>
               
               {/* Egyéb Section Label */}
-              <div className="relative border-b-2 border-primary-500" style={{ height: `${Object.entries(trainingCategories).filter(([k, c]) => c.type === 'dropdown').length * 28}px` }}>
+              <div className="relative border-b-2 border-accent" style={{ height: `${Object.entries(trainingCategories).filter(([k, c]) => c.type === 'dropdown').length * 28}px` }}>
                 <div className="absolute inset-0 flex items-center justify-center px-1">
-                  <span className="text-primary-400 font-bold text-sm tracking-wide" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                  <span className="text-accent font-bold text-sm tracking-wide" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
                     EGYÉB
                   </span>
                 </div>
@@ -793,7 +786,7 @@ export default function MacrocyclePlanner() {
               {/* Napi Bontás Section Label */}
               <div className="relative" style={{ height: `${7 * 28}px` }}>
                 <div className="absolute inset-0 flex items-center justify-center px-1">
-                  <span className="text-primary-400 font-bold text-xs tracking-wide" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                  <span className="text-accent font-bold text-xs tracking-wide" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
                     NAPI BONTÁS
                   </span>
                 </div>
@@ -812,8 +805,8 @@ export default function MacrocyclePlanner() {
               
               return (<>
             {/* Month Row */}
-            <div className="flex border-b border-slate-600">
-              <div className="w-24 px-2 py-2 bg-slate-800 font-semibold text-white text-xs border-r border-slate-600">
+            <div className="flex border-b border-line">
+              <div className="w-24 px-2 py-2 bg-surface font-semibold text-fg text-xs border-r border-line">
                 Hónap
               </div>
               {(() => {
@@ -841,7 +834,7 @@ export default function MacrocyclePlanner() {
                   <div
                     key={idx}
                     style={{ width: `${group.count * finalColumnWidth}px` }}
-                    className="px-1 py-2 text-center text-[10px] text-slate-300 border-r border-slate-600 font-medium"
+                    className="px-1 py-2 text-center text-[10px] text-fg border-r border-line font-medium"
                   >
                     {group.month}
                   </div>
@@ -850,8 +843,8 @@ export default function MacrocyclePlanner() {
             </div>
 
             {/* Date Monday Row */}
-            <div className="flex border-b border-slate-600">
-              <div className="w-24 px-2 py-2 bg-slate-800 font-semibold text-white text-xs border-r border-slate-600">
+            <div className="flex border-b border-line">
+              <div className="w-24 px-2 py-2 bg-surface font-semibold text-fg text-xs border-r border-line">
                 Dátum
               </div>
               {macrocycleData.weeks.map((week, idx) => {
@@ -862,7 +855,7 @@ export default function MacrocyclePlanner() {
                   <div
                     key={idx}
                     style={{ width: `${finalColumnWidth}px` }}
-                    className="px-1 py-2 text-center text-[10px] text-slate-300 border-r border-slate-600"
+                    className="px-1 py-2 text-center text-[10px] text-fg border-r border-line"
                   >
                     {mondayDate}
                   </div>
@@ -871,8 +864,8 @@ export default function MacrocyclePlanner() {
             </div>
 
             {/* Cycle Row */}
-            <div className="flex border-b-2 border-slate-600">
-              <div className="w-24 px-2 py-2 bg-slate-800 font-semibold text-white text-xs border-r border-slate-600">
+            <div className="flex border-b-2 border-line">
+              <div className="w-24 px-2 py-2 bg-surface font-semibold text-fg text-xs border-r border-line">
                 Ciklus
               </div>
               {macrocycleData.weeks.map((week, idx) => {
@@ -883,7 +876,7 @@ export default function MacrocyclePlanner() {
                   <div
                     key={idx}
                     style={{ width: `${finalColumnWidth}px` }}
-                    className="relative border-r border-slate-600"
+                    className="relative border-r border-line"
                   >
                     {isEditing ? (
                       <input
@@ -896,14 +889,14 @@ export default function MacrocyclePlanner() {
                           if (e.key === 'Escape') setActiveCycleEdit(null)
                         }}
                         autoFocus
-                        className="w-full h-full px-0.5 py-1.5 text-center text-[10px] bg-slate-700 text-white border-none focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        className="w-full h-full px-0.5 py-1.5 text-center text-[10px] bg-surface-2 text-fg border-none focus:outline-none focus:ring-1 focus:ring-accent"
                         placeholder="C1"
                       />
                     ) : (
                       <button
                         onClick={() => canEdit && handleCycleClick(idx)}
                         disabled={!canEdit}
-                        className={`w-full h-full px-0.5 py-1.5 text-center text-[10px] text-slate-300 transition-colors ${canEdit ? 'hover:bg-slate-700' : 'cursor-default'}`}
+                        className={`w-full h-full px-0.5 py-1.5 text-center text-[10px] text-fg transition-colors ${canEdit ? 'hover:bg-surface-2' : 'cursor-default'}`}
                       >
                         {cycleValue || '-'}
                       </button>
@@ -920,19 +913,19 @@ export default function MacrocyclePlanner() {
               {Object.entries(trainingCategories)
                 .filter(([key, cat]) => cat.category === 'OPT')
                 .map(([categoryKey, category], idx, arr) => (
-                  <div key={categoryKey} className={`flex ${idx === arr.length - 1 ? 'border-b-2 border-primary-500' : 'border-b border-slate-600'}`}>
-                    <div className="w-24 px-2 py-1.5 bg-slate-800 font-medium text-white text-[10px] border-r border-slate-600 flex items-center pl-3">
+                  <div key={categoryKey} className={`flex ${idx === arr.length - 1 ? 'border-b-2 border-accent' : 'border-b border-line'}`}>
+                    <div className="w-24 px-2 py-1.5 bg-surface font-medium text-fg text-[10px] border-r border-line flex items-center pl-3">
                       {category.name}
                     </div>
                     {macrocycleData.weeks.map((week, weekIdx) => {
                       const cellColor = getCellColor(weekIdx, categoryKey)
 
                       return (
-                        <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className="relative border-r border-slate-600">
+                        <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className="relative border-r border-line">
                           <button
                             onClick={() => canEdit && handleCellClick(weekIdx, categoryKey, category)}
                             disabled={!canEdit}
-                            className={`w-full h-full px-1 py-1.5 text-[10px] font-medium text-white transition-opacity border-0 ${cellColor} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
+                            className={`w-full h-full px-1 py-1.5 text-[10px] font-medium transition-opacity border-0 ${cellColor} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
                           >
                           </button>
                         </div>
@@ -946,8 +939,8 @@ export default function MacrocyclePlanner() {
               {Object.entries(trainingCategories)
                 .filter(([key, cat]) => cat.type === 'dropdown')
                 .map(([categoryKey, category], idx, arr) => (
-                <div key={categoryKey} className={`flex ${idx === arr.length - 1 ? 'border-b-2 border-primary-500' : 'border-b border-slate-600'}`}>
-                  <div className="w-24 px-2 py-1.5 bg-slate-800 font-medium text-white text-[10px] border-r border-slate-600 flex items-center">
+                <div key={categoryKey} className={`flex ${idx === arr.length - 1 ? 'border-b-2 border-accent' : 'border-b border-line'}`}>
+                  <div className="w-24 px-2 py-1.5 bg-surface font-medium text-fg text-[10px] border-r border-line flex items-center">
                     {category.name}
                   </div>
                   {macrocycleData.weeks.map((week, weekIdx) => {
@@ -956,13 +949,13 @@ export default function MacrocyclePlanner() {
                     const cellValue = getCellValue(weekIdx, categoryKey)
 
                     return (
-                      <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className={`relative border-r border-slate-600 ${isActive ? 'z-[101]' : ''}`}>
+                      <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className={`relative border-r border-line ${isActive ? 'z-[101]' : ''}`}>
                         <button
                           data-week={weekIdx}
                           data-category={categoryKey}
                           onClick={() => canEdit && handleCellClick(weekIdx, categoryKey, category)}
                           disabled={!canEdit}
-                          className={`w-full h-full px-1 py-1.5 text-[10px] font-medium text-white transition-opacity border-0 ${cellColor} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
+                          className={`w-full h-full px-1 py-1.5 text-[10px] font-medium transition-opacity border-0 ${cellColor} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
                         >
                           {cellValue && (
                             <span className="block truncate" title={cellValue}>
@@ -972,14 +965,14 @@ export default function MacrocyclePlanner() {
                         </button>
 
                         {isActive && category.type === 'dropdown' && canEdit && (
-                          <div className="absolute bottom-full left-0 z-[100] mb-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl">
+                          <div className={`absolute bottom-full ${weekIdx >= macrocycleData.weeks.length - 6 ? 'right-0' : 'left-0'} z-[100] mb-1 w-48 bg-surface border border-line rounded-lg shadow-2xl`}>
                             <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
                               {category.options.map((option) => (
                                 <button
                                   key={option}
                                   onClick={() => handleOptionSelect(weekIdx, categoryKey, option)}
-                                  className={`w-full px-3 py-2 text-left text-sm text-white rounded hover:bg-slate-700 transition-colors ${
-                                    cellValue === option ? 'bg-slate-700' : ''
+                                  className={`w-full px-3 py-2 text-left text-sm text-fg rounded hover:bg-surface-2 transition-colors ${
+                                    cellValue === option ? 'bg-surface-2' : ''
                                   }`}
                                 >
                                   {option}
@@ -999,8 +992,8 @@ export default function MacrocyclePlanner() {
 
                 {/* Days of Week Rows */}
                 {daysOfWeek.map((day, dayIdx) => (
-                  <div key={day} className="flex border-b border-slate-600">
-                    <div className="w-24 px-2 py-1.5 bg-slate-800 font-medium text-white text-[10px] border-r border-slate-600 flex items-center">
+                  <div key={day} className="flex border-b border-line">
+                    <div className="w-24 px-2 py-1.5 bg-surface font-medium text-fg text-[10px] border-r border-line flex items-center">
                       {day}
                     </div>
                     {macrocycleData.weeks.map((week, weekIdx) => {
@@ -1009,18 +1002,18 @@ export default function MacrocyclePlanner() {
                       
                       // Get background color based on selected options
                       const getCellBgColor = () => {
-                        if (dailyData.length === 0) return 'bg-slate-700'
+                        if (dailyData.length === 0) return 'bg-surface-2'
                         if (dailyData.length === 1) return dailyCategories[dailyData[0]].color
                         // Multiple options - use gradient or first color
                         return dailyCategories[dailyData[0]].color
                       }
 
                       return (
-                        <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className={`relative border-r border-slate-600 ${isActive ? 'z-[101]' : ''}`}>
+                        <div key={weekIdx} style={{ width: `${finalColumnWidth}px` }} className={`relative border-r border-line ${isActive ? 'z-[101]' : ''}`}>
                           <button
                             onClick={() => canEdit && setActiveDropdown({ weekIndex: weekIdx, category: `daily_${dayIdx}` })}
                             disabled={!canEdit}
-                            className={`w-full h-full px-1 py-1.5 text-[10px] font-bold text-white transition-opacity border-0 ${getCellBgColor()} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
+                            className={`w-full h-full px-1 py-1.5 text-[10px] font-bold transition-opacity border-0 ${getCellBgColor()} ${canEdit ? 'hover:opacity-80' : 'cursor-default'}`}
                           >
                             {dailyData.length > 0 && (
                               <span className="block truncate" title={dailyData.map(k => dailyCategories[k].fullName).join(', ')}>
@@ -1030,7 +1023,7 @@ export default function MacrocyclePlanner() {
                           </button>
 
                           {isActive && canEdit && (
-                            <div className="absolute bottom-full left-0 z-[100] mb-1 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl">
+                            <div className={`absolute bottom-full ${weekIdx >= macrocycleData.weeks.length - 6 ? 'right-0' : 'left-0'} z-[100] mb-1 w-40 bg-surface border border-line rounded-lg shadow-2xl`}>
                               <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
                                 {/* Clear/Empty option - Always visible */}
                                 <button
@@ -1051,12 +1044,12 @@ export default function MacrocyclePlanner() {
                                     
                                     setActiveDropdown(null)
                                   }}
-                                  className={`w-full px-3 py-2 text-left text-sm rounded hover:bg-slate-700 transition-colors flex items-center gap-2 border-b border-slate-600 mb-1 ${
-                                    dailyData.length === 0 ? 'text-slate-400 bg-slate-700' : 'text-red-400'
+                                  className={`w-full px-3 py-2 text-left text-sm rounded hover:bg-surface-2 transition-colors flex items-center gap-2 border-b border-line mb-1 ${
+                                    dailyData.length === 0 ? 'text-muted bg-surface-2' : 'text-bad'
                                   }`}
                                 >
-                                  <span className="w-5 h-5 rounded bg-slate-700 flex items-center justify-center text-xs">
-                                    ✕
+                                  <span className="w-5 h-5 rounded bg-surface-2 flex items-center justify-center">
+                                    <X className="w-3 h-3" aria-hidden="true" />
                                   </span>
                                   Üres
                                 </button>
@@ -1064,11 +1057,11 @@ export default function MacrocyclePlanner() {
                                   <button
                                     key={key}
                                     onClick={() => handleDailyClick(weekIdx, dayIdx, key)}
-                                    className={`w-full px-3 py-2 text-left text-sm text-white rounded hover:bg-slate-700 transition-colors flex items-center gap-2 ${
-                                      dailyData.includes(key) ? 'bg-slate-700' : ''
+                                    className={`w-full px-3 py-2 text-left text-sm text-fg rounded hover:bg-surface-2 transition-colors flex items-center gap-2 ${
+                                      dailyData.includes(key) ? 'bg-surface-2' : ''
                                     }`}
                                   >
-                                    <span className={`w-5 h-5 rounded ${cat.color} flex items-center justify-center text-xs font-bold`}>
+                                    <span className={`w-5 h-5 rounded border border-line ${cat.color} flex items-center justify-center text-xs font-bold`}>
                                       {cat.name}
                                     </span>
                                     {cat.fullName}
@@ -1090,26 +1083,26 @@ export default function MacrocyclePlanner() {
             </div>
           </div>
         </div>
+        </div>
       )}
 
       {/* Legend */}
       {currentSeason && (
-        <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4">Jelmagyarázat</h3>
+        <Panel title="Jelmagyarázat">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* OPT Group */}
             <div>
-              <h4 className="text-sm font-medium text-slate-300 mb-2">OPT Modell</h4>
+              <h4 className="text-sm font-medium text-fg mb-2">OPT Modell</h4>
               <div className="space-y-1">
                 {Object.entries(trainingCategories)
                   .filter(([key, cat]) => cat.category === 'OPT')
                   .map(([key, category]) => (
                     <div key={key} className="flex items-center space-x-2">
-                      <div className={`w-4 h-4 rounded ${category.color}`}></div>
-                      <span className="text-xs text-slate-400">{category.name}</span>
+                      <div className={`w-4 h-4 rounded border border-line ${category.color}`}></div>
+                      <span className="text-xs text-muted">{category.name}</span>
                     </div>
                   ))}
-                <p className="text-[10px] text-slate-500 mt-2 italic">Kattints a cellára be/kikapcsoláshoz</p>
+                <p className="text-[10px] text-muted mt-2 italic">Kattints a cellára be/kikapcsoláshoz</p>
               </div>
             </div>
 
@@ -1118,12 +1111,12 @@ export default function MacrocyclePlanner() {
               .filter(([key, cat]) => cat.type === 'dropdown')
               .map(([key, category]) => (
                 <div key={key}>
-                  <h4 className="text-sm font-medium text-slate-300 mb-2">{category.name}</h4>
+                  <h4 className="text-sm font-medium text-fg mb-2">{category.name}</h4>
                   <div className="space-y-1">
                     {category.options.map((option) => (
                       <div key={option} className="flex items-center space-x-2">
-                        <div className={`w-4 h-4 rounded ${category.colors[option] || 'bg-slate-600'}`}></div>
-                        <span className="text-xs text-slate-400">{option}</span>
+                        <div className={`w-4 h-4 rounded border border-line ${category.colors[option] || 'bg-surface-3'}`}></div>
+                        <span className="text-xs text-muted">{option}</span>
                       </div>
                     ))}
                   </div>
@@ -1132,21 +1125,21 @@ export default function MacrocyclePlanner() {
 
             {/* Daily Breakdown */}
             <div>
-              <h4 className="text-sm font-medium text-slate-300 mb-2">Napi Bontás</h4>
+              <h4 className="text-sm font-medium text-fg mb-2">Napi bontás</h4>
               <div className="space-y-1">
                 {Object.entries(dailyCategories).map(([key, cat]) => (
                   <div key={key} className="flex items-center space-x-2">
-                    <div className={`w-4 h-4 rounded ${cat.color} flex items-center justify-center text-[10px] font-bold text-white`}>
+                    <div className={`w-4 h-4 rounded border border-line ${cat.color} flex items-center justify-center text-[10px] font-bold`}>
                       {cat.name}
                     </div>
-                    <span className="text-xs text-slate-400">{cat.fullName}</span>
+                    <span className="text-xs text-muted">{cat.fullName}</span>
                   </div>
                 ))}
-                <p className="text-[10px] text-slate-500 mt-2 italic">Kattints a cellára kiválasztáshoz (több is választható)</p>
+                <p className="text-[10px] text-muted mt-2 italic">Kattints a cellára kiválasztáshoz (több is választható)</p>
               </div>
             </div>
           </div>
-        </div>
+        </Panel>
       )}
 
       {/* Create Season Modal */}
