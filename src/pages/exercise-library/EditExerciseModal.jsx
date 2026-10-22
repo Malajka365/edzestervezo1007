@@ -1,5 +1,9 @@
 import { X, Plus } from 'lucide-react'
 import { MUSCLE_GROUPS, MODALITIES } from '../../lib/exerciseTaxonomy'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
+import IconButton from '../../components/ui/IconButton'
+import { Field, Input, Select, Textarea } from '../../components/ui/Field'
 import MediaUpload from './MediaUpload'
 import ChipMultiSelect from './ChipMultiSelect'
 import MusclePicker from './MusclePicker'
@@ -15,253 +19,224 @@ export default function EditExerciseModal({
   detailMuscles,
   setDetailMuscles,
 }) {
+  const close = () => {
+    setShowEditModal(false)
+    setEditingExercise(null)
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <h2 className="text-2xl font-bold text-white">Gyakorlat szerkesztése</h2>
-              <button
-                onClick={() => {
-                  setShowEditModal(false)
-                  setEditingExercise(null)
-                }}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
+    <Modal
+      open
+      onClose={close}
+      title="Gyakorlat szerkesztése"
+      size="lg"
+      footer={
+        <>
+          <Button onClick={close}>Mégse</Button>
+          <Button
+            variant="primary"
+            onClick={updateExercise}
+            disabled={loading || !editingExercise.name.trim()}
+          >
+            {loading ? 'Mentés...' : 'Mentés'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        {/* Name (HU) */}
+        <Field label="Gyakorlat neve (magyar) *" htmlFor="ex-name">
+          <Input
+            id="ex-name"
+            type="text"
+            value={editingExercise.name}
+            onChange={(e) => setEditingExercise({ ...editingExercise, name: e.target.value })}
+          />
+        </Field>
 
-            {/* Modal Content - Same as Create Modal but with editingExercise */}
-            <div className="p-6 space-y-6">
-              {/* Name (HU) */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Gyakorlat neve (magyar) *
-                </label>
-                <input
+        {/* Name (EN) */}
+        <Field label="Angol név" htmlFor="ex-name-en">
+          <Input
+            id="ex-name-en"
+            type="text"
+            value={editingExercise.name_en || ''}
+            onChange={(e) => setEditingExercise({ ...editingExercise, name_en: e.target.value })}
+            placeholder="pl. Bench Press"
+          />
+        </Field>
+
+        {/* Muscle Group & Difficulty */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Izomcsoport" htmlFor="ex-muscle-group">
+            <Select
+              id="ex-muscle-group"
+              value={editingExercise.muscle_group}
+              onChange={(e) => setEditingExercise({ ...editingExercise, muscle_group: e.target.value })}
+            >
+              {MUSCLE_GROUPS.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Nehézség" htmlFor="ex-difficulty">
+            <Select
+              id="ex-difficulty"
+              value={editingExercise.difficulty}
+              onChange={(e) => setEditingExercise({ ...editingExercise, difficulty: e.target.value })}
+            >
+              <option value="beginner">Kezdő</option>
+              <option value="intermediate">Haladó</option>
+              <option value="advanced">Profi</option>
+            </Select>
+          </Field>
+        </div>
+
+        {/* Modality & Type */}
+        <Field label="Modalitás" htmlFor="ex-modality">
+          <Select
+            id="ex-modality"
+            value={editingExercise.modality || 'erosites'}
+            onChange={(e) => setEditingExercise({ ...editingExercise, modality: e.target.value })}
+          >
+            {MODALITIES.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </Select>
+        </Field>
+
+        {/* GIF / media */}
+        <MediaUpload
+          value={editingExercise.gif_path}
+          onChange={(path) => setEditingExercise({ ...editingExercise, gif_path: path })}
+          slugBase={editingExercise.name_en || editingExercise.name}
+        />
+
+        {/* Description */}
+        <Field label="Leírás" htmlFor="ex-description">
+          <Textarea
+            id="ex-description"
+            value={editingExercise.description}
+            onChange={(e) => setEditingExercise({ ...editingExercise, description: e.target.value })}
+            rows="3"
+          />
+        </Field>
+
+        {/* Equipment */}
+        <Field label="Szükséges eszközök" htmlFor="ex-equipment">
+          <ChipMultiSelect
+            id="ex-equipment"
+            options={(equipmentTypes || []).map((e) => ({ value: e.code, label: e.name_hu }))}
+            value={editingExercise.equipment}
+            onChange={(v) => setEditingExercise({ ...editingExercise, equipment: v })}
+            placeholder="Eszköz hozzáadása..."
+          />
+        </Field>
+
+        {/* Instructions */}
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-muted">Végrehajtás (lépések)</p>
+          <div className="space-y-2">
+            {editingExercise.instructions.map((instruction, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="flex-shrink-0 w-6 h-6 bg-accent text-accent-fg rounded-full flex items-center justify-center text-sm font-medium">
+                  {idx + 1}
+                </span>
+                <Input
                   type="text"
-                  value={editingExercise.name}
-                  onChange={(e) => setEditingExercise({ ...editingExercise, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-
-              {/* Name (EN) */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Angol név</label>
-                <input
-                  type="text"
-                  value={editingExercise.name_en || ''}
-                  onChange={(e) => setEditingExercise({ ...editingExercise, name_en: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  placeholder="pl. Bench Press"
-                />
-              </div>
-
-              {/* Muscle Group & Difficulty */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Izomcsoport</label>
-                  <select
-                    value={editingExercise.muscle_group}
-                    onChange={(e) => setEditingExercise({ ...editingExercise, muscle_group: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    {MUSCLE_GROUPS.map(g => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Nehézség</label>
-                  <select
-                    value={editingExercise.difficulty}
-                    onChange={(e) => setEditingExercise({ ...editingExercise, difficulty: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="beginner">Kezdő</option>
-                    <option value="intermediate">Haladó</option>
-                    <option value="advanced">Profi</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Modality */}
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Modalitás</label>
-                  <select
-                    value={editingExercise.modality || 'erosites'}
-                    onChange={(e) => setEditingExercise({ ...editingExercise, modality: e.target.value })}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    {MODALITIES.map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* GIF / media */}
-              <MediaUpload
-                value={editingExercise.gif_path}
-                onChange={(path) => setEditingExercise({ ...editingExercise, gif_path: path })}
-                slugBase={editingExercise.name_en || editingExercise.name}
-              />
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Leírás</label>
-                <textarea
-                  value={editingExercise.description}
-                  onChange={(e) => setEditingExercise({ ...editingExercise, description: e.target.value })}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  rows="3"
-                />
-              </div>
-
-              {/* Equipment */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Szükséges eszközök</label>
-                <ChipMultiSelect
-                  options={(equipmentTypes || []).map((e) => ({ value: e.code, label: e.name_hu }))}
-                  value={editingExercise.equipment}
-                  onChange={(v) => setEditingExercise({ ...editingExercise, equipment: v })}
-                  placeholder="Eszköz hozzáadása..."
-                />
-              </div>
-
-              {/* Instructions */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Végrehajtás (lépések)</label>
-                <div className="space-y-2">
-                  {editingExercise.instructions.map((instruction, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <span className="flex-shrink-0 w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium mt-2">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 flex gap-2">
-                        <input
-                          type="text"
-                          value={instruction}
-                          onChange={(e) => {
-                            const newInstructions = [...editingExercise.instructions]
-                            newInstructions[idx] = e.target.value
-                            setEditingExercise({ ...editingExercise, instructions: newInstructions })
-                          }}
-                          className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          placeholder={`${idx + 1}. lépés`}
-                        />
-                        <button
-                          onClick={() => {
-                            const newInstructions = editingExercise.instructions.filter((_, i) => i !== idx)
-                            setEditingExercise({ ...editingExercise, instructions: newInstructions })
-                          }}
-                          className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => {
-                      setEditingExercise({
-                        ...editingExercise,
-                        instructions: [...editingExercise.instructions, '']
-                      })
-                    }}
-                    className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Lépés hozzáadása
-                  </button>
-                </div>
-              </div>
-
-              {/* Tips */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Tippek</label>
-                <div className="space-y-2">
-                  {editingExercise.tips.map((tip, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <span className="text-yellow-400 mt-2">•</span>
-                      <div className="flex-1 flex gap-2">
-                        <input
-                          type="text"
-                          value={tip}
-                          onChange={(e) => {
-                            const newTips = [...editingExercise.tips]
-                            newTips[idx] = e.target.value
-                            setEditingExercise({ ...editingExercise, tips: newTips })
-                          }}
-                          className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          placeholder="Tipp..."
-                        />
-                        <button
-                          onClick={() => {
-                            const newTips = editingExercise.tips.filter((_, i) => i !== idx)
-                            setEditingExercise({ ...editingExercise, tips: newTips })
-                          }}
-                          className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => {
-                      setEditingExercise({
-                        ...editingExercise,
-                        tips: [...editingExercise.tips, '']
-                      })
-                    }}
-                    className="w-full px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Tipp hozzáadása
-                  </button>
-                </div>
-              </div>
-
-              {/* Secondary Muscles */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Másodlagos izomcsoportok</label>
-                <ChipMultiSelect
-                  options={MUSCLE_GROUPS.map((g) => ({ value: g.id, label: g.name }))}
-                  value={editingExercise.secondary_muscles}
-                  onChange={(v) => setEditingExercise({ ...editingExercise, secondary_muscles: v })}
-                  placeholder="Csoport hozzáadása..."
-                />
-              </div>
-
-              {/* Detail Muscles */}
-              <MusclePicker muscles={muscles || []} value={detailMuscles} onChange={setDetailMuscles} />
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-slate-700">
-                <button
-                  onClick={() => {
-                    setShowEditModal(false)
-                    setEditingExercise(null)
+                  value={instruction}
+                  onChange={(e) => {
+                    const newInstructions = [...editingExercise.instructions]
+                    newInstructions[idx] = e.target.value
+                    setEditingExercise({ ...editingExercise, instructions: newInstructions })
                   }}
-                  className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Mégse
-                </button>
-                <button
-                  onClick={updateExercise}
-                  disabled={loading || !editingExercise.name.trim()}
-                  className="flex-1 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Mentés...' : 'Mentés'}
-                </button>
+                  aria-label={`${idx + 1}. lépés`}
+                  placeholder={`${idx + 1}. lépés`}
+                />
+                <IconButton
+                  icon={X}
+                  label={`${idx + 1}. lépés törlése`}
+                  onClick={() => {
+                    const newInstructions = editingExercise.instructions.filter((_, i) => i !== idx)
+                    setEditingExercise({ ...editingExercise, instructions: newInstructions })
+                  }}
+                  className="flex-shrink-0"
+                />
               </div>
-            </div>
+            ))}
+            <Button
+              icon={Plus}
+              className="w-full"
+              onClick={() => {
+                setEditingExercise({
+                  ...editingExercise,
+                  instructions: [...editingExercise.instructions, '']
+                })
+              }}
+            >
+              Lépés hozzáadása
+            </Button>
           </div>
         </div>
+
+        {/* Tips */}
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-muted">Tippek</p>
+          <div className="space-y-2">
+            {editingExercise.tips.map((tip, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="flex-shrink-0 w-6 text-center text-warn" aria-hidden="true">•</span>
+                <Input
+                  type="text"
+                  value={tip}
+                  onChange={(e) => {
+                    const newTips = [...editingExercise.tips]
+                    newTips[idx] = e.target.value
+                    setEditingExercise({ ...editingExercise, tips: newTips })
+                  }}
+                  aria-label={`${idx + 1}. tipp`}
+                  placeholder="Tipp..."
+                />
+                <IconButton
+                  icon={X}
+                  label={`${idx + 1}. tipp törlése`}
+                  onClick={() => {
+                    const newTips = editingExercise.tips.filter((_, i) => i !== idx)
+                    setEditingExercise({ ...editingExercise, tips: newTips })
+                  }}
+                  className="flex-shrink-0"
+                />
+              </div>
+            ))}
+            <Button
+              icon={Plus}
+              className="w-full"
+              onClick={() => {
+                setEditingExercise({
+                  ...editingExercise,
+                  tips: [...editingExercise.tips, '']
+                })
+              }}
+            >
+              Tipp hozzáadása
+            </Button>
+          </div>
+        </div>
+
+        {/* Secondary Muscles */}
+        <Field label="Másodlagos izomcsoportok" htmlFor="ex-secondary-muscles">
+          <ChipMultiSelect
+            id="ex-secondary-muscles"
+            options={MUSCLE_GROUPS.map((g) => ({ value: g.id, label: g.name }))}
+            value={editingExercise.secondary_muscles}
+            onChange={(v) => setEditingExercise({ ...editingExercise, secondary_muscles: v })}
+            placeholder="Csoport hozzáadása..."
+          />
+        </Field>
+
+        {/* Detail Muscles */}
+        <MusclePicker muscles={muscles || []} value={detailMuscles} onChange={setDetailMuscles} />
+      </div>
+    </Modal>
   )
 }
