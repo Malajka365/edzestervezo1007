@@ -53,11 +53,24 @@ describe('Modal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onClose on backdrop click but not on dialog click', async () => {
+  it('does not close on backdrop click by default', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(
       <Modal open onClose={onClose} title="Teszt ablak">
+        tartalom
+      </Modal>
+    )
+    await user.click(screen.getByText('tartalom'))
+    await user.click(screen.getByRole('dialog').parentElement)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('closes on backdrop click (not dialog click) with closeOnBackdrop', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <Modal open onClose={onClose} title="Teszt ablak" closeOnBackdrop>
         tartalom
       </Modal>
     )

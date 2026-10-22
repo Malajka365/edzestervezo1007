@@ -8,7 +8,7 @@ import { useNavGroups } from './useNavGroups'
 // Ctrl+K parancspaletta: oldalak és gyors műveletek ékezetfüggetlen kereséssel.
 export default function CommandPalette({ open, onClose }) {
   return (
-    <Modal open={open} onClose={onClose} title="Keresés, parancsok" size="md">
+    <Modal open={open} onClose={onClose} title="Keresés, parancsok" size="md" closeOnBackdrop>
       <PaletteBody onClose={onClose} />
     </Modal>
   )

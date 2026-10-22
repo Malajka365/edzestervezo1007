@@ -11,7 +11,16 @@ const SIZES = {
   xl: 'max-w-4xl',
 }
 
-export default function Modal({ open, onClose, title, size = 'md', footer, children }) {
+// closeOnBackdrop: alapból a háttérre kattintás NEM zár (az űrlapos ablakokban elveszne a begépelt adat).
+export default function Modal({
+  open,
+  onClose,
+  title,
+  size = 'md',
+  footer,
+  closeOnBackdrop = false,
+  children,
+}) {
   const dialogRef = useRef(null)
   const mouseDownOnBackdrop = useRef(false)
   const titleId = useId()
@@ -27,7 +36,9 @@ export default function Modal({ open, onClose, title, size = 'md', footer, child
         mouseDownOnBackdrop.current = e.target === e.currentTarget
       }}
       onClick={(e) => {
-        if (mouseDownOnBackdrop.current && e.target === e.currentTarget) onClose?.()
+        if (closeOnBackdrop && mouseDownOnBackdrop.current && e.target === e.currentTarget) {
+          onClose?.()
+        }
         mouseDownOnBackdrop.current = false
       }}
     >
