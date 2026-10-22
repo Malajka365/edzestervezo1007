@@ -12,7 +12,8 @@ import { usePopover } from './usePopover'
 const THEME_LABELS = { system: 'Rendszer', light: 'Világos', dark: 'Sötét' }
 const THEME_ITEMS = THEME_MODES.map((id) => ({ id, label: THEME_LABELS[id] }))
 
-// Külön komponens, hogy a useTheme csak akkor fusson, ha a kapcsoló látszik.
+// Külön komponens: a menü nyitásakor csatlakozik a témához. A téma alkalmazását és a
+// rendszer-téma követését az App gyökerében futó useTheme végzi, ez csak módot vált.
 function ThemeSwitch() {
   const { mode, setMode } = useTheme()
   return (

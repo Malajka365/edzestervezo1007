@@ -9,15 +9,20 @@
       (function () {
         var THEME_SWITCH_ENABLED = true; // tükrözi: src/lib/theme.js THEME_SWITCH_ENABLED
         var theme = 'dark';
-        try {
-          if (THEME_SWITCH_ENABLED) {
-            var mode = localStorage.getItem('tf-theme');
-            if (mode !== 'light' && mode !== 'dark') mode = 'system';
-            theme = mode === 'system'
-              ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-              : mode;
+        if (THEME_SWITCH_ENABLED) {
+          var mode = 'system';
+          try {
+            var stored = localStorage.getItem('tf-theme');
+            if (stored === 'light' || stored === 'dark') mode = stored;
+          } catch (e) {}
+          if (mode === 'system') {
+            try {
+              theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            } catch (e) {}
+          } else {
+            theme = mode;
           }
-        } catch (e) {}
+        }
         document.documentElement.dataset.theme = theme;
       })();
     </script>
