@@ -2,6 +2,7 @@ import { Suspense, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useTeams } from '../../context/TeamContext'
 import { useHotkey } from '../../hooks/useHotkey'
+import { hasOpenOverlay } from '../ui/useOverlay'
 import { PROFILE_ITEM } from '../../lib/navigation'
 import LoadingSpinner from '../LoadingSpinner'
 import BottomTabBar, { BOTTOM_BAR_PADDING } from './BottomTabBar'
@@ -10,14 +11,18 @@ import MobileTopBar from './MobileTopBar'
 import MoreSheet from './MoreSheet'
 import NoTeamState from './NoTeamState'
 import Sidebar from './Sidebar'
+import TeamsErrorState from './TeamsErrorState'
 
 export default function AppShell({ session }) {
-  const { teams, loading } = useTeams()
+  const { teams, loading, teamsError, fetchTeams } = useTeams()
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
 
-  useHotkey('mod+k', () => setPaletteOpen(true))
+  // Nyitott űrlap-modal fölé nem nyitunk palettát: a navigáció elvetné a beírt adatot.
+  useHotkey('mod+k', () => {
+    if (!hasOpenOverlay()) setPaletteOpen(true)
+  })
 
   const isProfileRoute = location.pathname.replace(/\/+$/, '') === PROFILE_ITEM.path
   const showNoTeam = teams.length === 0 && !loading && !isProfileRoute
@@ -32,7 +37,7 @@ export default function AppShell({ session }) {
 
         <main className={`min-h-0 flex-1 overflow-y-auto lg:pb-0 ${BOTTOM_BAR_PADDING}`}>
           {showNoTeam ? (
-            <NoTeamState />
+            teamsError ? <TeamsErrorState onRetry={fetchTeams} /> : <NoTeamState />
           ) : (
             <Suspense fallback={<LoadingSpinner size="inline" />}>
               <Outlet context={{ session }} />

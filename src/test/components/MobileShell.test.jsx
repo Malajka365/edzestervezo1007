@@ -91,4 +91,20 @@ describe('Mobil keret', () => {
     const dup = ids.filter((id, i) => ids.indexOf(id) !== i)
     expect(dup).toEqual([])
   })
+
+  it('az Escape előbb a felhasználói menüt zárja be, csak a második a "Több" lapot', async () => {
+    renderShell({ permissionsLoading: true })
+
+    await userEvent.click(within(tabBar()).getByRole('button', { name: 'Több' }))
+    const sheet = within(screen.getByRole('dialog', { name: 'Menü' }))
+    await userEvent.click(sheet.getByRole('button', { name: /edzo@example.com/ }))
+    expect(sheet.getByRole('button', { name: 'Kijelentkezés' })).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('button', { name: 'Kijelentkezés' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Menü' })).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Menü' })).not.toBeInTheDocument()
+  })
 })

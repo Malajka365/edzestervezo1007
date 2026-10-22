@@ -61,10 +61,10 @@ export default function Calendar() {
     'Erő': { color: 'bg-t-strength', textColor: 'text-on-status', shortLabel: 'Er' },
     'Állóképesség': { color: 'bg-ok', textColor: 'text-on-status', shortLabel: 'Á' },
     'Gyorsaság': { color: 'bg-bad', textColor: 'text-on-status', shortLabel: 'Gy' },
-    'Technika': { color: 'bg-warn', textColor: 'text-on-status', shortLabel: 'T' },
+    'Technika': { color: 'bg-warn-soft', textColor: 'text-fg', shortLabel: 'T' },
     'Taktika': { color: 'bg-t-tactic', textColor: 'text-on-status', shortLabel: 'Ta' },
     'Regeneráció': { color: 'bg-t-ball', textColor: 'text-on-status', shortLabel: 'R' },
-    'Pihenő': { color: 'bg-t-rest', textColor: 'text-on-status', shortLabel: 'P' },
+    'Pihenő': { color: 'bg-surface-3', textColor: 'text-fg', shortLabel: 'P' },
     'Mérkőzés': { color: 'bg-t-match', textColor: 'text-on-status', shortLabel: 'M' },
     '-': { color: 'bg-surface-2', textColor: 'text-subtle', shortLabel: '-' },
   }

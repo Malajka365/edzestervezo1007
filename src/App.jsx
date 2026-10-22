@@ -44,7 +44,7 @@ const queryClient = new QueryClient({
 function App() {
   // A téma az egész appra érvényes (Auth, csatlakozás, irányítópult): itt él a
   // rendszer-téma követése, a kapcsoló (UserMenu) csak módot vált.
-  useTheme()
+  useTheme({ apply: true })
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [connError, setConnError] = useState(null)

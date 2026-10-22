@@ -15,14 +15,19 @@ export function usePopover() {
       if (ref.current && !ref.current.contains(event.target)) setOpen(false)
     }
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key !== 'Escape' || event.isComposing) return
+      // Az Escape-et a popover kapja meg először (capture fázis): a mögötte lévő overlay
+      // (pl. a "Több" lap) nem záródik vele, mert megállítjuk és defaultPrevented lesz.
+      event.preventDefault()
+      event.stopPropagation()
+      setOpen(false)
     }
 
     document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown, true)
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('keydown', handleKeyDown, true)
     }
   }, [open])
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-const isMac = () =>
+export const isMac = () =>
   typeof navigator !== 'undefined' && /mac|iphone|ipad|ipod/i.test(navigator.platform || navigator.userAgent || '')
 
 // Billentyűkombináció figyelése, pl. useHotkey('mod+k', handler).

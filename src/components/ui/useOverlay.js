@@ -31,6 +31,11 @@ function unlockScroll() {
   if (scrollLocks === 0) document.body.style.overflow = previousOverflow
 }
 
+// Igaz, ha bármely Modal/Drawer/ConfirmDialog nyitva van (pl. globális gyorsbillentyűk kihagyására).
+export function hasOpenOverlay() {
+  return stack.length > 0
+}
+
 export function useOverlay({ open, onClose, containerRef }) {
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -66,6 +71,8 @@ export function useOverlay({ open, onClose, containerRef }) {
       if (!isTop()) return
 
       if (e.key === 'Escape') {
+        // Egy belső réteg (pl. popover) már kezelte, vagy IME-szerkesztés közbeni Escape.
+        if (e.defaultPrevented || e.isComposing) return
         e.preventDefault()
         onCloseRef.current?.()
         return

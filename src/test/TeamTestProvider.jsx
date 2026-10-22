@@ -6,6 +6,7 @@ export const BASE_TEAM_CONTEXT = {
   selectedTeam: null,
   setSelectedTeam: () => {},
   loading: false,
+  teamsError: null,
   fetchTeams: async () => {},
   createTeam: async () => ({ success: true }),
   updateTeam: async () => ({ success: true }),

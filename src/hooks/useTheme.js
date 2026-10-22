@@ -21,8 +21,9 @@ function systemPrefersDark() {
  * Tema mód állapot: { mode, resolved, setMode }.
  * `mode` a felhasználó választása (system | light | dark), `resolved` a ténylegesen
  * alkalmazott téma. Rendszer módban a prefers-color-scheme változását is követi.
+ * A `data-theme` attribútumot csak az `{ apply: true }` példány állítja.
  */
-export function useTheme() {
+export function useTheme({ apply = false } = {}) {
   const [mode, setModeState] = useState(readStoredMode)
   const [systemDark, setSystemDark] = useState(systemPrefersDark)
 
@@ -37,9 +38,11 @@ export function useTheme() {
     return () => mql.removeEventListener('change', onChange)
   }, [mode])
 
+  // Csak az App gyökerében futó példány alkalmaz (apply: true): a többi (pl. a téma
+  // kapcsoló) csak módot vált, így újracsatlakozáskor nem írja felül a data-theme-et.
   useEffect(() => {
-    applyTheme(resolved)
-  }, [resolved])
+    if (apply) applyTheme(resolved)
+  }, [apply, resolved])
 
   // Több példány is él (az App gyökerében és a téma kapcsolóban): a módváltást
   // eseménnyel osztjuk meg, a más lapon történt módosítást a storage eseménnyel követjük.

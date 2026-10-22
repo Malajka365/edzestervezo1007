@@ -364,7 +364,7 @@ export default function PlayerProgress() {
               ))}
             </Select>
             {selectedPlayer && selectedExercise && chartData.length > 0 && (
-              <Button variant="primary" icon={Download} onClick={exportToPDF}>
+              <Button variant="primary" icon={Download} onClick={exportToPDF} loading={exporting}>
                 PDF exportálás
               </Button>
             )}

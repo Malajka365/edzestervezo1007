@@ -21,7 +21,7 @@ export default function TeamSwitcher({ compact = false }) {
       <button
         type="button"
         onClick={toggle}
-        aria-haspopup="true"
+        aria-haspopup="dialog"
         aria-expanded={open}
         className={`flex w-full items-center gap-2 rounded-[9px] border border-line bg-surface-2 text-left text-fg transition-colors hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
           compact ? 'px-2.5 py-1.5' : 'px-3 py-2'

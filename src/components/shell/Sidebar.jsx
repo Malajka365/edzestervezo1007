@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { isMac } from '../../hooks/useHotkey'
 import NavGroups from './NavGroups'
 import TeamSwitcher from './TeamSwitcher'
 import UserMenu from './UserMenu'
@@ -34,7 +35,7 @@ export default function Sidebar({ session, onOpenPalette = () => {}, onNavigate,
           <Search className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
           <span className="flex-1 truncate">Keresés, parancsok</span>
           <kbd className="rounded border border-line-strong px-1.5 py-0.5 font-mono text-[11px] text-subtle">
-            Ctrl K
+            {isMac() ? '⌘K' : 'Ctrl K'}
           </kbd>
         </button>
       </div>

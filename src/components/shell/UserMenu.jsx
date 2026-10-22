@@ -39,7 +39,7 @@ export default function UserMenu({ session, onNavigate }) {
       <button
         type="button"
         onClick={toggle}
-        aria-haspopup="true"
+        aria-haspopup="dialog"
         aria-expanded={open}
         className="flex w-full items-center gap-2.5 rounded-[9px] p-1.5 text-left transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       >

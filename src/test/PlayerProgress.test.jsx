@@ -95,4 +95,33 @@ describe('PlayerProgress PDF export', () => {
     // Export után vissza az élő témára.
     await waitFor(() => expect(screen.getByTestId('grid').dataset.stroke).toBe(LIVE.line))
   })
+
+  it('disables the PDF button while exporting so a second export cannot start', async () => {
+    let release
+    captureForPdf.mockImplementationOnce(
+      () => new Promise((resolve) => { release = () => resolve({ toDataURL: () => 'data:image/png;base64,' }) })
+    )
+    render(<PlayerProgress />)
+
+    fireEvent.change(screen.getByLabelText('Játékos'), { target: { value: 'p1' } })
+    fireEvent.change(screen.getByLabelText('Gyakorlat'), { target: { value: 'e1' } })
+    await waitFor(() => expect(screen.getByTestId('grid')).toBeTruthy())
+
+    const button = screen.getByRole('button', { name: /PDF exportálás/ })
+    expect(button).not.toBeDisabled()
+
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    await waitFor(() => expect(captureForPdf).toHaveBeenCalledTimes(1))
+    expect(screen.getByRole('button', { name: /PDF exportálás/ })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: /PDF exportálás/ }))
+    expect(captureForPdf).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      release()
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: /PDF exportálás/ })).not.toBeDisabled())
+  })
 })
