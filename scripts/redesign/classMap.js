@@ -2,13 +2,19 @@
 // No JSX parser: className= attribute values are located with a small scanner that
 // understands string literals, template literals (with nested ${...}) and comments.
 
-const PREFIXES = 'bg|text|border|ring|divide|from|via|to|placeholder|fill|stroke|outline|shadow|accent'
+const PREFIXES =
+  'bg|text|border-[trblxyse]|border|ring-offset|ring|divide|from|via|to|placeholder|fill|stroke|outline|shadow|accent|caret|decoration'
 const SHADED = 'slate|gray|zinc|neutral|stone|primary|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose'
-const UTILITY = `(${PREFIXES})-(?:(white|black)|(${SHADED})-(\\d{2,3}))(?:/(\\d+|\\[[^\\]\\s]+\\]))?`
+const OPACITY = '\\d+(?:\\.\\d+)?|\\[[^\\]\\s]+\\]'
+const UTILITY = `(${PREFIXES})-(?:(white|black)|(${SHADED})-(\\d{2,3}))(?:/(${OPACITY}))?`
 const BARE_RE = new RegExp(`^${UTILITY}$`)
-const VARIANT_CHARS = '[\\w\\[\\]&>*-]'
-// Whole-source scan: the match may start with variant prefixes (hover:, lg:group-hover: ...)
-const SCAN_RE = new RegExp(`(?<!${VARIANT_CHARS}|:)((?:${VARIANT_CHARS}+:)*)${UTILITY}(?![\\w-])`, 'g')
+// A variant is word chars or a bracket group, e.g. hover:, group-hover/item:, data-[state=open]:, group-[.is-open]:
+const VARIANT = '(?:[\\w&>*/-]|\\[(?:[^\\[\\]\\s]|\\[[^\\]\\s]*\\])*\\])+:'
+// Whole-source scan: group 1 is the variant prefix, the rest mirror BARE_RE.
+const SCAN_RE = new RegExp(`(?<![\\w&>*\\]-]|:)((?:${VARIANT})*)${UTILITY}(?![\\w-])`, 'g')
+
+// Legacy component classes (defined in src/index.css) that must disappear from className values.
+const LEGACY_COMPONENT_CLASSES = new Set(['btn', 'btn-primary', 'btn-secondary', 'input-field', 'card'])
 
 const EMOJI_RE = /\p{Extended_Pictographic}/gu
 const EMOJI_EXCLUDED = new Set(['©', '®', '™']) // (c), (R), TM are plain text
@@ -35,11 +41,13 @@ function splitVariants(token) {
   return [token.slice(0, cut + 1), token.slice(cut + 1)]
 }
 
+function toParsed(util, mono, shadedColor, shade, opacity) {
+  return { util, color: mono || shadedColor, shade: shade ? Number(shade) : null, opacity }
+}
+
 function parseBare(base) {
   const m = BARE_RE.exec(base)
-  if (!m) return null
-  const [, util, mono, shadedColor, shade, opacity] = m
-  return { util, color: mono || shadedColor, shade: shade ? Number(shade) : null, opacity }
+  return m ? toParsed(...m.slice(1)) : null
 }
 
 const SLATE_BG = { 900: 'bg', 950: 'bg', 800: 'surface', 700: 'surface-2', 600: 'surface-3', 500: 'surface-3' }
@@ -53,41 +61,43 @@ function slateText(shade) {
 }
 
 function isSoftOpacity(opacity) {
-  return /^\d+$/.test(opacity || '') && Number(opacity) <= 30
+  return /^\d+(\.\d+)?$/.test(opacity || '') && Number(opacity) <= 30
 }
 
 /** Returns the token class name (without prefix variants) or null. */
 function mapBare({ util, color, shade, opacity }, hover) {
   const op = opacity ? `/${opacity}` : ''
   const withOp = (name) => `${util}-${name}${op}`
+  // border-t / border-x ... map like plain border; ring-offset, caret, decoration ... stay unmapped
+  const kind = util.startsWith('border') ? 'border' : util
 
   if (color === 'slate') {
-    if (util === 'bg') return SLATE_BG[shade] ? withOp(SLATE_BG[shade]) : null
-    if (util === 'border' || util === 'divide') return SLATE_LINE[shade] ? withOp(SLATE_LINE[shade]) : null
-    if (util === 'text') return slateText(shade) ? withOp(slateText(shade)) : null
-    if (util === 'placeholder') return shade === 400 || shade === 500 ? withOp('subtle') : null
+    if (kind === 'bg') return SLATE_BG[shade] ? withOp(SLATE_BG[shade]) : null
+    if (kind === 'border' || kind === 'divide') return SLATE_LINE[shade] ? withOp(SLATE_LINE[shade]) : null
+    if (kind === 'text') return slateText(shade) ? withOp(slateText(shade)) : null
+    if (kind === 'placeholder') return shade === 400 || shade === 500 ? withOp('subtle') : null
     return null
   }
 
-  if (color === 'white') return util === 'text' ? withOp('fg') : null
+  if (color === 'white') return kind === 'text' ? withOp('fg') : null
 
   if (color === 'primary') {
-    if (util === 'bg') {
+    if (kind === 'bg') {
       if (isSoftOpacity(opacity)) return 'bg-accent-soft'
       if (shade === 900) return withOp('accent-soft')
       if (shade === 500 || shade === 600) return withOp('accent')
       if (shade === 700) return withOp('accent-hover')
       return null
     }
-    if (util === 'text') return shade >= 300 && shade <= 600 ? withOp('accent') : null
-    if (util === 'border' || util === 'ring') return withOp('accent')
+    if (kind === 'text') return shade >= 300 && shade <= 600 ? withOp('accent') : null
+    if (kind === 'border' || kind === 'ring') return withOp('accent')
     return null
   }
 
   const status = STATUS[color]
   if (status) {
-    if (util === 'text' || util === 'border' || util === 'ring') return withOp(status)
-    if (util === 'bg') {
+    if (kind === 'text' || kind === 'border' || kind === 'ring') return withOp(status)
+    if (kind === 'bg') {
       if (isSoftOpacity(opacity)) return `bg-${status}-soft`
       if (shade === 900) return withOp(`${status}-soft`)
       if (shade === 500 || shade === 600) return withOp(status)
@@ -109,8 +119,7 @@ export function mapClass(cls) {
 }
 
 /** True for a legacy colour class. `bg-black/<opacity>` is exempt: it is the overlay scrim (no token for it). */
-function isLegacyColour(token) {
-  const parsed = parseBare(splitVariants(token)[1])
+function isLegacyColour(parsed) {
   if (!parsed) return false
   return !(parsed.util === 'bg' && parsed.color === 'black' && parsed.opacity)
 }
@@ -234,20 +243,20 @@ export function migrateSource(src) {
   const code = transformClassNames(src, (tok) => {
     const mapped = mapClass(tok)
     if (mapped) return mapped
-    if (isLegacyColour(tok) && !unmapped.includes(tok)) unmapped.push(tok)
+    if (isLegacyColour(parseBare(splitVariants(tok)[1])) && !unmapped.includes(tok)) unmapped.push(tok)
     return tok
   })
   return { code, unmapped }
 }
 
-/** Distinct legacy colour classes, the `btn` class and emoji found in the source. */
+/** Distinct legacy colour classes, legacy component classes (btn, card ...) and emoji found in the source. */
 export function findLegacy(src) {
   const found = new Set()
   for (const m of src.matchAll(SCAN_RE)) {
-    if (isLegacyColour(splitVariants(m[0])[1])) found.add(m[0])
+    if (isLegacyColour(toParsed(...m.slice(2)))) found.add(m[0])
   }
   transformClassNames(src, (tok) => {
-    if (tok === 'btn') found.add('btn')
+    if (LEGACY_COMPONENT_CLASSES.has(tok)) found.add(tok)
     return tok
   })
   for (const m of src.matchAll(EMOJI_RE)) {

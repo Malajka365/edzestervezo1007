@@ -157,3 +157,68 @@ describe('findLegacy', () => {
     expect(findLegacy('className="text-white text-white"')).toEqual(['text-white'])
   })
 })
+
+describe('fix round 1', () => {
+  it('flags legacy colours behind bracket variants', () => {
+    expect(findLegacy('className="data-[state=open]:bg-slate-700"')).toEqual(['data-[state=open]:bg-slate-700'])
+    expect(findLegacy('className="aria-[x=y]:bg-slate-700"')).toEqual(['aria-[x=y]:bg-slate-700'])
+    expect(findLegacy('className="group-[.is-open]:text-white"')).toEqual(['group-[.is-open]:text-white'])
+    expect(findLegacy('className="group-hover/item:text-white"')).toEqual(['group-hover/item:text-white'])
+  })
+
+  it('migrates bracket-variant classes the same way check finds them', () => {
+    const r = migrateSource(
+      '<i className="data-[state=open]:bg-slate-700 group-[.is-open]:text-white aria-[x=y]:text-purple-400" />',
+    )
+    expect(r.code).toBe(
+      '<i className="data-[state=open]:bg-surface-2 group-[.is-open]:text-fg aria-[x=y]:text-purple-400" />',
+    )
+    expect(r.unmapped).toEqual(['aria-[x=y]:text-purple-400'])
+    expect(mapClass('data-[state=open]:bg-slate-700')).toBe('data-[state=open]:bg-surface-2')
+  })
+
+  it('flags legacy component classes only as className tokens', () => {
+    const found = findLegacy('className="btn-primary input-field card"')
+    expect(found).toEqual(expect.arrayContaining(['btn-primary', 'input-field', 'card']))
+    expect(findLegacy('className="btn-secondary"')).toEqual(['btn-secondary'])
+    expect(findLegacy('const card = 1; const inputField = 2')).toEqual([])
+    expect(findLegacy('className="cardinal card-body"')).toEqual([])
+    expect(findLegacy("className={`flex ${x ? 'card' : ''}`}")).toEqual(['card'])
+  })
+
+  it('detects ring-offset, caret, decoration and directional borders', () => {
+    const src =
+      'className="ring-offset-slate-800 caret-white decoration-red-500 border-t-slate-700 border-x-blue-500 border-s-white"'
+    expect(findLegacy(src)).toEqual([
+      'ring-offset-slate-800',
+      'caret-white',
+      'decoration-red-500',
+      'border-t-slate-700',
+      'border-x-blue-500',
+      'border-s-white',
+    ])
+  })
+
+  it('maps directional borders where the table applies, leaves the rest unmapped', () => {
+    expect(mapClass('border-t-slate-700')).toBe('border-t-line')
+    expect(mapClass('hover:border-b-slate-500')).toBe('hover:border-b-line-strong')
+    expect(mapClass('border-l-primary-500')).toBe('border-l-accent')
+    expect(mapClass('border-x-red-500/50')).toBe('border-x-bad/50')
+    expect(mapClass('ring-offset-slate-800')).toBeNull()
+    expect(mapClass('caret-white')).toBeNull()
+    expect(mapClass('decoration-red-500')).toBeNull()
+    const r = migrateSource('<i className="border-t-slate-700 ring-offset-slate-800" />')
+    expect(r.code).toBe('<i className="border-t-line ring-offset-slate-800" />')
+    expect(r.unmapped).toEqual(['ring-offset-slate-800'])
+  })
+
+  it('accepts decimal opacity', () => {
+    expect(mapClass('bg-slate-700/2.5')).toBe('bg-surface-2/2.5')
+    expect(mapClass('bg-red-500/12.5')).toBe('bg-bad-soft')
+    expect(findLegacy('className="bg-slate-700/2.5 hover:text-white/87.5"')).toEqual([
+      'bg-slate-700/2.5',
+      'hover:text-white/87.5',
+    ])
+    expect(findLegacy('className="bg-black/2.5"')).toEqual([])
+  })
+})

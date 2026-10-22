@@ -1,14 +1,16 @@
-// Usage: npm run redesign:migrate -- <files...>
+// Usage: npm run redesign:migrate -- <files or directories...>
 // Rewrites legacy colour classes inside className values in place and prints
 // `file: <unmapped classes>` for each file (classes needing a manual decision).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { migrateSource } from './classMap.js'
+import { expandPaths } from './files.mjs'
 
-const files = process.argv.slice(2)
-if (files.length === 0) {
-  console.error('Usage: npm run redesign:migrate -- <files...>')
+const args = process.argv.slice(2)
+if (args.length === 0) {
+  console.error('Usage: npm run redesign:migrate -- <files or directories...>')
   process.exit(2)
 }
+const files = expandPaths(args)
 
 let failed = false
 for (const file of files) {
