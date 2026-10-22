@@ -8,10 +8,13 @@ import {
   Download,
   Filter,
   TrendingUp,
-  User,
   Dumbbell,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
+import Button from '../components/ui/Button'
+import EmptyState from '../components/ui/EmptyState'
+import { Select } from '../components/ui/Field'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { exportTablePdf } from '../lib/pdfExport'
 
@@ -153,53 +156,31 @@ export default function TrainingLoad() {
 
   if (!selectedTeam) {
     return (
-      <div className="h-screen flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">1RM Százalék Kalkulátor</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Terhelés százalékok</p>
-            </div>
-            <div className="flex-shrink-0">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Calculator className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Válassz csapatot</h3>
-            <p className="text-slate-400">Válassz egy csapatot az 1RM kalkulátor használatához</p>
-          </div>
-        </div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        <PageHeader title="1RM táblázat" description="Terhelés százalékok" />
+        <EmptyState
+          icon={Calculator}
+          title="Válassz csapatot"
+          description="Válassz egy csapatot az 1RM táblázat használatához."
+        />
       </div>
     )
   }
 
-  return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-primary-400" />
-                <span>1RM Százalék Kalkulátor</span>
-              </h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                Tervezd meg az edzés terhelést a játékosok legutóbbi 1RM értékei alapján
-              </p>
-            </div>
-          </div>
+  const selectedExerciseName = exercises.find((e) => e.id === selectedExercise)?.name
 
-          {/* Közép: Gyakorlat selector */}
-          <div className="flex items-center gap-2">
-            <select
+  return (
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="1RM táblázat"
+        description={`${selectedTeam.name} · Tervezd meg az edzés terhelést a játékosok legutóbbi 1RM értékei alapján`}
+        actions={
+          <>
+            <Select
               value={selectedExercise}
               onChange={(e) => setSelectedExercise(e.target.value)}
-              className="input-field min-w-[200px]"
+              aria-label="Gyakorlat"
+              className="min-w-[200px]"
             >
               <option value="">Válassz gyakorlatot...</option>
               {exercises.map((exercise) => (
@@ -207,113 +188,96 @@ export default function TrainingLoad() {
                   {exercise.name}
                 </option>
               ))}
-            </select>
-          </div>
-
-          {/* Jobb oldal: PDF Export + TeamSelector */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+            </Select>
             {selectedExercise && calculations.length > 0 && (
-              <button
-                onClick={exportToPDF}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="PDF Exportálás"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">PDF Exportálás</span>
-              </button>
+              <Button variant="primary" icon={Download} onClick={exportToPDF}>
+                PDF exportálás
+              </Button>
             )}
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6">
+          </>
+        }
+      />
 
       {/* Results Table */}
       {loading ? (
-        <div className="card">
+        <Panel>
           <LoadingSpinner size="inline" />
-        </div>
+        </Panel>
       ) : selectedExercise && calculations.length > 0 ? (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <TrendingUp className="w-5 h-5 text-primary-400" />
-              <h3 className="text-lg font-semibold text-white">
-                {exercises.find((e) => e.id === selectedExercise)?.name} - Terhelés Százalékok
-              </h3>
-            </div>
-            <div className="text-sm text-slate-400">
+        <Panel
+          title={`${selectedExerciseName} - Terhelés százalékok`}
+          icon={TrendingUp}
+          actions={
+            <span className="text-sm font-normal text-muted">
               {calculations.filter((c) => c.oneRM).length} / {calculations.length} játékos
-            </div>
-          </div>
-
+            </span>
+          }
+        >
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-400 uppercase sticky left-0 bg-slate-800 z-10">
+                <tr className="border-b border-line">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-muted uppercase sticky left-0 bg-surface z-10">
                     Játékos
                   </th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-400 uppercase">
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-muted uppercase">
                     Mérés dátuma
                   </th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-slate-400 uppercase bg-primary-900/30">
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-muted uppercase bg-accent-soft">
                     1RM (100%)
                   </th>
                   {percentages.map((pct) => (
                     <th
                       key={pct}
-                      className="px-3 py-3 text-center text-xs font-semibold text-slate-400 uppercase"
+                      className="px-3 py-3 text-center text-xs font-semibold text-muted uppercase"
                     >
                       {pct}%
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700">
+              <tbody className="divide-y divide-line">
                 {calculations.map((calc) => (
                   <tr
                     key={calc.player.id}
-                    className={`hover:bg-slate-700/50 transition-colors ${
+                    className={`hover:bg-surface-2/50 transition-colors ${
                       !calc.oneRM ? 'opacity-50' : ''
                     }`}
                   >
-                    <td className="px-3 py-3 whitespace-nowrap sticky left-0 bg-slate-800 z-10">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-3 py-3 whitespace-nowrap sticky left-0 bg-surface z-10">
+                      <div className="flex items-center gap-2">
                         {calc.player.jersey_number && (
-                          <span className="text-sm font-bold text-primary-400">
+                          <span className="font-mono text-sm font-semibold text-accent">
                             #{calc.player.jersey_number}
                           </span>
                         )}
-                        <span className="text-white font-medium">{calc.player.name}</span>
+                        <span className="text-fg font-medium">{calc.player.name}</span>
                       </div>
                     </td>
                     <td className="px-3 py-3 text-center">
                       {calc.lastMeasured ? (
-                        <span className="text-slate-300 text-sm">
+                        <span className="text-fg text-sm">
                           {new Date(calc.lastMeasured).toLocaleDateString('hu-HU')}
                         </span>
                       ) : (
-                        <span className="text-slate-500 text-sm">-</span>
+                        <span className="text-muted text-sm">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-center bg-primary-900/20">
+                    <td className="px-3 py-3 text-center bg-accent-soft">
                       {calc.oneRM ? (
-                        <span className="text-lg font-bold text-primary-400">{calc.oneRM}</span>
+                        <span className="font-mono text-lg font-semibold text-accent">{calc.oneRM}</span>
                       ) : (
-                        <span className="text-slate-500 text-sm">Nincs adat</span>
+                        <span className="text-muted text-sm">Nincs adat</span>
                       )}
                     </td>
                     {percentages.map((pct) => (
                       <td key={pct} className="px-3 py-3 text-center">
                         {calc.oneRM ? (
-                          <span className="text-white font-mono text-sm">
+                          <span className="text-fg font-mono text-sm">
                             {calc.percentages[pct]}
                           </span>
                         ) : (
-                          <span className="text-slate-600">-</span>
+                          <span className="text-subtle">-</span>
                         )}
                       </td>
                     ))}
@@ -324,30 +288,26 @@ export default function TrainingLoad() {
           </div>
 
           {/* Info Box */}
-          <div className="mt-4 p-4 bg-slate-700/50 rounded-lg">
-            <p className="text-sm text-slate-300">
+          <div className="mt-4 rounded-[9px] bg-surface-2 p-4">
+            <p className="text-sm text-fg">
               <strong>Használat:</strong> Az értékek az egyes játékosok legutóbbi 1RM mérésén alapulnak.
               Használd ezeket az értékeket az edzéstervek elkészítéséhez és a terhelés optimalizálásához.
             </p>
           </div>
-        </div>
+        </Panel>
       ) : selectedExercise ? (
-        <div className="card text-center py-12">
-          <Dumbbell className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">Nincs adat</h3>
-          <p className="text-slate-400">
-            Ehhez a gyakorlathoz még nincs mérési adat rögzítve
-          </p>
-        </div>
+        <EmptyState
+          icon={Dumbbell}
+          title="Nincs adat"
+          description="Ehhez a gyakorlathoz még nincs mérési adat rögzítve"
+        />
       ) : (
-        <div className="card text-center py-12">
-          <Filter className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">Válassz gyakorlatot</h3>
-          <p className="text-slate-400">Válassz egy gyakorlatot a kalkulátor használatához</p>
-        </div>
+        <EmptyState
+          icon={Filter}
+          title="Válassz gyakorlatot"
+          description="Válassz egy gyakorlatot a táblázat használatához"
+        />
       )}
-
-      </div>
     </div>
   )
 }
