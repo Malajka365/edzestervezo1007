@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { X, Check, Dumbbell, Circle } from 'lucide-react'
+import { X, Check, Dumbbell, Volleyball, Lightbulb } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Button from './ui/Button'
+import Modal from './ui/Modal'
+import { SESSION_TYPES } from '../pages/calendar/sessionTypes'
+
+const WEEKDAYS = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
+const WEEKDAYS_SHORT = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V']
 
 export default function QuickAddTrainingModal({ 
   currentDate, 
@@ -215,172 +221,168 @@ export default function QuickAddTrainingModal({
 
     return { toCreate, toDelete }
   }
+  const changes = getChangesCount()
+  const gymType = SESSION_TYPES.gym
+  const ballType = SESSION_TYPES.ball
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold text-white">
-              Gyors Edzés Hozzáadás
-            </h2>
-            <p className="text-sm text-slate-400 mt-1">
-              {currentDate.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long' })}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-400" />
-          </button>
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center gap-6 mb-6 p-4 bg-slate-700/50 rounded-lg">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-purple-600 flex items-center justify-center">
-              <Dumbbell className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-sm text-slate-300">Konditerem</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-teal-600 flex items-center justify-center">
-              <Circle className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-sm text-slate-300">Labdás edzés</span>
-          </div>
-        </div>
-
-        {/* Week Headers */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
-          {['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'].map((day) => (
-            <div key={day} className="text-center text-xs font-medium text-slate-400 py-1">
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Weeks Grid */}
-        <div className="space-y-3 mb-6">
-          {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7 gap-2">
-              {week.map(({ date, isCurrentMonth }) => {
-                const dateString = formatDate(date)
-                const selected = selectedDays[dateString] || { gym: false, ball: false }
-                const hasSelection = selected.gym || selected.ball
-
-                return (
-                  <div
-                    key={dateString}
-                    className={`border rounded-lg p-2 transition-all ${
-                      !isCurrentMonth
-                        ? 'opacity-40 border-slate-700 bg-slate-800/30'
-                        : isToday(date)
-                        ? 'border-primary-500 bg-primary-500/10'
-                        : hasSelection
-                        ? 'border-green-500 bg-green-500/10'
-                        : 'border-slate-600 bg-slate-700/50'
-                    }`}
-                  >
-                    <div className="text-center mb-1">
-                      <div className={`text-sm font-semibold ${
-                        !isCurrentMonth
-                          ? 'text-slate-600'
-                          : isToday(date) 
-                          ? 'text-primary-400' 
-                          : 'text-white'
-                      }`}>
-                        {date.getDate()}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      {/* Gym checkbox */}
-                      <button
-                        onClick={() => toggleDay(date, 'gym')}
-                        disabled={!isCurrentMonth}
-                        className={`w-full p-1.5 rounded flex items-center justify-center gap-1 transition-colors ${
-                          selected.gym
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-slate-600 text-slate-400 hover:bg-slate-500'
-                        } ${!isCurrentMonth ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <Dumbbell className="w-3 h-3" />
-                        {selected.gym && <Check className="w-3 h-3" />}
-                      </button>
-
-                      {/* Ball checkbox */}
-                      <button
-                        onClick={() => toggleDay(date, 'ball')}
-                        disabled={!isCurrentMonth}
-                        className={`w-full p-1.5 rounded flex items-center justify-center gap-1 transition-colors ${
-                          selected.ball
-                            ? 'bg-teal-600 text-white'
-                            : 'bg-slate-600 text-slate-400 hover:bg-slate-500'
-                        } ${!isCurrentMonth ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <Circle className="w-3 h-3" />
-                        {selected.ball && <Check className="w-3 h-3" />}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-        </div>
-
-        {/* Summary */}
-        {(getChangesCount().toCreate > 0 || getChangesCount().toDelete > 0) && (
-          <div className="mb-6 space-y-2">
-            {getChangesCount().toCreate > 0 && (
-              <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                <div className="flex items-center gap-2 text-green-400">
-                  <Check className="w-5 h-5" />
-                  <span className="font-semibold">
-                    {getChangesCount().toCreate} új edzés létrehozása
-                  </span>
-                </div>
-              </div>
-            )}
-            {getChangesCount().toDelete > 0 && (
-              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <div className="flex items-center gap-2 text-red-400">
-                  <X className="w-5 h-5" />
-                  <span className="font-semibold">
-                    {getChangesCount().toDelete} edzés törlése
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Buttons */}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-          >
-            Mégse
-          </button>
-          <button
+    <Modal
+      open
+      onClose={onClose}
+      title="Gyors edzés hozzáadás"
+      size="xl"
+      footer={
+        <>
+          <Button onClick={onClose}>Mégse</Button>
+          <Button
+            variant="primary"
             onClick={handleSave}
-            disabled={loading || (getChangesCount().toCreate === 0 && getChangesCount().toDelete === 0)}
-            className="flex-1 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={loading}
+            disabled={changes.toCreate === 0 && changes.toDelete === 0}
           >
-            {loading ? 'Mentés...' : 'Változtatások Mentése'}
-          </button>
-        </div>
+            {loading ? 'Mentés...' : 'Változtatások mentése'}
+          </Button>
+        </>
+      }
+    >
+      <p className="-mt-1 mb-4 text-sm text-muted">
+        {currentDate.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long' })}
+      </p>
 
-        <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-sm text-blue-400">
-            💡 <strong>Tipp:</strong> Az edzéseket később szerkesztheted a naptárban (időpont, helyszín, részletek).
-          </p>
+      {/* Legend */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg bg-surface-2/50 p-4">
+        <div className="flex items-center gap-2">
+          <div className={`flex h-6 w-6 items-center justify-center rounded ${gymType.solid}`}>
+            <Dumbbell className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <span className="text-sm text-fg">Konditerem</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`flex h-6 w-6 items-center justify-center rounded ${ballType.solid}`}>
+            <Volleyball className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <span className="text-sm text-fg">Labdás edzés</span>
         </div>
       </div>
-    </div>
+
+      {/* Week Headers */}
+      <div className="mb-2 grid grid-cols-7 gap-1 sm:gap-2">
+        {WEEKDAYS.map((day, index) => (
+          <div key={day} className="py-1 text-center text-xs font-medium text-muted">
+            <span className="sm:hidden">{WEEKDAYS_SHORT[index]}</span>
+            <span className="hidden sm:inline">{day}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Weeks Grid */}
+      <div className="mb-6 space-y-2 sm:space-y-3">
+        {weeks.map((week, weekIndex) => (
+          <div key={weekIndex} className="grid grid-cols-7 gap-1 sm:gap-2">
+            {week.map(({ date, isCurrentMonth }) => {
+              const dateString = formatDate(date)
+              const selected = selectedDays[dateString] || { gym: false, ball: false }
+              const hasSelection = selected.gym || selected.ball
+
+              return (
+                <div
+                  key={dateString}
+                  className={`rounded-lg border p-1 transition-all sm:p-2 ${
+                    !isCurrentMonth
+                      ? 'border-line bg-surface/30 opacity-40'
+                      : isToday(date)
+                      ? 'border-accent bg-accent-soft'
+                      : hasSelection
+                      ? 'border-ok bg-ok-soft'
+                      : 'border-line bg-surface-2/50'
+                  }`}
+                >
+                  <div className="mb-1 text-center">
+                    <div className={`text-sm font-semibold ${
+                      !isCurrentMonth
+                        ? 'text-subtle'
+                        : isToday(date)
+                        ? 'text-accent'
+                        : 'text-fg'
+                    }`}>
+                      {date.getDate()}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    {/* Gym checkbox */}
+                    <button
+                      type="button"
+                      onClick={() => toggleDay(date, 'gym')}
+                      disabled={!isCurrentMonth}
+                      aria-pressed={selected.gym}
+                      aria-label={`${dateString} ${gymType.label}`}
+                      className={`flex w-full items-center justify-center gap-1 rounded p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        selected.gym
+                          ? gymType.solid
+                          : 'bg-surface-3 text-muted hover:bg-line'
+                      } ${!isCurrentMonth ? 'cursor-not-allowed opacity-50' : ''}`}
+                    >
+                      <Dumbbell className="h-3 w-3" aria-hidden="true" />
+                      {selected.gym && <Check className="h-3 w-3" aria-hidden="true" />}
+                    </button>
+
+                    {/* Ball checkbox */}
+                    <button
+                      type="button"
+                      onClick={() => toggleDay(date, 'ball')}
+                      disabled={!isCurrentMonth}
+                      aria-pressed={selected.ball}
+                      aria-label={`${dateString} ${ballType.label}`}
+                      className={`flex w-full items-center justify-center gap-1 rounded p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        selected.ball
+                          ? ballType.solid
+                          : 'bg-surface-3 text-muted hover:bg-line'
+                      } ${!isCurrentMonth ? 'cursor-not-allowed opacity-50' : ''}`}
+                    >
+                      <Volleyball className="h-3 w-3" aria-hidden="true" />
+                      {selected.ball && <Check className="h-3 w-3" aria-hidden="true" />}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Summary */}
+      {(changes.toCreate > 0 || changes.toDelete > 0) && (
+        <div className="mb-6 space-y-2">
+          {changes.toCreate > 0 && (
+            <div className="rounded-lg border border-ok/30 bg-ok-soft p-4">
+              <div className="flex items-center gap-2 text-ok">
+                <Check className="h-5 w-5" aria-hidden="true" />
+                <span className="font-semibold">
+                  {changes.toCreate} új edzés létrehozása
+                </span>
+              </div>
+            </div>
+          )}
+          {changes.toDelete > 0 && (
+            <div className="rounded-lg border border-bad/30 bg-bad-soft p-4">
+              <div className="flex items-center gap-2 text-bad">
+                <X className="h-5 w-5" aria-hidden="true" />
+                <span className="font-semibold">
+                  {changes.toDelete} edzés törlése
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent-soft p-3">
+        <Lightbulb className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
+        <p className="text-sm text-accent">
+          <strong>Tipp:</strong> Az edzéseket később szerkesztheted a naptárban (időpont, helyszín, részletek).
+        </p>
+      </div>
+    </Modal>
   )
 }

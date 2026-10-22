@@ -5,21 +5,36 @@ import { canEditModule } from '../lib/permissions'
 import {
   Plus,
   Search,
-  Dumbbell,
-  Circle,
-  Target,
-  Trophy,
-  Edit,
+  LayoutGrid,
+  ClipboardList,
+  Pencil,
   Trash2,
   Copy,
-  X,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
 import GymTemplateEditor from '../components/GymTemplateEditor'
 import BallTemplateEditor from '../components/BallTemplateEditor'
 import TacticTemplateEditor from '../components/TacticTemplateEditor'
+import Button from '../components/ui/Button'
+import Chip from '../components/ui/Chip'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import EmptyState from '../components/ui/EmptyState'
+import { Field, Input, Select, Textarea } from '../components/ui/Field'
+import IconButton from '../components/ui/IconButton'
+import Modal from '../components/ui/Modal'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
+import Skeleton from '../components/ui/Skeleton'
+import { SESSION_TYPES } from './calendar/sessionTypes'
 import toast from 'react-hot-toast'
+
+// Sablontípusok: a színek a közös edzéstípus tokenekből (t-*) jönnek.
+const TEMPLATE_TYPES = [
+  { value: 'all', label: 'Összes', icon: LayoutGrid, color: 'bg-surface-3 text-fg' },
+  { value: 'gym', label: 'Konditerem', icon: SESSION_TYPES.gym.icon, color: SESSION_TYPES.gym.solid },
+  { value: 'ball', label: 'Labdás', icon: SESSION_TYPES.ball.icon, color: SESSION_TYPES.ball.solid },
+  { value: 'tactic', label: 'Taktika & Technika', icon: SESSION_TYPES.tactic.icon, color: SESSION_TYPES.tactic.solid },
+  { value: 'other', label: 'Egyéb', icon: SESSION_TYPES.other.icon, color: SESSION_TYPES.other.solid },
+]
 
 export default function TrainingTemplates() {
   const { selectedTeam, currentUserPermissions } = useTeams()
@@ -32,14 +47,6 @@ export default function TrainingTemplates() {
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [loading, setLoading] = useState(false)
   const [confirmState, setConfirmState] = useState(null)
-
-  const templateTypes = [
-    { value: 'all', label: 'Összes', icon: Trophy, color: 'bg-slate-600' },
-    { value: 'gym', label: 'Konditerem', icon: Dumbbell, color: 'bg-purple-600' },
-    { value: 'ball', label: 'Labdás', icon: Circle, color: 'bg-blue-600' },
-    { value: 'tactic', label: 'Taktika & Technika', icon: Target, color: 'bg-green-600' },
-    { value: 'other', label: 'Egyéb', icon: Trophy, color: 'bg-orange-600' },
-  ]
 
   useEffect(() => {
     if (selectedTeam) {
@@ -128,209 +135,152 @@ export default function TrainingTemplates() {
   }
 
   const getTypeConfig = (type) => {
-    return templateTypes.find(t => t.value === type) || templateTypes[0]
+    return TEMPLATE_TYPES.find(t => t.value === type) || TEMPLATE_TYPES[0]
+  }
+
+  const openNewTemplate = () => {
+    setEditingTemplate(null)
+    setShowModal(true)
   }
 
   if (!selectedTeam) {
     return (
-      <div className="h-screen flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Edzéssablonok</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Újrafelhasználható edzésprogramok</p>
-            </div>
-            <div className="flex-shrink-0">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
-        </div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        <PageHeader title="Edzéssablonok" description="Újrafelhasználható edzésprogramok" />
+        <EmptyState
+          icon={ClipboardList}
+          title="Nincs kiválasztott csapat"
+          description="Válassz ki egy csapatot a folytatáshoz."
+        />
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Edzéssablonok</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                {templates.length}/{filteredTemplates.length} - Újrafelhasználható edzésprogramok
-              </p>
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Edzéssablonok"
+        description={`${filteredTemplates.length} / ${templates.length} sablon - Újrafelhasználható edzésprogramok`}
+        actions={
+          canEdit && (
+            <Button variant="primary" icon={Plus} onClick={openNewTemplate}>
+              Új sablon
+            </Button>
+          )
+        }
+      />
+
+      <div className="space-y-6">
+        {/* Filters */}
+        <Panel>
+          <div className="flex flex-col gap-4 md:flex-row">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+                <Input
+                  type="text"
+                  aria-label="Keresés sablonok között"
+                  placeholder="Keresés sablonok között..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Középső gombok */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {canEdit && (
-              <button
-                onClick={() => {
-                  setEditingTemplate(null)
-                  setShowModal(true)
-                }}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="Új sablon"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Új sablon</span>
-              </button>
-            )}
-          </div>
-
-          {/* Jobb oldal: TeamSelector */}
-          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-      {/* Filters */}
-      <div className="card">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Keresés sablonok között..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input-field w-full pl-10"
-              />
-            </div>
-          </div>
-
-          {/* Type Filter */}
-          <div className="flex gap-2 overflow-x-auto">
-            {templateTypes.map((type) => {
-              const Icon = type.icon
-              return (
-                <button
+            {/* Type Filter */}
+            <div className="flex flex-wrap gap-2">
+              {TEMPLATE_TYPES.map((type) => (
+                <Chip
                   key={type.value}
+                  icon={type.icon}
+                  selected={selectedType === type.value}
                   onClick={() => setSelectedType(type.value)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
-                    selectedType === type.value
-                      ? `${type.color} text-white`
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span>{type.label}</span>
-                </button>
+                  {type.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </Panel>
+
+        {/* Templates Grid */}
+        {loading ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-40" />
+            ))}
+          </div>
+        ) : filteredTemplates.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title="Nincs még sablon"
+            description="Hozz létre az első újrafelhasználható edzésprogramot!"
+            actionLabel={canEdit ? 'Első sablon létrehozása' : undefined}
+            onAction={canEdit ? openNewTemplate : undefined}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredTemplates.map((template) => {
+              const typeConfig = getTypeConfig(template.type)
+              const Icon = typeConfig.icon
+
+              return (
+                <Panel key={template.id} className="transition-all hover:border-accent">
+                  <div className="mb-4 flex items-start justify-between">
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${typeConfig.color}`}>
+                      <Icon className="h-6 w-6" aria-hidden="true" />
+                    </div>
+                    {canEdit && (
+                      <div className="flex items-center gap-1">
+                        <IconButton
+                          icon={Pencil}
+                          label="Szerkesztés"
+                          onClick={() => {
+                            setEditingTemplate(template)
+                            setShowModal(true)
+                          }}
+                        />
+                        <IconButton
+                          icon={Copy}
+                          label="Duplikálás"
+                          onClick={() => duplicateTemplate(template)}
+                        />
+                        <IconButton
+                          icon={Trash2}
+                          label="Törlés"
+                          onClick={() => deleteTemplate(template.id)}
+                          className="hover:!bg-bad-soft hover:!text-bad"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <h3 className="mb-2 text-lg font-semibold text-fg">
+                    {template.name}
+                  </h3>
+
+                  <div className="flex items-center gap-4 text-sm text-muted">
+                    {template.duration && (
+                      <span>{template.duration} perc</span>
+                    )}
+                    <span className="text-subtle">•</span>
+                    <span>{typeConfig.label}</span>
+                  </div>
+
+                  {template.category && (
+                    <div className="mt-3">
+                      <span className="inline-block rounded-full bg-surface-2 px-3 py-1 text-xs text-fg">
+                        {template.category}
+                      </span>
+                    </div>
+                  )}
+                </Panel>
               )
             })}
           </div>
-        </div>
-      </div>
-
-      {/* Templates Grid */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-        </div>
-      ) : filteredTemplates.length === 0 ? (
-        <div className="card text-center py-12">
-          <Trophy className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">
-            Nincs még sablon
-          </h3>
-          <p className="text-slate-400 mb-4">
-            Hozz létre az első újrafelhasználható edzésprogramot!
-          </p>
-          {canEdit && (
-            <button
-              onClick={() => {
-                setEditingTemplate(null)
-                setShowModal(true)
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Első sablon létrehozása</span>
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTemplates.map((template) => {
-            const typeConfig = getTypeConfig(template.type)
-            const Icon = typeConfig.icon
-
-            return (
-              <div
-                key={template.id}
-                className="card hover:border-primary-500 transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`w-12 h-12 ${typeConfig.color} rounded-lg flex items-center justify-center`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  {canEdit && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingTemplate(template)
-                          setShowModal(true)
-                        }}
-                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                        title="Szerkesztés"
-                      >
-                        <Edit className="w-4 h-4 text-slate-400" />
-                      </button>
-                      <button
-                        onClick={() => duplicateTemplate(template)}
-                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                        title="Duplikálás"
-                      >
-                        <Copy className="w-4 h-4 text-slate-400" />
-                      </button>
-                      <button
-                        onClick={() => deleteTemplate(template.id)}
-                        className="p-2 hover:bg-red-600 rounded-lg transition-colors"
-                        title="Törlés"
-                      >
-                        <Trash2 className="w-4 h-4 text-slate-400" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {template.name}
-                </h3>
-
-                <div className="flex items-center gap-4 text-sm text-slate-400">
-                  {template.duration && (
-                    <span>{template.duration} perc</span>
-                  )}
-                  <span className="text-slate-600">•</span>
-                  <span>{typeConfig.label}</span>
-                </div>
-
-                {template.category && (
-                  <div className="mt-3">
-                    <span className="inline-block px-3 py-1 bg-slate-700 text-slate-300 text-xs rounded-full">
-                      {template.category}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
+        )}
       </div>
 
       {/* Create/Edit Modal */}
@@ -410,138 +360,105 @@ function TemplateModal({ template, selectedTeam, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">
-            {template ? 'Sablon szerkesztése' : 'Új sablon létrehozása'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+    <Modal
+      open
+      onClose={onClose}
+      title={template ? 'Sablon szerkesztése' : 'Új sablon létrehozása'}
+      size="xl"
+      footer={
+        <>
+          <Button onClick={onClose}>Mégse</Button>
+          <Button type="submit" form="template-form" variant="primary" loading={loading}>
+            {loading ? 'Mentés...' : 'Mentés'}
+          </Button>
+        </>
+      }
+    >
+      <form id="template-form" onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Sablon neve *" htmlFor="template-name">
+          <Input
+            id="template-name"
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="pl. Erő 1. fázis"
+            required
+          />
+        </Field>
+
+        <Field label="Típus *" htmlFor="template-type">
+          <Select
+            id="template-type"
+            value={formData.type}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            required
           >
-            <X className="w-5 h-5 text-slate-400" />
-          </button>
+            <option value="gym">Konditerem</option>
+            <option value="ball">Labdás edzés</option>
+            <option value="tactic">Taktika & Technika</option>
+            <option value="other">Egyéb</option>
+          </Select>
+        </Field>
+
+        <Field label="Kategória" htmlFor="template-category">
+          <Input
+            id="template-category"
+            type="text"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            placeholder="pl. Felső test, Támadás, stb."
+          />
+        </Field>
+
+        <Field label="Időtartam (perc)" htmlFor="template-duration">
+          <Input
+            id="template-duration"
+            type="number"
+            value={formData.duration}
+            onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+            min="1"
+          />
+        </Field>
+
+        {/* Type-specific editors */}
+        <div className="border-t border-line pt-6">
+          {formData.type === 'gym' && (
+            <GymTemplateEditor
+              templateData={formData.template_data}
+              onChange={(data) => setFormData({ ...formData, template_data: data })}
+            />
+          )}
+
+          {formData.type === 'ball' && (
+            <BallTemplateEditor
+              templateData={formData.template_data}
+              onChange={(data) => setFormData({ ...formData, template_data: data })}
+            />
+          )}
+
+          {formData.type === 'tactic' && (
+            <TacticTemplateEditor
+              templateData={formData.template_data}
+              onChange={(data) => setFormData({ ...formData, template_data: data })}
+            />
+          )}
+
+          {formData.type === 'other' && (
+            <Field label="Részletek" htmlFor="template-notes">
+              <Textarea
+                id="template-notes"
+                value={formData.template_data.notes || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  template_data: { ...formData.template_data, notes: e.target.value }
+                })}
+                rows="5"
+                placeholder="Edzés részletei, feladatok, megjegyzések..."
+              />
+            </Field>
+          )}
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Sablon neve *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="input-field w-full"
-              placeholder="pl. Erő 1. fázis"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Típus *
-            </label>
-            <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="input-field w-full"
-              required
-            >
-              <option value="gym">Konditerem</option>
-              <option value="ball">Labdás edzés</option>
-              <option value="tactic">Taktika & Technika</option>
-              <option value="other">Egyéb</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Kategória
-            </label>
-            <input
-              type="text"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="input-field w-full"
-              placeholder="pl. Felső test, Támadás, stb."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Időtartam (perc)
-            </label>
-            <input
-              type="number"
-              value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-              className="input-field w-full"
-              min="1"
-            />
-          </div>
-
-          {/* Type-specific editors */}
-          <div className="border-t border-slate-600 pt-6">
-            {formData.type === 'gym' && (
-              <GymTemplateEditor
-                templateData={formData.template_data}
-                onChange={(data) => setFormData({ ...formData, template_data: data })}
-              />
-            )}
-
-            {formData.type === 'ball' && (
-              <BallTemplateEditor
-                templateData={formData.template_data}
-                onChange={(data) => setFormData({ ...formData, template_data: data })}
-              />
-            )}
-
-            {formData.type === 'tactic' && (
-              <TacticTemplateEditor
-                templateData={formData.template_data}
-                onChange={(data) => setFormData({ ...formData, template_data: data })}
-              />
-            )}
-
-            {formData.type === 'other' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Részletek
-                </label>
-                <textarea
-                  value={formData.template_data.notes || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    template_data: { ...formData.template_data, notes: e.target.value } 
-                  })}
-                  className="input-field w-full"
-                  rows="5"
-                  placeholder="Edzés részletei, feladatok, megjegyzések..."
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-3 pt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-            >
-              Mégse
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Mentés...' : 'Mentés'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }
