@@ -1,17 +1,33 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { usePlayers } from '../hooks/usePlayers'
-import { ChevronLeft, ChevronRight, Users, X, Save, Trash2, Calendar, CalendarDays, CalendarRange, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Users, Save, Trash2, Calendar, CalendarDays, CalendarRange, Plus, Clock, ClipboardList } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import Modal from './ui/Modal'
+import Panel from './ui/Panel'
+import SegmentedControl from './ui/SegmentedControl'
+import Spinner from './ui/Spinner'
+import { Field, Input, Select, Textarea } from './ui/Field'
 import {
   ATTENDANCE_STATUSES,
   TRAINING_TYPES,
   getStatusColor,
+  getStatusChipClass,
   getStatusLabel,
   saveAttendance,
   deleteAttendance,
 } from '../lib/attendance'
+
+const TEAM_ATTENDANCE_FORM_ID = 'team-attendance-form'
+
+const VIEW_ITEMS = [
+  { id: 'day', label: 'Nap', icon: Calendar },
+  { id: 'week', label: 'Hét', icon: CalendarDays },
+  { id: 'month', label: 'Hónap', icon: CalendarRange },
+]
 
 export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -253,252 +269,218 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
     }
   }
 
+  const formatTime = (time) => (time ? time.slice(0, 5) : '')
+
+  const attendanceTitle = (att) =>
+    `${att.players?.name || 'N/A'} - ${getStatusLabel(att.status)}${att.event_time ? ` (${formatTime(att.event_time)})` : ''}${att.notes ? `: ${att.notes}` : ''}`
+
+  // Egy játékos jelenléte a hónap/hét cellában (kattintásra szerkeszthető)
+  const renderAttendanceChip = (att, i) => (
+    <button
+      type="button"
+      key={i}
+      onClick={(e) => handleAttendanceClick(e, att)}
+      className={`${getStatusChipClass(att.status)} block w-full cursor-pointer truncate rounded px-1.5 py-0.5 text-left text-[10px] font-medium transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent`}
+      title={attendanceTitle(att)}
+    >
+      {att.players?.name || 'N/A'}
+      {att.event_time && ` ${formatTime(att.event_time)}`}
+    </button>
+  )
+
+  const renderAddButton = (onClick) =>
+    canEdit && (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex h-6 w-6 items-center justify-center rounded bg-accent text-accent-fg transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        title="Új jelenlét hozzáadása"
+        aria-label="Új jelenlét hozzáadása"
+      >
+        <Plus className="h-3 w-3" aria-hidden="true" />
+      </button>
+    )
+
   return (
     <div className="space-y-4">
-
       {/* Naptár */}
-      <div className="card">
+      <Panel>
         {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={handlePrevious}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5 text-white" />
-          </button>
-          
-          <div className="flex items-center gap-4">
-            <h3 className="text-xl font-bold text-white">
-              {getHeaderTitle()}
-            </h3>
-            
-            {/* View Mode Selector */}
-            <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('day')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'day' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-                title="Napi nézet"
-              >
-                <Calendar className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'week' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-                title="Heti nézet"
-              >
-                <CalendarDays className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('month')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'month' ? 'bg-primary-500 text-white' : 'text-slate-400 hover:text-white'
-                }`}
-                title="Havi nézet"
-              >
-                <CalendarRange className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1">
+            <IconButton icon={ChevronLeft} label="Előző" onClick={handlePrevious} />
+            <h3 className="min-w-0 px-1 text-lg font-bold text-fg sm:text-xl">{getHeaderTitle()}</h3>
+            <IconButton icon={ChevronRight} label="Következő" onClick={handleNext} />
           </div>
-          
-          <button
-            onClick={handleNext}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <ChevronRight className="w-5 h-5 text-white" />
-          </button>
+
+          {/* View Mode Selector */}
+          <SegmentedControl label="Nézet" items={VIEW_ITEMS} value={viewMode} onChange={setViewMode} />
         </div>
 
         {/* Calendar Grid - Havi nézet */}
         {viewMode === 'month' && (
-        <div className="grid grid-cols-7 gap-2">
-          {/* Day Headers */}
-          {dayNames.map((day, index) => (
-            <div key={index} className="text-center text-sm font-medium text-slate-400 py-2">
-              {day}
-            </div>
-          ))}
-          
-          {/* Days */}
-          {getDaysInMonth().map((day, idx) => {
-            const dayAttendance = day ? getAttendanceForDate(day) : []
-            const isToday = day === new Date().getDate() && 
-                           currentDate.getMonth() === new Date().getMonth() &&
-                           currentDate.getFullYear() === new Date().getFullYear()
-            
-            return (
-              <div
-                key={idx}
-                className={`
-                  min-h-[100px] rounded-lg p-2 transition-all relative
-                  ${!day ? 'invisible' : 'bg-slate-700'}
-                  ${isToday ? 'ring-2 ring-primary-500' : ''}
-                `}
-              >
-                {day && (
-                  <>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm font-bold text-white">{day}</div>
-                      {canEdit && (
-                        <button
-                          onClick={() => handleDayClick(day)}
-                          className="w-5 h-5 bg-primary-500 hover:bg-primary-600 rounded flex items-center justify-center text-white transition-colors"
-                          title="Új jelenlét hozzáadása"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                    {dayAttendance.length > 0 && (
-                      <div className="space-y-1">
-                        {dayAttendance.slice(0, 3).map((att, i) => (
-                          <div
-                            key={i}
-                            onClick={(e) => handleAttendanceClick(e, att)}
-                            className={`${getStatusColor(att.status)} rounded px-1.5 py-0.5 text-[10px] text-white font-medium truncate cursor-pointer hover:opacity-80 transition-opacity`}
-                            title={`${att.players?.name || 'N/A'} - ${getStatusLabel(att.status)}${att.event_time ? ` (${att.event_time.slice(0, 5)})` : ''}${att.notes ? `: ${att.notes}` : ''}`}
-                          >
-                            {att.players?.name || 'N/A'}
-                            {att.event_time && ` ${att.event_time.slice(0, 5)}`}
-                          </div>
-                        ))}
-                        {dayAttendance.length > 3 && (
-                          <div className="text-[10px] text-slate-400 font-medium">
-                            +{dayAttendance.length - 3} további
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[640px] grid-cols-7 gap-2">
+              {/* Day Headers */}
+              {dayNames.map((day, index) => (
+                <div key={index} className="py-2 text-center text-sm font-medium text-muted">
+                  {day}
+                </div>
+              ))}
+
+              {/* Days */}
+              {getDaysInMonth().map((day, idx) => {
+                const dayAttendance = day ? getAttendanceForDate(day) : []
+                const isToday =
+                  day === new Date().getDate() &&
+                  currentDate.getMonth() === new Date().getMonth() &&
+                  currentDate.getFullYear() === new Date().getFullYear()
+
+                return (
+                  <div
+                    key={idx}
+                    className={`relative min-h-[100px] rounded-[10px] p-2 transition-all ${
+                      !day ? 'invisible' : 'bg-surface-2'
+                    } ${isToday ? 'ring-2 ring-accent' : ''}`}
+                  >
+                    {day && (
+                      <>
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="text-sm font-bold text-fg">{day}</div>
+                          {renderAddButton(() => handleDayClick(day))}
+                        </div>
+                        {dayAttendance.length > 0 && (
+                          <div className="space-y-1">
+                            {dayAttendance.slice(0, 3).map(renderAttendanceChip)}
+                            {dayAttendance.length > 3 && (
+                              <div className="text-[10px] font-medium text-muted">
+                                +{dayAttendance.length - 3} további
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
+                      </>
                     )}
-                  </>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         )}
 
         {/* Heti nézet */}
         {viewMode === 'week' && (
-          <div className="grid grid-cols-7 gap-2">
-            {dayNames.map((day, index) => (
-              <div key={index} className="text-center text-sm font-medium text-slate-400 py-2">
-                {day}
-              </div>
-            ))}
-            
-            {getWeekDays().map((date, idx) => {
-              const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-              const dayAttendance = getAttendanceForDateStr(dateStr)
-              const isToday = date.toDateString() === new Date().toDateString()
-              
-              return (
-                <div
-                  key={idx}
-                  className={`
-                    min-h-[250px] rounded-lg p-2 transition-all relative
-                    bg-slate-700
-                    ${isToday ? 'ring-2 ring-primary-500' : ''}
-                  `}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-bold text-white">{date.getDate()}</div>
-                    {canEdit && (
-                      <button
-                        onClick={() => handleDayClick(date.getDate())}
-                        className="w-5 h-5 bg-primary-500 hover:bg-primary-600 rounded flex items-center justify-center text-white transition-colors"
-                        title="Új jelenlét hozzáadása"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[640px] grid-cols-7 gap-2">
+              {dayNames.map((day, index) => (
+                <div key={index} className="py-2 text-center text-sm font-medium text-muted">
+                  {day}
+                </div>
+              ))}
+
+              {getWeekDays().map((date, idx) => {
+                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+                const dayAttendance = getAttendanceForDateStr(dateStr)
+                const isToday = date.toDateString() === new Date().toDateString()
+
+                return (
+                  <div
+                    key={idx}
+                    className={`relative min-h-[250px] rounded-[10px] bg-surface-2 p-2 transition-all ${
+                      isToday ? 'ring-2 ring-accent' : ''
+                    }`}
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="text-sm font-bold text-fg">{date.getDate()}</div>
+                      {renderAddButton(() => handleDayClick(date.getDate()))}
+                    </div>
+                    {dayAttendance.length > 0 && (
+                      <div className="space-y-1">
+                        {dayAttendance.slice(0, 7).map(renderAttendanceChip)}
+                        {dayAttendance.length > 7 && (
+                          <div className="text-[10px] font-medium text-muted">
+                            +{dayAttendance.length - 7} további
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
-                  {dayAttendance.length > 0 && (
-                    <div className="space-y-1">
-                      {dayAttendance.slice(0, 7).map((att, i) => (
-                        <div
-                          key={i}
-                          onClick={(e) => handleAttendanceClick(e, att)}
-                          className={`${getStatusColor(att.status)} rounded px-1.5 py-0.5 text-[10px] text-white font-medium truncate cursor-pointer hover:opacity-80 transition-opacity`}
-                          title={`${att.players?.name || 'N/A'} - ${getStatusLabel(att.status)}${att.event_time ? ` (${att.event_time.slice(0, 5)})` : ''}${att.notes ? `: ${att.notes}` : ''}`}
-                        >
-                          {att.players?.name || 'N/A'}
-                          {att.event_time && ` ${att.event_time.slice(0, 5)}`}
-                        </div>
-                      ))}
-                      {dayAttendance.length > 7 && (
-                        <div className="text-[10px] text-slate-400 font-medium">
-                          +{dayAttendance.length - 7} további
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
 
         {/* Napi nézet */}
         {viewMode === 'day' && (
           <div className="space-y-4">
-            <div className="bg-slate-700 rounded-lg p-6">
-              <h4 className="text-lg font-bold text-white mb-4">
+            <div className="rounded-[10px] bg-surface-2 p-4 sm:p-6">
+              <h4 className="mb-4 text-lg font-bold text-fg">
                 {currentDate.getFullYear()}. {monthNames[currentDate.getMonth()]} {currentDate.getDate()}.
               </h4>
-              
+
               {(() => {
                 const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
                 const dayAttendance = getAttendanceForDateStr(dateStr)
-                
+
                 return dayAttendance.length > 0 ? (
                   <div className="space-y-3">
                     {dayAttendance.map((att, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-3 p-3 bg-slate-600 rounded-lg"
+                        className="flex items-center gap-3 rounded-[10px] bg-surface-3 p-3"
                       >
-                        <div className={`w-10 h-10 ${getStatusColor(att.status)} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+                        <div
+                          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${getStatusChipClass(att.status)}`}
+                        >
                           {att.players?.jersey_number || '?'}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h5 className="font-bold text-white text-sm truncate">{att.players?.name || 'N/A'}</h5>
-                          <div className="flex items-center gap-3 text-xs text-slate-300">
+                        <div className="min-w-0 flex-1">
+                          <h5 className="truncate text-sm font-bold text-fg">{att.players?.name || 'N/A'}</h5>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg">
                             <span className="flex items-center gap-1">
-                              <span className={`w-1.5 h-1.5 ${getStatusColor(att.status)} rounded-full`}></span>
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${getStatusColor(att.status)}`}
+                                aria-hidden="true"
+                              />
                               {getStatusLabel(att.status)}
                             </span>
                             {att.event_time && (
-                              <span>🕐 {att.event_time.slice(0, 5)}</span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-muted" aria-hidden="true" />
+                                {formatTime(att.event_time)}
+                              </span>
                             )}
                             {att.training_type && (
-                              <span>📋 {att.training_type}</span>
+                              <span className="flex items-center gap-1">
+                                <ClipboardList className="h-3 w-3 text-muted" aria-hidden="true" />
+                                {att.training_type}
+                              </span>
                             )}
                           </div>
                           {att.notes && (
-                            <p className="text-xs text-slate-400 mt-1 line-clamp-1">{att.notes}</p>
+                            <p className="mt-1 line-clamp-1 text-xs text-muted">{att.notes}</p>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-slate-400">
-                    <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <div className="py-8 text-center text-muted">
+                    <Users className="mx-auto mb-2 h-12 w-12 opacity-50" aria-hidden="true" />
                     <p>Nincs jelenlét ezen a napon</p>
                     {canEdit && (
-                      <button
+                      <Button
+                        variant="primary"
+                        className="mt-4"
                         onClick={() => {
                           const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
                           setSelectedDate(dateStr)
                           setShowModal(true)
                         }}
-                        className="mt-4 btn btn-primary"
                       >
                         Jelenlét felvitele
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )
@@ -506,133 +488,98 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
             </div>
           </div>
         )}
-      </div>
+      </Panel>
 
-      {/* Napi részletek - ha van kijelölt nap */}
       {loading && (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+        <div className="py-8 text-center">
+          <Spinner />
         </div>
       )}
 
       {/* Attendance Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <h3 className="text-xl font-bold text-white">
-                Jelenlét - {selectedDate}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={`Jelenlét - ${selectedDate}`}
+        size="sm"
+        footer={
+          canEdit && (
+            <>
+              {formData.id && (
+                <Button variant="danger" icon={Trash2} onClick={handleDelete}>
+                  Törlés
+                </Button>
+              )}
+              <Button type="submit" form={TEAM_ATTENDANCE_FORM_ID} variant="primary" icon={Save}>
+                {formData.id ? 'Frissítés' : 'Mentés'}
+              </Button>
+            </>
+          )
+        }
+      >
+        <form id={TEAM_ATTENDANCE_FORM_ID} onSubmit={handleSave} className="space-y-4">
+          <Field label="Játékos *" htmlFor="team-att-player">
+            <Select
+              id="team-att-player"
+              value={formData.player_id}
+              onChange={(e) => setFormData({ ...formData, player_id: e.target.value })}
+              required
+            >
+              <option value="">Válassz játékost...</option>
+              {players.map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name} {player.jersey_number ? `(#${player.jersey_number})` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Játékos *
-                </label>
-                <select
-                  value={formData.player_id}
-                  onChange={(e) => setFormData({...formData, player_id: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  required
-                >
-                  <option value="">Válassz játékost...</option>
-                  {players.map(player => (
-                    <option key={player.id} value={player.id}>
-                      {player.name} {player.jersey_number ? `(#${player.jersey_number})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <Field label="Státusz *" htmlFor="team-att-status">
+            <Select
+              id="team-att-status"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              required
+            >
+              {ATTENDANCE_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </Select>
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Státusz *
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  required
-                >
-                  {ATTENDANCE_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
+          <Field label="Edzés jellege" htmlFor="team-att-type">
+            <Select
+              id="team-att-type"
+              value={formData.training_type}
+              onChange={(e) => setFormData({ ...formData, training_type: e.target.value })}
+            >
+              {TRAINING_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </Select>
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Edzés jellege
-                </label>
-                <select
-                  value={formData.training_type}
-                  onChange={(e) => setFormData({...formData, training_type: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                >
-                  {TRAINING_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
+          <Field label="Időpont" htmlFor="team-att-time">
+            <Input
+              id="team-att-time"
+              type="time"
+              value={formData.event_time}
+              onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+              placeholder="pl. 14:30"
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Időpont
-                </label>
-                <input
-                  type="time"
-                  value={formData.event_time}
-                  onChange={(e) => setFormData({...formData, event_time: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  placeholder="pl. 14:30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Megjegyzés
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  rows="3"
-                  placeholder="Opcionális megjegyzés..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                {formData.id && canEdit && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Törlés
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    type="submit"
-                    className="flex-1 btn btn-primary flex items-center justify-center gap-2"
-                  >
-                    <Save className="w-5 h-5" />
-                    {formData.id ? 'Frissítés' : 'Mentés'}
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <Field label="Megjegyzés" htmlFor="team-att-notes">
+            <Textarea
+              id="team-att-notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows="3"
+              placeholder="Opcionális megjegyzés..."
+            />
+          </Field>
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={!!confirmState}

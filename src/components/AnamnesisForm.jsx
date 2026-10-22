@@ -1,8 +1,45 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { X, Save, AlertCircle } from 'lucide-react'
+import { Save, AlertCircle, MapPin, User, Clock, ClipboardList, Stethoscope } from 'lucide-react'
 import BodyDiagram from './BodyDiagram'
+import Button from './ui/Button'
+import Modal from './ui/Modal'
+import Tabs from './ui/Tabs'
+import { Field, Input, Select, Textarea } from './ui/Field'
 import toast from 'react-hot-toast'
+
+const SECTION_HEADING = 'border-b border-line pb-1.5 text-base font-semibold text-fg'
+
+// Modul szinten definiálva, hogy gépelés közben ne mount-olódjon újra (fókuszvesztés).
+function FormField({ as: Control = Input, label, name, children, ...props }) {
+  const id = `anamnesis-${name}`
+  return (
+    <Field label={label} htmlFor={id}>
+      <Control id={id} name={name} {...props}>
+        {children}
+      </Control>
+    </Field>
+  )
+}
+
+function CheckboxField({ label, name, checked, onChange }) {
+  const id = `anamnesis-${name}`
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="checkbox"
+        id={id}
+        name={name}
+        checked={checked}
+        onChange={onChange}
+        className="h-4 w-4 rounded accent-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      />
+      <label htmlFor={id} className="text-sm text-fg">
+        {label}
+      </label>
+    </div>
+  )
+}
 
 export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClose, onSaved, embedded = false, canEdit = true }) {
   const [loading, setLoading] = useState(false)
@@ -57,11 +94,11 @@ export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClo
   })
 
   const steps = [
-    { id: 0, name: 'Fájdalom lokalizáció', icon: '📍' },
-    { id: 1, name: 'Alapadatok', icon: '👤' },
-    { id: 2, name: '24 órás lefolyás', icon: '🕐' },
-    { id: 3, name: 'Kórtörténet', icon: '📋' },
-    { id: 4, name: 'Speciális kérdések', icon: '⚕️' },
+    { id: 0, name: 'Fájdalom lokalizáció', shortName: 'Lokalizáció', icon: MapPin },
+    { id: 1, name: 'Alapadatok', shortName: 'Alapadatok', icon: User },
+    { id: 2, name: '24 órás lefolyás', shortName: '24 óra', icon: Clock },
+    { id: 3, name: 'Kórtörténet', shortName: 'Kórtörténet', icon: ClipboardList },
+    { id: 4, name: 'Speciális kérdések', shortName: 'Speciális', icon: Stethoscope },
   ]
 
   const handleKeyDown = (e) => {
@@ -168,519 +205,283 @@ export default function AnamnesisForm({ player, teamId, existingAnamnesis, onClo
     }
   }
 
-  // Wrapper JSX választó
-  const wrapperContent = (content) => {
-    if (embedded) {
-      return (
-        <div className="bg-slate-800 rounded-xl w-full h-full flex flex-col shadow-lg">
-          {content}
+  const stepTabs = steps.map(({ id, name, shortName, icon }) => ({
+    id,
+    icon,
+    label: (
+      <>
+        <span className="lg:hidden">{shortName}</span>
+        <span className="hidden lg:inline">{name}</span>
+      </>
+    ),
+  }))
+
+  const title = existingAnamnesis ? 'Anamnézis szerkesztése' : 'Új anamnézis'
+
+  const stepNavigation = (
+    <Tabs items={stepTabs} value={currentStep} onChange={setCurrentStep} />
+  )
+
+  const formBody = (
+    <div onKeyDown={handleKeyDown} className="space-y-3">
+      {/* Step 0: Fájdalom lokalizáció */}
+      {currentStep === 0 && (
+        <div className="space-y-2">
+          <BodyDiagram
+            painPoints={formData.pain_locations}
+            onPainPointsChange={handlePainLocationsChange}
+          />
         </div>
-      )
-    }
+      )}
+
+      {/* Step 1: Alapadatok */}
+      {currentStep === 1 && (
+        <div className="space-y-3">
+          <h3 className={SECTION_HEADING}>Alapadatok</h3>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField label="Név" name="name" value={formData.name} onChange={handleInputChange} required />
+            <FormField label="Születési dátum" name="birth_date" type="date" value={formData.birth_date} onChange={handleInputChange} />
+            <FormField label="Felvétel dátuma" name="admission_date" type="date" value={formData.admission_date} onChange={handleInputChange} />
+            <FormField label="Telefon" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} />
+            <FormField label="Foglalkozás" name="occupation" value={formData.occupation} onChange={handleInputChange} />
+            <FormField label="Hobbi/Sport" name="hobby_sport" value={formData.hobby_sport} onChange={handleInputChange} />
+          </div>
+
+          <FormField
+            as={Textarea}
+            label="Probléma leírása"
+            name="problem_description"
+            value={formData.problem_description}
+            onChange={handleInputChange}
+            rows="2"
+          />
+        </div>
+      )}
+
+      {/* Step 2: 24 órás lefolyás */}
+      {currentStep === 2 && (
+        <div className="space-y-3">
+          <h3 className={SECTION_HEADING}>24 órás lefolyás</h3>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <CheckboxField label="Alvászavar" name="sleep_disorder" checked={formData.sleep_disorder} onChange={handleInputChange} />
+
+            <FormField as={Select} label="Alvási pozíció" name="sleep_position" value={formData.sleep_position} onChange={handleInputChange}>
+              <option value="has">Has</option>
+              <option value="hát">Hát</option>
+              <option value="oldalt BJ">Oldalt BJ</option>
+            </FormField>
+
+            <CheckboxField label="Ébredés fájdalom" name="wake_pain" checked={formData.wake_pain} onChange={handleInputChange} />
+            <CheckboxField label="Felkelés fájdalom" name="get_up_pain" checked={formData.get_up_pain} onChange={handleInputChange} />
+
+            <FormField as={Select} label="Napközben fájdalom" name="daytime_pain" value={formData.daytime_pain} onChange={handleInputChange}>
+              <option value="fokozódik">Fokozódik</option>
+              <option value="csökken">Csökken</option>
+            </FormField>
+
+            <FormField as={Select} label="Este fájdalom" name="evening_pain" value={formData.evening_pain} onChange={handleInputChange}>
+              <option value="fokozódik">Fokozódik</option>
+              <option value="csökken">Csökken</option>
+            </FormField>
+          </div>
+
+          <FormField
+            as={Textarea}
+            label="Kialakítja / fokozza"
+            name="aggravating_factors"
+            value={formData.aggravating_factors}
+            onChange={handleInputChange}
+            rows="2"
+            placeholder="Mi fokozza a fájdalmat?"
+          />
+
+          <FormField
+            as={Textarea}
+            label="Elmúlásztja / enyhíti"
+            name="relieving_factors"
+            value={formData.relieving_factors}
+            onChange={handleInputChange}
+            rows="2"
+            placeholder="Mi enyhíti a fájdalmat?"
+          />
+        </div>
+      )}
+
+      {/* Step 3: Kórtörténet */}
+      {currentStep === 3 && (
+        <div className="space-y-3">
+          <h3 className={SECTION_HEADING}>Previous Hx</h3>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField as={Select} label="Ezt megelőző epizódok" name="previous_episodes" value={formData.previous_episodes} onChange={handleInputChange}>
+              <option value="0">0</option>
+              <option value="1-5">1-5</option>
+              <option value="6-10">6-10</option>
+              <option value="11+">11+</option>
+            </FormField>
+
+            <FormField
+              label="Első epizód éve"
+              name="first_episode_year"
+              type="number"
+              value={formData.first_episode_year || ''}
+              onChange={handleNumberChange}
+              placeholder="pl. 2020"
+            />
+          </div>
+
+          <FormField
+            as={Textarea}
+            label="Első epizód oka"
+            name="first_episode_cause"
+            value={formData.first_episode_cause}
+            onChange={handleInputChange}
+            rows="2"
+            placeholder="Mi okozta az első epizódot?"
+          />
+
+          <FormField
+            label="Gyakorisága"
+            name="episode_frequency"
+            value={formData.episode_frequency}
+            onChange={handleInputChange}
+            placeholder="pl. havonta egyszer, évente 2-3 alkalommal"
+          />
+
+          <FormField
+            label="Egyes epizódok tartama"
+            name="episode_duration"
+            value={formData.episode_duration}
+            onChange={handleInputChange}
+            placeholder="pl. 2-3 nap, 1-2 hét"
+          />
+
+          <FormField
+            as={Textarea}
+            label="Eddigi kezelések és hatása"
+            name="previous_treatments"
+            value={formData.previous_treatments}
+            onChange={handleInputChange}
+            rows="3"
+            placeholder="Milyen kezeléseket kapott, milyen hatással?"
+          />
+
+          {/* Present Hx */}
+          <h4 className="mt-3 border-b border-line pb-1 text-sm font-semibold text-fg">
+            Present Hx
+          </h4>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField as={Select} label="Kezdete" name="current_status" value={formData.current_status} onChange={handleInputChange}>
+              <option value="javul">Javul</option>
+              <option value="változatlan">Változatlan</option>
+              <option value="romlik">Romlik</option>
+            </FormField>
+
+            <FormField as={Select} label="Felismerhető-e valamilyen minta" name="pain_pattern" value={formData.pain_pattern} onChange={handleInputChange}>
+              <option value="discus">Discus</option>
+              <option value="arthrosis">Arthrosis</option>
+              <option value="gyulladás">Gyulladás</option>
+            </FormField>
+          </div>
+
+          <FormField
+            as={Textarea}
+            label="Oka"
+            name="current_cause"
+            value={formData.current_cause}
+            onChange={handleInputChange}
+            rows="2"
+            placeholder="Mi okozta a jelenlegi problémát?"
+          />
+
+          <FormField
+            as={Textarea}
+            label="Eddigi kezelések / hatása"
+            name="current_treatments"
+            value={formData.current_treatments}
+            onChange={handleInputChange}
+            rows="3"
+            placeholder="Milyen kezeléseket kapott eddig, milyen hatással?"
+          />
+        </div>
+      )}
+
+      {/* Step 4: Speciális kérdések */}
+      {currentStep === 4 && (
+        <div className="space-y-3">
+          <h3 className={SECTION_HEADING}>Speciális kérdések</h3>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <FormField as={Select} label="Gyógyszer" name="medication" value={formData.medication} onChange={handleInputChange}>
+              <option value="nincs">Nincs</option>
+              <option value="NSAID">NSAID</option>
+              <option value="fájdalomcsillapító">Fájdalomcsillapító</option>
+              <option value="steroid">Steroid</option>
+              <option value="anticoagulans">Anticoagulans</option>
+              <option value="más">Más</option>
+            </FormField>
+
+            <FormField as={Select} label="Képalkotó" name="imaging" value={formData.imaging} onChange={handleInputChange}>
+              <option value="nincs">Nincs</option>
+              <option value="RTG">RTG</option>
+              <option value="MR">MR</option>
+              <option value="CT">CT</option>
+            </FormField>
+
+            <CheckboxField label="Műtét volt" name="surgery" checked={formData.surgery} onChange={handleInputChange} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const footerActions = (
+    <>
+      {!canEdit && (
+        <span className="mr-2 flex items-center gap-2 text-sm text-muted">
+          <AlertCircle className="h-4 w-4" aria-hidden="true" />
+          Csak megtekintési jogosultság
+        </span>
+      )}
+      {canEdit && (
+        <Button
+          variant="primary"
+          icon={Save}
+          loading={loading}
+          onClick={handleSaveAnamnesis}
+        >
+          {loading ? 'Mentés...' : 'Mentés'}
+        </Button>
+      )}
+      {!embedded && <Button onClick={onClose}>Mégse</Button>}
+    </>
+  )
+
+  // Beágyazott módban (játékos profil fül) Panel-szerű kártya, egyébként Modal.
+  if (embedded) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-slate-800 rounded-xl max-w-5xl w-full max-h-[95vh] flex flex-col">
-          {content}
+      <section className="min-w-0 rounded-[14px] border border-line bg-surface">
+        <div className="px-4 pt-3">
+          <h2 className="mb-2 text-lg font-bold text-fg">{title}</h2>
+          {stepNavigation}
         </div>
-      </div>
+        <div className="p-4">{formBody}</div>
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-4 py-3">
+          {footerActions}
+        </div>
+      </section>
     )
   }
 
-  return wrapperContent(
-    <>
-        {/* Kompakt Header + Tab Navigation */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700">
-          {/* Bal: Cím */}
-          <h2 className="text-lg font-bold text-white">
-            {existingAnamnesis ? 'Anamnézis szerkesztése' : 'Új anamnézis'}
-          </h2>
-          
-          {/* Közép: Tab Navigation */}
-          <div className="flex items-center gap-1">
-            {steps.map((step, index) => (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => setCurrentStep(index)}
-                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
-                  currentStep === index
-                    ? 'bg-primary-600 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                }`}
-              >
-                <span className="text-base">{step.icon}</span>
-                <span className="hidden lg:inline">{step.name}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Jobb: Bezár gomb */}
-          {!embedded && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-slate-400" />
-            </button>
-          )}
-        </div>
-
-        {/* Form */}
-        <div onKeyDown={handleKeyDown} className="p-4 space-y-3 overflow-y-auto flex-1">
-          
-          {/* Step 0: Fájdalom lokalizáció */}
-          {currentStep === 0 && (
-            <div className="space-y-2">
-              <BodyDiagram
-                painPoints={formData.pain_locations}
-                onPainPointsChange={handlePainLocationsChange}
-              />
-            </div>
-          )}
-
-          {/* Step 1: Alapadatok */}
-          {currentStep === 1 && (
-            <div className="space-y-3">
-              <h3 className="text-base font-semibold text-white border-b border-slate-700 pb-1.5">
-                Alapadatok
-              </h3>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Név</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Születési dátum</label>
-                <input
-                  type="date"
-                  name="birth_date"
-                  value={formData.birth_date}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Felvétel dátuma</label>
-                <input
-                  type="date"
-                  name="admission_date"
-                  value={formData.admission_date}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Telefon</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Foglalkozás</label>
-                <input
-                  type="text"
-                  name="occupation"
-                  value={formData.occupation}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Hobbi/Sport</label>
-                <input
-                  type="text"
-                  name="hobby_sport"
-                  value={formData.hobby_sport}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Probléma leírása</label>
-              <textarea
-                name="problem_description"
-                value={formData.problem_description}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                rows="2"
-              />
-            </div>
-          </div>
-          )}
-
-          {/* Step 2: 24 órás lefolyás */}
-          {currentStep === 2 && (
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-white border-b border-slate-700 pb-1.5">
-              24 órás lefolyás
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="sleep_disorder"
-                  name="sleep_disorder"
-                  checked={formData.sleep_disorder}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 text-primary-600 rounded"
-                />
-                <label htmlFor="sleep_disorder" className="text-xs text-white">Alvászavar</label>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Alvási pozíció</label>
-                <select
-                  name="sleep_position"
-                  value={formData.sleep_position}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="has">Has</option>
-                  <option value="hát">Hát</option>
-                  <option value="oldalt BJ">Oldalt BJ</option>
-                </select>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="wake_pain"
-                  name="wake_pain"
-                  checked={formData.wake_pain}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 text-primary-600 rounded"
-                />
-                <label htmlFor="wake_pain" className="text-xs text-white">Ébredés fájdalom</label>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="get_up_pain"
-                  name="get_up_pain"
-                  checked={formData.get_up_pain}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 text-primary-600 rounded"
-                />
-                <label htmlFor="get_up_pain" className="text-xs text-white">Felkelés fájdalom</label>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Napközben fájdalom</label>
-                <select
-                  name="daytime_pain"
-                  value={formData.daytime_pain}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="fokozódik">Fokozódik</option>
-                  <option value="csökken">Csökken</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Este fájdalom</label>
-                <select
-                  name="evening_pain"
-                  value={formData.evening_pain}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="fokozódik">Fokozódik</option>
-                  <option value="csökken">Csökken</option>
-                </select>
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Kialakítja / fokozza</label>
-              <textarea
-                name="aggravating_factors"
-                value={formData.aggravating_factors}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                rows="2"
-                placeholder="Mi fokozza a fájdalmat?"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Elmúlásztja / enyhíti</label>
-              <textarea
-                name="relieving_factors"
-                value={formData.relieving_factors}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                rows="2"
-                placeholder="Mi enyhíti a fájdalmat?"
-              />
-            </div>
-          </div>
-          )}
-
-          {/* Step 3: Kórtörténet */}
-          {currentStep === 3 && (
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-white border-b border-slate-700 pb-1.5">
-              Previous Hx
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Ezt megelőző epizódok</label>
-                <select
-                  name="previous_episodes"
-                  value={formData.previous_episodes}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="0">0</option>
-                  <option value="1-5">1-5</option>
-                  <option value="6-10">6-10</option>
-                  <option value="11+">11+</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Első epizód éve</label>
-                <input
-                  type="number"
-                  name="first_episode_year"
-                  value={formData.first_episode_year || ''}
-                  onChange={handleNumberChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                  placeholder="pl. 2020"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Első epizód oka</label>
-              <textarea
-                name="first_episode_cause"
-                value={formData.first_episode_cause}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                rows="2"
-                placeholder="Mi okozta az első epizódot?"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Gyakorisága</label>
-              <input
-                type="text"
-                name="episode_frequency"
-                value={formData.episode_frequency}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                placeholder="pl. havonta egyszer, évente 2-3 alkalommal"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Egyes epizódok tartama</label>
-              <input
-                type="text"
-                name="episode_duration"
-                value={formData.episode_duration}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                placeholder="pl. 2-3 nap, 1-2 hét"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Eddigi kezelések és hatása</label>
-              <textarea
-                name="previous_treatments"
-                value={formData.previous_treatments}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                rows="3"
-                placeholder="Milyen kezeléseket kapott, milyen hatással?"
-              />
-            </div>
-
-            {/* Present Hx */}
-            <h4 className="text-sm font-semibold text-white border-b border-slate-700 pb-1 mt-3">
-              Present Hx
-            </h4>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Kezdete</label>
-                <select
-                  name="current_status"
-                  value={formData.current_status}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="javul">Javul</option>
-                  <option value="változatlan">Változatlan</option>
-                  <option value="romlik">Romlik</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Felismerhető-e valamilyen minta</label>
-                <select
-                  name="pain_pattern"
-                  value={formData.pain_pattern}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="discus">Discus</option>
-                  <option value="arthrosis">Arthrosis</option>
-                  <option value="gyulladás">Gyulladás</option>
-                </select>
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Oka</label>
-              <textarea
-                name="current_cause"
-                value={formData.current_cause}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                rows="2"
-                placeholder="Mi okozta a jelenlegi problémát?"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-xs font-medium text-white mb-1">Eddigi kezelések / hatása</label>
-              <textarea
-                name="current_treatments"
-                value={formData.current_treatments}
-                onChange={handleInputChange}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                rows="3"
-                placeholder="Milyen kezeléseket kapott eddig, milyen hatással?"
-              />
-            </div>
-          </div>
-          )}
-
-          {/* Step 4: Speciális kérdések */}
-          {currentStep === 4 && (
-          <div className="space-y-3">
-            <h3 className="text-base font-semibold text-white border-b border-slate-700 pb-1.5">
-              Speciális kérdések
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Gyógyszer</label>
-                <select
-                  name="medication"
-                  value={formData.medication}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="nincs">Nincs</option>
-                  <option value="NSAID">NSAID</option>
-                  <option value="fájdalomcsillapító">Fájdalomcsillapító</option>
-                  <option value="steroid">Steroid</option>
-                  <option value="anticoagulans">Anticoagulans</option>
-                  <option value="más">Más</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs font-medium text-white mb-1">Képalkotó</label>
-                <select
-                  name="imaging"
-                  value={formData.imaging}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-                >
-                  <option value="nincs">Nincs</option>
-                  <option value="RTG">RTG</option>
-                  <option value="MR">MR</option>
-                  <option value="CT">CT</option>
-                </select>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="surgery"
-                  name="surgery"
-                  checked={formData.surgery}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 text-primary-600 rounded"
-                />
-                <label htmlFor="surgery" className="text-sm text-white">Műtét volt</label>
-              </div>
-            </div>
-          </div>
-          )}
-
-          {/* Footer */}
-          <div className="flex items-center justify-end px-6 py-3 border-t border-slate-700 bg-slate-800">
-            <div className="flex gap-3">
-              {!canEdit && (
-                <span className="text-sm text-slate-400 flex items-center gap-2 mr-2">
-                  <AlertCircle className="w-4 h-4" />
-                  Csak megtekintési jogosultság
-                </span>
-              )}
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={handleSaveAnamnesis}
-                  disabled={loading}
-                  className="px-6 py-2 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Mentés...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Mentés
-                    </>
-                  )}
-                </button>
-              )}
-
-              {!embedded && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Mégse
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-    </>
+  return (
+    <Modal open onClose={onClose} title={title} size="xl" footer={footerActions}>
+      <div className="space-y-4">
+        {stepNavigation}
+        {formBody}
+      </div>
+    </Modal>
   )
 }

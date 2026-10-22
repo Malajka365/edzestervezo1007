@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getStatusColor, getStatusLabel, ATTENDANCE_STATUSES } from './attendance'
+import { getStatusColor, getStatusChipClass, getStatusLabel, ATTENDANCE_STATUSES } from './attendance'
 
 // Note: saveAttendance/deleteAttendance are intentionally NOT tested here —
 // they call supabase directly and are out of scope for pure-logic unit tests.
@@ -17,36 +17,57 @@ describe('ATTENDANCE_STATUSES', () => {
 })
 
 describe('getStatusColor', () => {
-  it('returns bg-green-500 for "jelen"', () => {
-    expect(getStatusColor('jelen')).toBe('bg-green-500')
+  it('returns bg-ok for "jelen"', () => {
+    expect(getStatusColor('jelen')).toBe('bg-ok')
   })
 
-  it('returns bg-red-500 for "hiányzik"', () => {
-    expect(getStatusColor('hiányzik')).toBe('bg-red-500')
+  it('returns bg-bad for "hiányzik"', () => {
+    expect(getStatusColor('hiányzik')).toBe('bg-bad')
   })
 
-  it('returns bg-yellow-500 for "beteg"', () => {
-    expect(getStatusColor('beteg')).toBe('bg-yellow-500')
+  it('returns bg-warn for "beteg"', () => {
+    expect(getStatusColor('beteg')).toBe('bg-warn')
   })
 
-  it('returns bg-orange-500 for "sérült"', () => {
-    expect(getStatusColor('sérült')).toBe('bg-orange-500')
+  it('returns bg-accent for "sérült"', () => {
+    expect(getStatusColor('sérült')).toBe('bg-accent')
   })
 
-  it('returns bg-gray-500 for "egyéb"', () => {
-    expect(getStatusColor('egyéb')).toBe('bg-gray-500')
+  it('returns bg-muted for "egyéb"', () => {
+    expect(getStatusColor('egyéb')).toBe('bg-muted')
   })
 
-  it('falls back to bg-slate-600 for an unknown status', () => {
-    expect(getStatusColor('nonexistent-status')).toBe('bg-slate-600')
+  it('falls back to bg-surface-3 for an unknown status', () => {
+    expect(getStatusColor('nonexistent-status')).toBe('bg-surface-3')
   })
 
-  it('falls back to bg-slate-600 for undefined', () => {
-    expect(getStatusColor(undefined)).toBe('bg-slate-600')
+  it('falls back to bg-surface-3 for undefined', () => {
+    expect(getStatusColor(undefined)).toBe('bg-surface-3')
   })
 
-  it('falls back to bg-slate-600 for an empty string', () => {
-    expect(getStatusColor('')).toBe('bg-slate-600')
+  it('falls back to bg-surface-3 for an empty string', () => {
+    expect(getStatusColor('')).toBe('bg-surface-3')
+  })
+})
+
+describe('getStatusChipClass', () => {
+  it('pairs a status background with a readable text colour', () => {
+    expect(getStatusChipClass('jelen')).toBe('bg-ok text-on-status')
+    expect(getStatusChipClass('hiányzik')).toBe('bg-bad text-on-status')
+    expect(getStatusChipClass('beteg')).toBe('bg-warn text-on-status')
+    expect(getStatusChipClass('sérült')).toBe('bg-accent text-accent-fg')
+    expect(getStatusChipClass('egyéb')).toBe('bg-muted text-bg')
+  })
+
+  it('falls back to a neutral chip for an unknown status', () => {
+    expect(getStatusChipClass('nonexistent-status')).toBe('bg-surface-3 text-fg')
+    expect(getStatusChipClass(undefined)).toBe('bg-surface-3 text-fg')
+  })
+
+  it('uses the same background as getStatusColor for every status', () => {
+    for (const { value } of ATTENDANCE_STATUSES) {
+      expect(getStatusChipClass(value).startsWith(getStatusColor(value))).toBe(true)
+    }
   })
 })
 

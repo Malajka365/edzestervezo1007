@@ -60,17 +60,17 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
   return (
     <div className="space-y-3">
       {/* Main Layout: Body diagrams on left, controls on right */}
-      <div className={`flex gap-4 ${readOnly ? 'justify-center' : ''}`}>
+      <div className={`flex flex-col gap-4 lg:flex-row ${readOnly ? 'justify-center' : ''}`}>
         {/* Body Diagrams */}
         <div className={`flex gap-2 ${readOnly ? 'w-full max-w-4xl' : 'flex-1'}`}>
           {/* Front View */}
           <div className="flex gap-1 items-center flex-1">
             <div className="w-8 flex items-center justify-center">
-              <h4 className="text-sm font-medium text-white -rotate-90 whitespace-nowrap">Elölnézet</h4>
+              <h4 className="text-sm font-medium text-fg -rotate-90 whitespace-nowrap">Elölnézet</h4>
             </div>
             <div className="relative flex-1">
               <div
-                className="relative bg-slate-700/30 rounded-lg p-3 cursor-crosshair"
+                className="relative bg-surface-2/30 rounded-lg p-3 cursor-crosshair"
                 onClick={(e) => handleClick(e, 'front')}
                 style={{ 
                   backgroundImage: `url(${bodyDiagram})`,
@@ -87,13 +87,15 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
                 {frontViewPoints.map((point) => (
                   <div
                     key={point.id}
-                    className={`absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border-2 border-white shadow-lg transition-all flex items-center justify-center font-bold text-white text-xs ${
+                    className={`absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border-2 shadow-lg transition-all flex items-center justify-center font-bold text-xs ${
                       readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-110'
                     }`}
                     style={{ 
                       left: `${point.x}%`, 
                       top: `${point.y}%`,
-                      backgroundColor: point.color || '#ef4444'
+                      backgroundColor: point.color || '#ef4444',
+                      borderColor: '#fff',
+                      color: '#fff',
                     }}
                     onClick={(e) => {
                       if (!readOnly) {
@@ -118,11 +120,11 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
           {/* Back View */}
           <div className="flex gap-1 items-center flex-1">
             <div className="w-8 flex items-center justify-center">
-              <h4 className="text-sm font-medium text-white -rotate-90 whitespace-nowrap">Hátulnézet</h4>
+              <h4 className="text-sm font-medium text-fg -rotate-90 whitespace-nowrap">Hátulnézet</h4>
             </div>
             <div className="relative flex-1">
               <div
-                className="relative bg-slate-700/30 rounded-lg p-3 cursor-crosshair"
+                className="relative bg-surface-2/30 rounded-lg p-3 cursor-crosshair"
                 onClick={(e) => handleClick(e, 'back')}
                 style={{ 
                   backgroundImage: `url(${bodyDiagram})`,
@@ -139,13 +141,15 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
                 {backViewPoints.map((point) => (
                   <div
                     key={point.id}
-                    className={`absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border-2 border-white shadow-lg transition-all flex items-center justify-center font-bold text-white text-xs ${
+                    className={`absolute w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border-2 shadow-lg transition-all flex items-center justify-center font-bold text-xs ${
                       readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-110'
                     }`}
                     style={{ 
                       left: `${point.x}%`, 
                       top: `${point.y}%`,
-                      backgroundColor: point.color || '#ef4444'
+                      backgroundColor: point.color || '#ef4444',
+                      borderColor: '#fff',
+                      color: '#fff',
                     }}
                     onClick={(e) => {
                       if (!readOnly) {
@@ -170,10 +174,10 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
 
         {/* Controls - Right Side - csak edit módban */}
         {!readOnly && (
-        <div className="w-64 space-y-4">
+        <div className="w-full space-y-4 lg:w-64">
           {/* Színválasztó */}
-          <div className="bg-slate-700/30 rounded-lg p-3">
-            <label className="block text-xs font-medium text-white mb-2">Jelölő szín</label>
+          <div className="bg-surface-2/30 rounded-lg p-3">
+            <label className="block text-xs font-medium text-fg mb-2">Jelölő szín</label>
             <div className="flex flex-wrap gap-2">
               {colors.map((color) => (
                 <button
@@ -181,18 +185,20 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
                   type="button"
                   onClick={() => setSelectedColor(color.value)}
                   className={`w-8 h-8 rounded-full border-2 transition-all ${
-                    selectedColor === color.value ? 'border-white scale-110' : 'border-slate-600'
+                    selectedColor === color.value ? 'border-fg scale-110' : 'border-line'
                   }`}
                   style={{ backgroundColor: color.value }}
                   title={color.name}
+                  aria-label={color.name}
+                  aria-pressed={selectedColor === color.value}
                 />
               ))}
             </div>
           </div>
 
           {/* Címke típus választó */}
-          <div className="bg-slate-700/30 rounded-lg p-3">
-            <label className="block text-xs font-medium text-white mb-2">Címke típus</label>
+          <div className="bg-surface-2/30 rounded-lg p-3">
+            <label className="block text-xs font-medium text-fg mb-2">Címke típus</label>
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -202,8 +208,8 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
                 }}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   labelType === 'number'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                    ? 'bg-accent text-accent-fg'
+                    : 'bg-surface-3 text-fg hover:bg-line'
                 }`}
               >
                 Szám (1,2,3...)
@@ -216,8 +222,8 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
                 }}
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   labelType === 'letter'
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                    ? 'bg-accent text-accent-fg'
+                    : 'bg-surface-3 text-fg hover:bg-line'
                 }`}
               >
                 Betű (A,B,C...)
@@ -226,14 +232,15 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
           </div>
 
           {/* Aktuális címke */}
-          <div className="bg-slate-700/30 rounded-lg p-3">
-            <label className="block text-xs font-medium text-white mb-2">Következő címke</label>
+          <div className="bg-surface-2/30 rounded-lg p-3">
+            <label className="block text-xs font-medium text-fg mb-2">Következő címke</label>
             <input
               type="text"
               value={selectedLabel}
               onChange={(e) => setSelectedLabel(e.target.value.toUpperCase())}
-              className="w-full px-3 py-2 bg-slate-600 text-white rounded-lg text-center text-2xl font-bold"
+              className="w-full rounded-[9px] border border-line-strong bg-surface-3 px-3 py-2 text-center text-2xl font-bold text-fg focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent"
               maxLength={3}
+              aria-label="Következő címke"
             />
           </div>
         </div>
@@ -242,14 +249,14 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
 
       {!readOnly && (
         <>
-          <p className="text-center text-xs text-slate-400">
+          <p className="text-center text-xs text-muted">
             Kattints a testre a pontok jelöléséhez • A pontokra kattintva törölheted őket
           </p>
 
           {/* Points Summary */}
           {painPoints.length > 0 && (
-            <div className="bg-slate-700/30 rounded-lg p-3">
-              <p className="text-xs text-slate-300 mb-2 font-medium">
+            <div className="bg-surface-2/30 rounded-lg p-3">
+              <p className="text-xs text-fg mb-2 font-medium">
                 Jelölt pontok: {painPoints.length}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -258,13 +265,13 @@ export default function BodyDiagram({ painPoints, onPainPointsChange, readOnly =
                     key={point.id}
                     type="button"
                     onClick={() => removePoint(point.id)}
-                    className="px-2 py-1 rounded-lg text-xs border-2 border-white hover:scale-105 transition-all flex items-center gap-1.5 font-semibold"
-                    style={{ backgroundColor: point.color || '#ef4444', color: 'white' }}
+                    className="px-2 py-1 rounded-lg text-xs border-2 hover:scale-105 transition-all flex items-center gap-1.5 font-semibold"
+                    style={{ backgroundColor: point.color || '#ef4444', borderColor: '#fff', color: '#fff' }}
                   >
                     <span className="text-sm">{point.label || '?'}</span>
                     <span className="opacity-75">•</span>
                     <span>{point.view === 'front' ? 'Elöl' : 'Hátul'}</span>
-                    <X className="w-3 h-3" />
+                    <X className="w-3 h-3" aria-hidden="true" />
                   </button>
                 ))}
               </div>

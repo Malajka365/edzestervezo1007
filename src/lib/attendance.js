@@ -1,13 +1,17 @@
 import { supabase } from './supabase'
 
-// Single source of truth for attendance status definitions (value, label, dot color).
+// Single source of truth for attendance status definitions (value, label, dot color,
+// chip color = háttér + olvasható szöveg). Mind design-token osztály.
 export const ATTENDANCE_STATUSES = [
-  { value: 'jelen', label: 'Jelen', color: 'bg-green-500' },
-  { value: 'hiányzik', label: 'Hiányzik', color: 'bg-red-500' },
-  { value: 'beteg', label: 'Beteg', color: 'bg-yellow-500' },
-  { value: 'sérült', label: 'Sérült', color: 'bg-orange-500' },
-  { value: 'egyéb', label: 'Egyéb', color: 'bg-gray-500' },
+  { value: 'jelen', label: 'Jelen', color: 'bg-ok', chip: 'bg-ok text-on-status' },
+  { value: 'hiányzik', label: 'Hiányzik', color: 'bg-bad', chip: 'bg-bad text-on-status' },
+  { value: 'beteg', label: 'Beteg', color: 'bg-warn', chip: 'bg-warn text-on-status' },
+  { value: 'sérült', label: 'Sérült', color: 'bg-accent', chip: 'bg-accent text-accent-fg' },
+  { value: 'egyéb', label: 'Egyéb', color: 'bg-muted', chip: 'bg-muted text-bg' },
 ]
+
+const FALLBACK_STATUS_COLOR = 'bg-surface-3'
+const FALLBACK_STATUS_CHIP = 'bg-surface-3 text-fg'
 
 // Training type options shown in the attendance modal.
 export const TRAINING_TYPES = [
@@ -20,7 +24,13 @@ export const TRAINING_TYPES = [
 
 export const getStatusColor = (status) => {
   const found = ATTENDANCE_STATUSES.find((s) => s.value === status)
-  return found ? found.color : 'bg-slate-600'
+  return found ? found.color : FALLBACK_STATUS_COLOR
+}
+
+// Kitöltött címke (naptár cella, avatar): háttér + hozzá illő szövegszín.
+export const getStatusChipClass = (status) => {
+  const found = ATTENDANCE_STATUSES.find((s) => s.value === status)
+  return found ? found.chip : FALLBACK_STATUS_CHIP
 }
 
 export const getStatusLabel = (status) => {
