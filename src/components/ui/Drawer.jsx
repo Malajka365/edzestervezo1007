@@ -13,7 +13,12 @@ export default function Drawer({ open, onClose, title, side = 'right', children 
 
   if (!open) return null
 
-  const sideClasses = side === 'left' ? 'left-0 border-r' : 'right-0 border-l'
+  // 'right': oldalpanel; 'bottom': mobil alsó lap (dinamikus magasság, safe-area padding).
+  const panelClasses =
+    side === 'bottom'
+      ? 'inset-x-0 bottom-0 max-h-[85vh] supports-[height:100dvh]:max-h-[85dvh] rounded-t-2xl border-t'
+      : 'inset-y-0 right-0 w-[min(400px,100%)] border-l'
+  const bodyClasses = side === 'bottom' ? 'pb-[max(1rem,env(safe-area-inset-bottom))]' : ''
 
   return createPortal(
     <div
@@ -32,7 +37,7 @@ export default function Drawer({ open, onClose, title, side = 'right', children 
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`absolute inset-y-0 flex w-[min(400px,100%)] flex-col border-line bg-surface shadow-2xl focus:outline-none ${sideClasses}`}
+        className={`absolute flex flex-col border-line bg-surface shadow-2xl focus:outline-none ${panelClasses}`}
       >
         <header className="flex items-center gap-2 border-b border-line px-4 py-3.5">
           <h2 id={titleId} className="min-w-0 flex-1 text-base font-semibold text-fg">
@@ -46,7 +51,7 @@ export default function Drawer({ open, onClose, title, side = 'right', children 
             data-overlay-close
           />
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto p-4 ${bodyClasses}`}>{children}</div>
       </aside>
     </div>,
     document.body
