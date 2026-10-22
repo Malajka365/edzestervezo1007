@@ -8,14 +8,37 @@ export const TOKEN_NAMES = [
   't-strength', 't-ball', 't-tactic', 't-match', 't-rest',
 ]
 
-function readColors() {
-  const style = getComputedStyle(document.documentElement)
+function readColorsFrom(element) {
+  const style = getComputedStyle(element)
   const colors = {}
   for (const name of TOKEN_NAMES) {
     const channels = style.getPropertyValue(`--${name}`).trim()
     if (channels) colors[name] = `rgb(${channels})`
   }
   return colors
+}
+
+function readColors() {
+  return readColorsFrom(document.documentElement)
+}
+
+/**
+ * Egy adott téma ('light' | 'dark') színei, függetlenül az aktuálisan aktív témától
+ * (pl. PDF-hez készülő diagramhoz). Egy rejtett, data-theme-mel ellátott elemet
+ * csatol a body-hoz, kiolvassa a tokeneket, majd eltávolítja. Hiányzó kulcsok
+ * (pl. jsdom-ban betöltött stíluslap nélkül) egyszerűen kimaradnak.
+ */
+export function readThemeColors(theme) {
+  const probe = document.createElement('div')
+  probe.setAttribute('data-theme', theme)
+  probe.style.position = 'absolute'
+  probe.style.visibility = 'hidden'
+  document.body.appendChild(probe)
+  try {
+    return readColorsFrom(probe)
+  } finally {
+    probe.remove()
+  }
 }
 
 /**

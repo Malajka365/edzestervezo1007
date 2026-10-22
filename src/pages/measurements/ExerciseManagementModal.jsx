@@ -64,6 +64,7 @@ export default function ExerciseManagementModal({
                       icon={Trash2}
                       label="Törlés"
                       size="sm"
+                      className="hover:!text-bad"
                       onClick={() => handleDeleteExercise(exercise.id)}
                     />
                   </div>

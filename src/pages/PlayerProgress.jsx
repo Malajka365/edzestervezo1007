@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { usePlayers } from '../hooks/usePlayers'
@@ -14,7 +14,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { Field, Input, Select } from '../components/ui/Field'
 import PageHeader from '../components/ui/PageHeader'
 import Panel from '../components/ui/Panel'
-import { useThemeColors } from '../hooks/useThemeColors'
+import { readThemeColors, useThemeColors } from '../hooks/useThemeColors'
 import LoadingSpinner from '../components/LoadingSpinner'
 import {
   LineChart,
@@ -34,7 +34,11 @@ export default function PlayerProgress() {
   const { selectedTeam } = useTeams()
   // Recharts-ban nem használható Tailwind osztály: a témaszíneket a tokenekből olvassuk.
   // A tartalék értékek csak olyan környezetben számítanak, ahol nincs betöltött téma (pl. jsdom).
-  const themeColors = useThemeColors()
+  const liveColors = useThemeColors()
+  // PDF-exportkor a diagram világos palettát kap (a fehér PDF-oldalhoz), függetlenül az aktív témától.
+  const [exporting, setExporting] = useState(false)
+  const lightColors = useMemo(() => (exporting ? readThemeColors('light') : null), [exporting])
+  const themeColors = lightColors ?? liveColors
   const chart = {
     grid: themeColors.line ?? 'gray',
     axis: themeColors.muted ?? 'gray',
@@ -183,6 +187,17 @@ export default function PlayerProgress() {
 
     if (!player || !exercise) return
 
+    // A diagram újrarajzolása világos palettával, majd két képkocka várakozás a rögzítés előtt.
+    setExporting(true)
+    try {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      await buildPdf(player, exercise)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const buildPdf = async (player, exercise) => {
     const dateRange = dateFrom && dateTo
       ? `${new Date(dateFrom).toLocaleDateString('hu-HU')} - ${new Date(dateTo).toLocaleDateString('hu-HU')}`
       : dateFrom
