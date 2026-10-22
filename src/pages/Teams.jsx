@@ -9,24 +9,91 @@ import TrainingLocations from '../components/TrainingLocations'
 import TeamMembersPanel from '../components/TeamMembersPanel'
 import {
   Users,
-  Plus,
   Edit2,
   Trash2,
   UserPlus,
   X,
   Save,
-  Loader2,
   Calendar,
-  Hash,
-  FileText,
   Search,
   MapPin,
+  MoreHorizontal,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
-import CreateTeamModal from '../components/team/CreateTeamModal'
+import { usePopover } from '../components/shell/usePopover'
+import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import Modal from '../components/ui/Modal'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
+import Skeleton from '../components/ui/Skeleton'
+import { Field, Input, Textarea } from '../components/ui/Field'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
+
+const EMPTY_PLAYER_FORM = {
+  name: '',
+  birth_date: '',
+  position: '',
+  jersey_number: '',
+  notes: '',
+}
+const EMPTY_TEAM_FORM = { name: '', sport: '', description: '' }
+const TEAM_FORM_ID = 'team-edit-form'
+const PLAYER_FORM_ID = 'player-form'
+
+const MENU_ITEM =
+  'flex w-full items-center gap-2 rounded-[7px] px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+
+// "Csapat" túlcsordulás-menü: szerkesztés mindenkinek, törlés csak a tulajdonosnak.
+function TeamMenu({ isOwner, onEdit, onDelete }) {
+  const { open, close, toggle, ref } = usePopover()
+
+  return (
+    <div ref={ref} className="relative">
+      <IconButton
+        icon={MoreHorizontal}
+        label="Csapat"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      />
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-40 mt-1 w-52 rounded-[10px] border border-line bg-surface p-1 shadow-xl"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              close()
+              onEdit()
+            }}
+            className={`${MENU_ITEM} text-fg`}
+          >
+            <Edit2 className="h-4 w-4 text-muted" aria-hidden="true" />
+            Csapat szerkesztése
+          </button>
+          {isOwner && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                close()
+                onDelete()
+              }}
+              className={`${MENU_ITEM} text-bad`}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Csapat törlése
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Teams() {
   const { teams, selectedTeam, updateTeam, deleteTeam, isTeamOwner, currentUserPermissions } = useTeams()
@@ -37,21 +104,14 @@ export default function Teams() {
   const { data: players = [], isLoading: loadingPlayers } = usePlayers(selectedTeam?.id)
   const [confirmState, setConfirmState] = useState(null)
   const [showTeamModal, setShowTeamModal] = useState(false)
-  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false)
-  const [showPlayerModal, setShowPlayerModal] = useState(false)
+    const [showPlayerModal, setShowPlayerModal] = useState(false)
   const [showLocationsModal, setShowLocationsModal] = useState(false)
   const [editingTeam, setEditingTeam] = useState(null)
   const [editingPlayer, setEditingPlayer] = useState(null)
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [teamForm, setTeamForm] = useState({ name: '', sport: '', description: '' })
-  const [playerForm, setPlayerForm] = useState({
-    name: '',
-    birth_date: '',
-    position: '',
-    jersey_number: '',
-    notes: '',
-  })
+  const [teamForm, setTeamForm] = useState(EMPTY_TEAM_FORM)
+  const [playerForm, setPlayerForm] = useState(EMPTY_PLAYER_FORM)
 
   // Invalidate the shared players cache so every screen (this one included)
   // refetches the up-to-date roster after a create/update/delete.
@@ -67,7 +127,7 @@ export default function Teams() {
     if (result.success) {
       setShowTeamModal(false)
       setEditingTeam(null)
-      setTeamForm({ name: '', sport: '', description: '' })
+      setTeamForm(EMPTY_TEAM_FORM)
     }
   }
 
@@ -114,13 +174,7 @@ export default function Teams() {
 
       invalidatePlayers()
       setShowPlayerModal(false)
-      setPlayerForm({
-        name: '',
-        birth_date: '',
-        position: '',
-        jersey_number: '',
-        notes: '',
-      })
+      setPlayerForm(EMPTY_PLAYER_FORM)
     } catch (error) {
       console.error('Error creating player:', error)
       toast.error('Hiba történt a játékos létrehozásakor')
@@ -144,13 +198,7 @@ export default function Teams() {
       invalidatePlayers()
       setShowPlayerModal(false)
       setEditingPlayer(null)
-      setPlayerForm({
-        name: '',
-        birth_date: '',
-        position: '',
-        jersey_number: '',
-        notes: '',
-      })
+      setPlayerForm(EMPTY_PLAYER_FORM)
     } catch (error) {
       console.error('Error updating player:', error)
       toast.error('Hiba történt a játékos frissítésekor')
@@ -195,16 +243,8 @@ export default function Teams() {
     setShowPlayerModal(false)
     setEditingTeam(null)
     setEditingPlayer(null)
-    setTeamForm({ name: '', sport: '', description: '' })
-    setPlayerForm({
-      name: '',
-      birth_date: '',
-      position: '',
-      jersey_number: '',
-      height: '',
-      weight: '',
-      notes: '',
-    })
+    setTeamForm(EMPTY_TEAM_FORM)
+    setPlayerForm(EMPTY_PLAYER_FORM)
   }
 
   // The shared usePlayers query orders by name; this screen historically
@@ -232,414 +272,302 @@ export default function Teams() {
     )
   }
 
+  const description = selectedTeam
+    ? `${selectedTeam.name} · ${players.length} játékos`
+    : 'Játékosok kezelése'
+
   return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Csapatok</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                {teams.length} csapat • {selectedTeam ? players.length + ' játékos' : 'Játékosok kezelése'}
-              </p>
-            </div>
-          </div>
-
-          {/* Középső gombok */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {selectedTeam && (
-              <button
-                onClick={() => setShowLocationsModal(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-                title="Edzés Helyszínek"
-              >
-                <MapPin className="w-4 h-4" />
-                <span className="hidden sm:inline">Edzés Helyszínek</span>
-              </button>
-            )}
-            <button
-              onClick={() => setShowCreateTeamModal(true)}
-              className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-              title="Új Csapat"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Új Csapat</span>
-            </button>
-          </div>
-
-          {/* Jobb oldal: TeamSelector */}
-          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-      {/* Players Section */}
-      {selectedTeam && (
-        <div className="card">
-          <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
-            <div>
-              <h3 className="text-xl font-bold text-white flex items-center">
-                <Users className="w-5 h-5 mr-2 text-primary-400" />
-                Játékosok - {selectedTeam.name}
-              </h3>
-              <p className="text-sm text-slate-400 mt-1">{players.length} játékos</p>
-            </div>
-            {/* A kiválasztott csapat szerkesztése/törlése + új játékos.
-                Korábban külön csapat-rács tetején voltak; ide olvasztva, mert
-                a csapatváltás a fejléc jobb felső TeamSelector dropdownjából megy. */}
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              <button
-                onClick={() => openEditTeam(selectedTeam)}
-                className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm transition-colors"
-                title="Csapat szerkesztése"
-              >
-                <Edit2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Csapat</span>
-              </button>
-              {isTeamOwner && (
-                <button
-                  onClick={() => handleDeleteTeam(selectedTeam.id)}
-                  className="flex items-center gap-1 px-3 py-2 bg-slate-700 hover:bg-red-900 text-slate-200 hover:text-red-300 rounded-lg text-sm transition-colors"
-                  title="Csapat törlése"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Játékosok"
+        description={description}
+        actions={
+          selectedTeam && (
+            <>
               {canEditPlayers && (
-                <button
-                  onClick={() => setShowPlayerModal(true)}
-                  className="btn-primary flex items-center space-x-2"
-                >
-                  <UserPlus className="w-5 h-5" />
-                  <span>Új Játékos</span>
-                </button>
+                <Button variant="primary" icon={UserPlus} onClick={() => setShowPlayerModal(true)}>
+                  Új játékos
+                </Button>
               )}
-            </div>
-          </div>
-
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Keresés név, mezszám vagy poszt szerint..."
-                className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              <Button icon={MapPin} onClick={() => setShowLocationsModal(true)}>
+                Helyszínek
+              </Button>
+              <TeamMenu
+                isOwner={isTeamOwner}
+                onEdit={() => openEditTeam(selectedTeam)}
+                onDelete={() => handleDeleteTeam(selectedTeam.id)}
               />
+            </>
+          )
+        }
+      />
+
+      <div className="space-y-6">
+        {/* Játékosok */}
+        {selectedTeam && (
+          <Panel title="Játékosok" icon={Users}>
+            {/* Keresés */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle"
+                  aria-hidden="true"
+                />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Keresés név, mezszám vagy poszt szerint..."
+                  aria-label="Játékosok keresése"
+                  className="pl-10 pr-10"
+                />
+                {searchQuery && (
+                  <IconButton
+                    icon={X}
+                    label="Keresés törlése"
+                    size="sm"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                  />
+                )}
+              </div>
               {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <p className="mt-2 text-sm text-muted">
+                  {filteredPlayers.length} találat "{searchQuery}" keresésre
+                </p>
               )}
             </div>
-            {searchQuery && (
-              <p className="text-sm text-slate-400 mt-2">
-                {filteredPlayers.length} találat "{searchQuery}" keresésre
-              </p>
-            )}
-          </div>
 
-          {loadingPlayers ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-            </div>
-          ) : players.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="Még nincs játékos"
-              description="Ebben a csapatban még nincs egyetlen játékos sem rögzítve."
-              actionLabel={canEditPlayers ? 'Játékos hozzáadása' : undefined}
-              onAction={canEditPlayers ? () => setShowPlayerModal(true) : undefined}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPlayers.map((player) => (
-                <div 
-                  key={player.id} 
-                  onClick={() => setSelectedPlayer(player)}
-                  className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-white font-semibold truncate">{player.name}</h4>
-                      {player.position && (
-                        <p className="text-sm text-slate-400 truncate">{player.position}</p>
+            {loadingPlayers ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[0, 1, 2].map((i) => (
+                  <Skeleton key={i} className="h-28" />
+                ))}
+              </div>
+            ) : players.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="Még nincs játékos"
+                description="Ebben a csapatban még nincs egyetlen játékos sem rögzítve."
+                actionLabel={canEditPlayers ? 'Játékos hozzáadása' : undefined}
+                onAction={canEditPlayers ? () => setShowPlayerModal(true) : undefined}
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredPlayers.map((player) => (
+                  <div
+                    key={player.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedPlayer(player)}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedPlayer(player)
+                      }
+                    }}
+                    className="cursor-pointer rounded-[10px] border border-line bg-surface-2 p-4 transition-colors hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <div className="mb-3 flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="truncate font-semibold text-fg">{player.name}</h4>
+                        {player.position && (
+                          <p className="truncate text-sm text-muted">{player.position}</p>
+                        )}
+                      </div>
+                      {player.jersey_number && (
+                        <span className="ml-2 font-mono text-2xl font-medium text-accent">
+                          #{player.jersey_number}
+                        </span>
                       )}
                     </div>
-                    {player.jersey_number && (
-                      <span className="text-2xl font-bold text-primary-400 ml-2">
-                        #{player.jersey_number}
-                      </span>
-                    )}
-                  </div>
 
-                  <div className="space-y-1 text-xs text-slate-400 mb-3">
-                    {player.birth_date && (
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-3 h-3" />
-                        <span>{new Date(player.birth_date).toLocaleDateString('hu-HU')}</span>
+                    <div className="mb-3 space-y-1 text-xs text-muted">
+                      {player.birth_date && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-3 w-3" aria-hidden="true" />
+                          <span>{new Date(player.birth_date).toLocaleDateString('hu-HU')}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {canEditPlayers && (
+                      <div className="flex items-center gap-2 border-t border-line pt-3">
+                        <Button
+                          size="sm"
+                          icon={Edit2}
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openEditPlayer(player)
+                          }}
+                        >
+                          Szerkeszt
+                        </Button>
+                        <IconButton
+                          icon={Trash2}
+                          label="Játékos törlése"
+                          className="text-bad hover:bg-bad-soft hover:text-bad"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeletePlayer(player.id)
+                          }}
+                        />
                       </div>
                     )}
                   </div>
-
-                  {canEditPlayers && (
-                    <div className="flex items-center space-x-2 pt-3 border-t border-slate-600">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditPlayer(player)
-                        }}
-                        className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-slate-300 rounded text-sm transition-colors flex items-center justify-center space-x-1"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                        <span>Szerkeszt</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeletePlayer(player.id)
-                        }}
-                        className="py-2 px-3 bg-slate-800 hover:bg-red-900 text-slate-300 hover:text-red-300 rounded text-sm transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {selectedTeam && (
-        <TeamMembersPanel team={selectedTeam} isOwner={isTeamOwner} />
-      )}
-
-      {!selectedTeam && teams.length > 0 && (
-        <div className="card text-center py-12">
-          <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <p className="text-slate-300 text-lg font-semibold mb-2">
-            Válassz egy csapatot a felső menüből
-          </p>
-          <p className="text-slate-400 text-sm">
-            A játékosok megjelenítéséhez először válassz ki egy csapatot
-          </p>
-        </div>
-      )}
-
-      {/* Új csapat */}
-      <CreateTeamModal open={showCreateTeamModal} onClose={() => setShowCreateTeamModal(false)} />
-
-      {/* Csapat szerkesztése */}
-      {showTeamModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">
-                Csapat Szerkesztése
-              </h3>
-              <button
-                onClick={closeModal}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateTeam} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Csapat neve *
-                </label>
-                <input
-                  type="text"
-                  value={teamForm.name}
-                  onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
-                  required
-                  className="input-field"
-                  placeholder="pl. U19 Férfi"
-                />
+                ))}
               </div>
+            )}
+          </Panel>
+        )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Sportág
-                </label>
-                <input
-                  type="text"
-                  value={teamForm.sport}
-                  onChange={(e) => setTeamForm({ ...teamForm, sport: e.target.value })}
-                  className="input-field"
-                  placeholder="pl. Labdarúgás, Kézilabda"
-                />
-              </div>
+        {selectedTeam && <TeamMembersPanel team={selectedTeam} isOwner={isTeamOwner} />}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Leírás
-                </label>
-                <textarea
-                  value={teamForm.description}
-                  onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
-                  className="input-field resize-none"
-                  rows="3"
-                  placeholder="Rövid leírás a csapatról..."
-                />
-              </div>
-
-              <div className="flex items-center space-x-3 pt-4">
-                <button type="submit" className="flex-1 btn-primary flex items-center justify-center space-x-2">
-                  <Save className="w-5 h-5" />
-                  <span>Mentés</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 btn-secondary"
-                >
-                  Mégse
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Player Modal */}
-      {showPlayerModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-slate-800 rounded-xl max-w-2xl w-full p-6 border border-slate-700 my-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">
-                {editingPlayer ? 'Játékos Szerkesztése' : 'Új Játékos'}
-              </h3>
-              <button
-                onClick={closeModal}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={editingPlayer ? handleUpdatePlayer : handleCreatePlayer} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Név *
-                  </label>
-                  <input
-                    type="text"
-                    value={playerForm.name}
-                    onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
-                    required
-                    className="input-field"
-                    placeholder="Játékos teljes neve"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Születési dátum
-                  </label>
-                  <input
-                    type="date"
-                    value={playerForm.birth_date}
-                    onChange={(e) => setPlayerForm({ ...playerForm, birth_date: e.target.value })}
-                    className="input-field"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Mezszám
-                  </label>
-                  <input
-                    type="number"
-                    value={playerForm.jersey_number}
-                    onChange={(e) => setPlayerForm({ ...playerForm, jersey_number: e.target.value })}
-                    className="input-field"
-                    placeholder="pl. 10"
-                    min="0"
-                    max="99"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Poszt
-                  </label>
-                  <input
-                    type="text"
-                    value={playerForm.position}
-                    onChange={(e) => setPlayerForm({ ...playerForm, position: e.target.value })}
-                    className="input-field"
-                    placeholder="pl. Középpályás, Csatár"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Jegyzetek
-                  </label>
-                  <textarea
-                    value={playerForm.notes}
-                    onChange={(e) => setPlayerForm({ ...playerForm, notes: e.target.value })}
-                    className="input-field resize-none"
-                    rows="3"
-                    placeholder="További információk a játékosról..."
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3 pt-4">
-                <button type="submit" className="flex-1 btn-primary flex items-center justify-center space-x-2">
-                  <Save className="w-5 h-5" />
-                  <span>{editingPlayer ? 'Mentés' : 'Létrehozás'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="flex-1 btn-secondary"
-                >
-                  Mégse
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+        {!selectedTeam && teams.length > 0 && (
+          <EmptyState
+            icon={Users}
+            title="Válassz egy csapatot a felső menüből"
+            description="A játékosok megjelenítéséhez először válassz ki egy csapatot"
+          />
+        )}
       </div>
 
-      {/* Locations Modal */}
-      {showLocationsModal && selectedTeam && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Edzés Helyszínek - {selectedTeam.name}</h3>
-              <button
-                onClick={() => setShowLocationsModal(false)}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-            <TrainingLocations teamId={selectedTeam.id} />
+      {/* Csapat szerkesztése */}
+      <Modal
+        open={showTeamModal}
+        onClose={closeModal}
+        title="Csapat szerkesztése"
+        size="sm"
+        footer={
+          <>
+            <Button onClick={closeModal}>Mégse</Button>
+            <Button type="submit" form={TEAM_FORM_ID} variant="primary" icon={Save}>
+              Mentés
+            </Button>
+          </>
+        }
+      >
+        <form id={TEAM_FORM_ID} onSubmit={handleUpdateTeam} className="grid gap-4">
+          <Field label="Csapat neve *" htmlFor="edit-team-name">
+            <Input
+              id="edit-team-name"
+              type="text"
+              value={teamForm.name}
+              onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
+              required
+              placeholder="pl. U19 Férfi"
+            />
+          </Field>
+          <Field label="Sportág" htmlFor="edit-team-sport">
+            <Input
+              id="edit-team-sport"
+              type="text"
+              value={teamForm.sport}
+              onChange={(e) => setTeamForm({ ...teamForm, sport: e.target.value })}
+              placeholder="pl. Labdarúgás, Kézilabda"
+            />
+          </Field>
+          <Field label="Leírás" htmlFor="edit-team-description">
+            <Textarea
+              id="edit-team-description"
+              value={teamForm.description}
+              onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
+              className="resize-none"
+              rows={3}
+              placeholder="Rövid leírás a csapatról..."
+            />
+          </Field>
+        </form>
+      </Modal>
+
+      {/* Játékos hozzáadása / szerkesztése */}
+      <Modal
+        open={showPlayerModal}
+        onClose={closeModal}
+        title={editingPlayer ? 'Játékos szerkesztése' : 'Új játékos'}
+        size="lg"
+        footer={
+          <>
+            <Button onClick={closeModal}>Mégse</Button>
+            <Button type="submit" form={PLAYER_FORM_ID} variant="primary" icon={Save}>
+              {editingPlayer ? 'Mentés' : 'Létrehozás'}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id={PLAYER_FORM_ID}
+          onSubmit={editingPlayer ? handleUpdatePlayer : handleCreatePlayer}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        >
+          <div className="md:col-span-2">
+            <Field label="Név *" htmlFor="player-name">
+              <Input
+                id="player-name"
+                type="text"
+                value={playerForm.name}
+                onChange={(e) => setPlayerForm({ ...playerForm, name: e.target.value })}
+                required
+                placeholder="Játékos teljes neve"
+              />
+            </Field>
           </div>
-        </div>
-      )}
+          <Field label="Születési dátum" htmlFor="player-birth-date">
+            <Input
+              id="player-birth-date"
+              type="date"
+              value={playerForm.birth_date}
+              onChange={(e) => setPlayerForm({ ...playerForm, birth_date: e.target.value })}
+            />
+          </Field>
+          <Field label="Mezszám" htmlFor="player-jersey">
+            <Input
+              id="player-jersey"
+              type="number"
+              value={playerForm.jersey_number}
+              onChange={(e) => setPlayerForm({ ...playerForm, jersey_number: e.target.value })}
+              placeholder="pl. 10"
+              min="0"
+              max="99"
+            />
+          </Field>
+          <div className="md:col-span-2">
+            <Field label="Poszt" htmlFor="player-position">
+              <Input
+                id="player-position"
+                type="text"
+                value={playerForm.position}
+                onChange={(e) => setPlayerForm({ ...playerForm, position: e.target.value })}
+                placeholder="pl. Középpályás, Csatár"
+              />
+            </Field>
+          </div>
+          <div className="md:col-span-2">
+            <Field label="Jegyzetek" htmlFor="player-notes">
+              <Textarea
+                id="player-notes"
+                value={playerForm.notes}
+                onChange={(e) => setPlayerForm({ ...playerForm, notes: e.target.value })}
+                className="resize-none"
+                rows={3}
+                placeholder="További információk a játékosról..."
+              />
+            </Field>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Helyszínek */}
+      <Modal
+        open={showLocationsModal && !!selectedTeam}
+        onClose={() => setShowLocationsModal(false)}
+        title={`Helyszínek – ${selectedTeam?.name ?? ''}`}
+        size="xl"
+      >
+        {selectedTeam && <TrainingLocations teamId={selectedTeam.id} />}
+      </Modal>
 
       <ConfirmDialog
         open={!!confirmState}

@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { MapPin, Plus, Edit2, Trash2, X, Check, Star } from 'lucide-react'
+import { MapPin, Plus, Edit2, Trash2, Check, Star } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import Modal from './ui/Modal'
+import EmptyState from './ui/EmptyState'
+import { Field, Input, Textarea } from './ui/Field'
 import LoadingSpinner from './LoadingSpinner'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
+
+const LOCATION_FORM_ID = 'location-form'
 
 export default function TrainingLocations({ teamId }) {
   const { currentUserPermissions } = useTeams()
@@ -135,27 +142,30 @@ export default function TrainingLocations({ teamId }) {
     }
   }
 
+  const closeModal = () => {
+    setShowModal(false)
+    setEditingLocation(null)
+  }
+
+  const openCreate = () => {
+    setEditingLocation(null)
+    setFormData({ name: '', address: '', notes: '', is_default: false })
+    setShowModal(true)
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-primary-400" />
-          <h3 className="text-lg font-semibold text-white">Edzés Helyszínek</h3>
-          <span className="text-sm text-slate-400">({locations.length})</span>
+          <MapPin className="h-5 w-5 text-accent" aria-hidden="true" />
+          <h3 className="text-lg font-semibold text-fg">Edzés helyszínek</h3>
+          <span className="text-sm text-muted">({locations.length})</span>
         </div>
         {canEdit && (
-          <button
-            onClick={() => {
-              setEditingLocation(null)
-              setFormData({ name: '', address: '', notes: '', is_default: false })
-              setShowModal(true)
-            }}
-            className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Új Helyszín</span>
-          </button>
+          <Button variant="primary" icon={Plus} onClick={openCreate}>
+            Új helyszín
+          </Button>
         )}
       </div>
 
@@ -163,175 +173,137 @@ export default function TrainingLocations({ teamId }) {
       {loading && locations.length === 0 ? (
         <LoadingSpinner size="inline" />
       ) : locations.length === 0 ? (
-        <div className="text-center py-8 text-slate-400">
-          <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Még nincs helyszín hozzáadva</p>
-          <p className="text-sm mt-1">Kattints az "Új Helyszín" gombra!</p>
-        </div>
+        <EmptyState
+          icon={MapPin}
+          title="Még nincs helyszín hozzáadva"
+          description={canEdit ? 'Kattints az "Új helyszín" gombra!' : undefined}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {locations.map((location) => (
             <div
               key={location.id}
-              className={`p-4 rounded-lg border transition-all ${
+              className={`rounded-[10px] border p-4 transition-colors ${
                 location.is_default
-                  ? 'bg-primary-500/10 border-primary-500/50'
-                  : 'bg-slate-800 border-slate-700 hover:border-slate-600'
+                  ? 'border-accent/50 bg-accent-soft'
+                  : 'border-line bg-surface'
               }`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2 flex-1">
-                  <MapPin className={`w-4 h-4 flex-shrink-0 ${location.is_default ? 'text-primary-400' : 'text-slate-400'}`} />
-                  <h4 className="font-semibold text-white">{location.name}</h4>
+              <div className="mb-2 flex items-start justify-between">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <MapPin
+                    className={`h-4 w-4 flex-shrink-0 ${location.is_default ? 'text-accent' : 'text-muted'}`}
+                    aria-hidden="true"
+                  />
+                  <h4 className="font-semibold text-fg">{location.name}</h4>
                   {location.is_default && (
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <Star
+                      className="h-4 w-4 fill-current text-warn"
+                      aria-label="Alapértelmezett helyszín"
+                    />
                   )}
                 </div>
                 {canEdit && (
                   <div className="flex items-center gap-1">
                     {!location.is_default && (
-                      <button
+                      <IconButton
+                        icon={Star}
+                        label="Alapértelmezettnek jelöl"
+                        size="sm"
                         onClick={() => handleSetDefault(location.id)}
-                        className="p-1 hover:bg-slate-700 rounded transition-colors"
-                        title="Alapértelmezettnek jelöl"
-                      >
-                        <Star className="w-4 h-4 text-slate-400" />
-                      </button>
+                      />
                     )}
-                    <button
+                    <IconButton
+                      icon={Edit2}
+                      label="Helyszín szerkesztése"
+                      size="sm"
                       onClick={() => handleEdit(location)}
-                      className="p-1 hover:bg-slate-700 rounded transition-colors"
-                    >
-                      <Edit2 className="w-4 h-4 text-slate-400" />
-                    </button>
-                    <button
+                    />
+                    <IconButton
+                      icon={Trash2}
+                      label="Helyszín törlése"
+                      size="sm"
+                      className="text-bad hover:bg-bad-soft hover:text-bad"
                       onClick={() => handleDelete(location.id)}
-                      className="p-1 hover:bg-red-500/20 rounded transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-red-400" />
-                    </button>
+                    />
                   </div>
                 )}
               </div>
-              
-              {location.address && (
-                <p className="text-sm text-slate-400 mb-1">{location.address}</p>
-              )}
-              
-              {location.notes && (
-                <p className="text-xs text-slate-500 mt-2">{location.notes}</p>
-              )}
+
+              {location.address && <p className="mb-1 text-sm text-muted">{location.address}</p>}
+
+              {location.notes && <p className="mt-2 text-xs text-muted">{location.notes}</p>}
             </div>
           ))}
         </div>
       )}
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">
-                {editingLocation ? 'Helyszín Szerkesztése' : 'Új Helyszín'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowModal(false)
-                  setEditingLocation(null)
-                }}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
+      <Modal
+        open={showModal}
+        onClose={closeModal}
+        title={editingLocation ? 'Helyszín szerkesztése' : 'Új helyszín'}
+        size="sm"
+        footer={
+          <>
+            <Button onClick={closeModal}>Mégse</Button>
+            <Button
+              type="submit"
+              form={LOCATION_FORM_ID}
+              variant="primary"
+              icon={Check}
+              loading={loading}
+            >
+              Mentés
+            </Button>
+          </>
+        }
+      >
+        <form id={LOCATION_FORM_ID} onSubmit={handleSubmit} className="grid gap-4">
+          <Field label="Név *" htmlFor="location-name">
+            <Input
+              id="location-name"
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="pl. Sportcsarnok"
+              required
+            />
+          </Field>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Név *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="input-field w-full"
-                  placeholder="pl. Sportcsarnok"
-                  required
-                />
-              </div>
+          <Field label="Cím" htmlFor="location-address">
+            <Input
+              id="location-address"
+              type="text"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              placeholder="pl. Budapest, Fő utca 1."
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Cím
-                </label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="input-field w-full"
-                  placeholder="pl. Budapest, Fő utca 1."
-                />
-              </div>
+          <Field label="Megjegyzések" htmlFor="location-notes">
+            <Textarea
+              id="location-notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={3}
+              placeholder="További információk..."
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Megjegyzések
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="input-field w-full"
-                  rows="3"
-                  placeholder="További információk..."
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="is_default"
-                  checked={formData.is_default}
-                  onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-primary-600 focus:ring-primary-500"
-                />
-                <label htmlFor="is_default" className="text-sm text-slate-300">
-                  Alapértelmezett helyszín
-                </label>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false)
-                    setEditingLocation(null)
-                  }}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                >
-                  Mégse
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Mentés...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>Mentés</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is_default"
+              checked={formData.is_default}
+              onChange={(e) => setFormData({ ...formData, is_default: e.target.checked })}
+              className="h-4 w-4 rounded border-line-strong bg-surface-2 text-accent focus:ring-accent"
+            />
+            <label htmlFor="is_default" className="text-sm text-fg">
+              Alapértelmezett helyszín
+            </label>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={!!confirmState}
