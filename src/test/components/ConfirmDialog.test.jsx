@@ -87,7 +87,7 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledTimes(1)
   })
 
-  it('renders a red confirm button and respects a custom confirmLabel when danger=true', () => {
+  it('renders a danger confirm button and respects a custom confirmLabel when danger=true', () => {
     render(
       <ConfirmDialog
         open
@@ -101,7 +101,7 @@ describe('ConfirmDialog', () => {
 
     const confirmButton = screen.getByRole('button', { name: 'Végleges törlés' })
     expect(confirmButton).toBeInTheDocument()
-    expect(confirmButton).toHaveClass('bg-red-600')
+    expect(confirmButton).toHaveClass('bg-bad')
   })
 
   it('does not apply the danger styling when danger=false', () => {
@@ -117,7 +117,7 @@ describe('ConfirmDialog', () => {
     )
 
     const confirmButton = screen.getByRole('button', { name: 'Rendben' })
-    expect(confirmButton).not.toHaveClass('bg-red-600')
-    expect(confirmButton).toHaveClass('btn-primary')
+    expect(confirmButton).not.toHaveClass('bg-bad')
+    expect(confirmButton).toHaveClass('bg-accent')
   })
 })

@@ -98,20 +98,20 @@ function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#1e293b',
-            color: '#ffffff',
-            border: '1px solid #334155',
+            background: 'rgb(var(--surface))',
+            color: 'rgb(var(--fg))',
+            border: '1px solid rgb(var(--line))',
           },
           success: {
             iconTheme: {
-              primary: '#22c55e',
-              secondary: '#1e293b',
+              primary: 'rgb(var(--ok))',
+              secondary: 'rgb(var(--surface))',
             },
           },
           error: {
             iconTheme: {
-              primary: '#ef4444',
-              secondary: '#1e293b',
+              primary: 'rgb(var(--bad))',
+              secondary: 'rgb(var(--surface))',
             },
           },
         }}
