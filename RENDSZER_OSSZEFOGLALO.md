@@ -169,7 +169,7 @@ Mérkőzések → Új Mérkőzés
 - time (TIME)
 - location (TEXT)
 - opponent (TEXT)
-- match_type (friendly/league/cup/tournament)
+- type (friendly/league/cup/tournament)
 - home_away (home/away)
 - our_score, opponent_score (INTEGER)
 - notes (TEXT)

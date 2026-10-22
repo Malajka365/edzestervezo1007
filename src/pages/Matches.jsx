@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
+import { toMatchRow } from '../lib/matches'
 import {
   Plus,
   Calendar,
@@ -253,8 +254,8 @@ export default function Matches() {
                           <span>{match.location}</span>
                         </div>
                       )}
-                      {match.match_type && (
-                        <StatusPill status="neutral">{getMatchTypeLabel(match.match_type)}</StatusPill>
+                      {match.type && (
+                        <StatusPill status="neutral">{getMatchTypeLabel(match.type)}</StatusPill>
                       )}
                       {/* Macrocycle indicator */}
                       {match.created_from_macrocycle && (
@@ -342,7 +343,7 @@ function MatchModal({ match, selectedTeam, onClose, onSave }) {
     time: match?.time || '',
     location: match?.location || '',
     opponent: match?.opponent || '',
-    match_type: match?.match_type || 'league',
+    type: match?.type || 'league',
     home_away: match?.home_away || 'home',
     our_score: match?.our_score ?? '',
     opponent_score: match?.opponent_score ?? '',
@@ -355,11 +356,7 @@ function MatchModal({ match, selectedTeam, onClose, onSave }) {
     setLoading(true)
 
     try {
-      const dataToSave = {
-        ...formData,
-        our_score: formData.our_score === '' ? null : parseInt(formData.our_score),
-        opponent_score: formData.opponent_score === '' ? null : parseInt(formData.opponent_score),
-      }
+      const dataToSave = toMatchRow(formData)
 
       if (match) {
         // Update
@@ -452,8 +449,8 @@ function MatchModal({ match, selectedTeam, onClose, onSave }) {
           <Field label="Típus" htmlFor="match-type">
             <Select
               id="match-type"
-              value={formData.match_type}
-              onChange={(e) => setFormData({ ...formData, match_type: e.target.value })}
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
             >
               <option value="league">Bajnoki</option>
               <option value="cup">Kupa</option>

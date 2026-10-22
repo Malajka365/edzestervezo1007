@@ -29,6 +29,19 @@ const VIEW_ITEMS = [
   { id: 'month', label: 'Hónap', icon: CalendarRange },
 ]
 
+const EMPTY_FORM = {
+  id: null,
+  player_id: '',
+  status: 'jelen',
+  training_type: 'edzés',
+  event_time: '',
+  notes: '',
+}
+
+// Helyi idő szerinti YYYY-MM-DD (a toISOString UTC-re váltana).
+const toDateStr = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
 export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [attendance, setAttendance] = useState([])
@@ -40,14 +53,7 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
   const [selectedDate, setSelectedDate] = useState(null)
   const [confirmState, setConfirmState] = useState(null)
   const [viewMode, setViewMode] = useState('month') // 'month', 'week', 'day'
-  const [formData, setFormData] = useState({
-    id: null,
-    player_id: '',
-    status: 'jelen',
-    training_type: 'edzés',
-    event_time: '',
-    notes: '',
-  })
+  const [formData, setFormData] = useState(EMPTY_FORM)
 
   useEffect(() => {
     if (teamId) {
@@ -147,18 +153,12 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
     return stats
   }
 
-  const handleDayClick = (day) => {
-    if (!day || !canEdit) return
-    const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    setSelectedDate(dateStr)
-    setFormData({
-      id: null,
-      player_id: '',
-      status: 'jelen',
-      training_type: 'edzés',
-      event_time: '',
-      notes: '',
-    })
+  // Új bejegyzés egy adott napra: teljes Date kell, mert a heti nézet
+  // átnyúlhat a szomszéd hónapba.
+  const handleDayClick = (date) => {
+    if (!date || !canEdit) return
+    setSelectedDate(toDateStr(date))
+    setFormData(EMPTY_FORM)
     setShowModal(true)
   }
 
@@ -347,7 +347,9 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
                       <>
                         <div className="mb-2 flex items-center justify-between">
                           <div className="text-sm font-bold text-fg">{day}</div>
-                          {renderAddButton(() => handleDayClick(day))}
+                          {renderAddButton(() =>
+                            handleDayClick(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))
+                          )}
                         </div>
                         {dayAttendance.length > 0 && (
                           <div className="space-y-1">
@@ -392,7 +394,7 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <div className="text-sm font-bold text-fg">{date.getDate()}</div>
-                      {renderAddButton(() => handleDayClick(date.getDate()))}
+                      {renderAddButton(() => handleDayClick(date))}
                     </div>
                     {dayAttendance.length > 0 && (
                       <div className="space-y-1">
@@ -473,11 +475,7 @@ export default function TeamAttendanceCalendar({ teamId, canEdit = true }) {
                       <Button
                         variant="primary"
                         className="mt-4"
-                        onClick={() => {
-                          const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
-                          setSelectedDate(dateStr)
-                          setShowModal(true)
-                        }}
+                        onClick={() => handleDayClick(currentDate)}
                       >
                         Jelenlét felvitele
                       </Button>

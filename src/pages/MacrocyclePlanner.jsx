@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
+import { buildMacrocycleMatchInsert } from '../lib/matches'
 import useMacrocycleData from './macrocycle/useMacrocycleData'
 import {
   Calendar,
@@ -481,18 +482,14 @@ export default function MacrocyclePlanner() {
         // Create new match
         const { data: newMatch, error: insertError } = await supabase
           .from('matches')
-          .insert({
-            team_id: selectedTeam.id,
-            season_id: currentSeason.id,
+          .insert(buildMacrocycleMatchInsert({
+            teamId: selectedTeam.id,
+            seasonId: currentSeason.id,
             date: matchDate,
-            home_away: homeAway,
-            created_from_macrocycle: true,
-            macrocycle_week_index: weekIdx,
-            macrocycle_day_index: dayIdx,
-            opponent: null, // To be filled in Matches page
-            time: '18:00', // Default time
-            type: 'league' // Default type (column name is 'type', not 'match_type')
-          })
+            homeAway,
+            weekIndex: weekIdx,
+            dayIndex: dayIdx,
+          }))
           .select()
         
         if (insertError) {

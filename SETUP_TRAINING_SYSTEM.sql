@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS matches (
   time TIME,
   location TEXT,
   opponent TEXT NOT NULL,
-  match_type TEXT CHECK (match_type IN ('friendly', 'league', 'cup', 'tournament')),
+  type TEXT CHECK (type IN ('friendly', 'league', 'cup', 'tournament')),
   home_away TEXT CHECK (home_away IN ('home', 'away')),
   our_score INTEGER,
   opponent_score INTEGER,
