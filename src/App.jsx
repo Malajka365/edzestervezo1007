@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard'
 import JoinTeam from './pages/JoinTeam'
 import LoadingSpinner from './components/LoadingSpinner'
 import ErrorBoundary from './components/ErrorBoundary'
+import Button from './components/ui/Button'
+import Panel from './components/ui/Panel'
 
 // Dashboard module routes — lazy-loaded; one <Suspense> around the layout's
 // <Outlet> (in Dashboard.jsx) catches all of these.
@@ -75,17 +77,17 @@ function App() {
   // A backend nem válaszolt: egyértelmű hibaképernyő a végtelen spinner helyett.
   if (connError) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="card max-w-md w-full text-center">
-          <h1 className="text-xl font-bold text-white mb-2">Nem érhető el a szerver</h1>
-          <p className="text-slate-400 mb-6">
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+        <Panel className="max-w-md w-full text-center">
+          <h1 className="text-xl font-bold text-fg mb-2">Nem érhető el a szerver</h1>
+          <p className="text-muted mb-6">
             Az alkalmazás nem tudott csatlakozni az adatbázishoz. Ellenőrizd az
             internetkapcsolatot és a Supabase projekt állapotát (VITE_SUPABASE_URL).
           </p>
-          <button onClick={() => window.location.reload()} className="btn-primary">
+          <Button variant="primary" onClick={() => window.location.reload()}>
             Újratöltés
-          </button>
-        </div>
+          </Button>
+        </Panel>
       </div>
     )
   }
@@ -141,11 +143,7 @@ function App() {
             <Route path="rehabilitacio" element={<Rehabilitation />} />
             <Route
               path="profil"
-              element={
-                <main className="p-6">
-                  <Profile session={session} />
-                </main>
-              }
+              element={<Profile session={session} />}
             />
             {/* Unknown /dashboard/* slug → back to the dashboard home */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

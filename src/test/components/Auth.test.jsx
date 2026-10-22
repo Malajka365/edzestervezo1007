@@ -30,6 +30,13 @@ describe('Auth form', () => {
     vi.clearAllMocks()
   })
 
+  it('does not render the database connection test toggle', () => {
+    renderAuth()
+
+    expect(screen.queryByText(/Adatbázis kapcsolat/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Kapcsolat teszt/)).not.toBeInTheDocument()
+  })
+
   it('shows the min-10-chars password hint after switching to the Regisztráció tab', async () => {
     const user = userEvent.setup()
     renderAuth()

@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { ROLES } from '../lib/permissions'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Button from '../components/ui/Button'
+import Panel from '../components/ui/Panel'
 
 export default function JoinTeam({ session }) {
   const { token } = useParams()
@@ -91,34 +93,34 @@ export default function JoinTeam({ session }) {
   if (status === 'loading' || status === 'joining') return <LoadingSpinner />
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="card max-w-md w-full text-center p-5 sm:p-6">
+    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+      <Panel className="max-w-md w-full text-center sm:p-6">
         {status === 'confirm' && invite && (
           <>
-            <h2 className="text-lg sm:text-xl font-bold text-white mb-2">Csapat meghívó</h2>
-            <p className="text-sm sm:text-base text-slate-300 mb-4 break-words">
+            <h2 className="text-lg sm:text-xl font-bold text-fg mb-2">Csapat meghívó</h2>
+            <p className="text-sm sm:text-base text-fg mb-4 break-words">
               Csatlakozol a(z) <strong>{invite.team_name}</strong> csapathoz mint{' '}
               <strong>{roleLabel(invite.role)}</strong>?
             </p>
             {invite.invited_email && (
-              <p className="text-xs sm:text-sm text-slate-400 mb-6 break-words">
+              <p className="text-xs sm:text-sm text-muted mb-6 break-words">
                 A meghívó ehhez az e-mail címhez kötött: <strong>{invite.invited_email}</strong>
               </p>
             )}
             {emailMismatch ? (
-              <p className="text-sm sm:text-base text-red-400">
+              <p className="text-sm sm:text-base text-bad">
                 Ez a meghívó egy másik e-mail címhez tartozik. Azzal a fiókkal jelentkezz be, amelyik a meghívót kapta.
               </p>
             ) : (
-              <button onClick={handleAccept} className="btn btn-primary w-full">
+              <Button variant="primary" className="w-full" onClick={handleAccept}>
                 Csatlakozás
-              </button>
+              </Button>
             )}
           </>
         )}
-        {status === 'success' && <p className="text-sm sm:text-base text-green-400">Sikeres csatlakozás! Átirányítás...</p>}
-        {status === 'error' && <p className="text-sm sm:text-base text-red-400">{errorMessage}</p>}
-      </div>
+        {status === 'success' && <p className="text-sm sm:text-base text-ok">Sikeres csatlakozás! Átirányítás...</p>}
+        {status === 'error' && <p className="text-sm sm:text-base text-bad">{errorMessage}</p>}
+      </Panel>
     </div>
   )
 }
