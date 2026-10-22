@@ -16,7 +16,7 @@ export default function BottomTabBar({ moreOpen, onOpenMore }) {
   return (
     <nav
       aria-label="Alsó menü"
-      className="fixed inset-x-0 bottom-0 z-30 flex h-[calc(4rem+env(safe-area-inset-bottom))] border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex h-[calc(4rem+env(safe-area-inset-bottom))] border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] lg:hidden"
     >
       {tabs.map((tab) => {
         const Icon = tab.icon

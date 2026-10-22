@@ -1,9 +1,11 @@
 import { Suspense, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useTeams } from '../../context/TeamContext'
+import { useHotkey } from '../../hooks/useHotkey'
 import { PROFILE_ITEM } from '../../lib/navigation'
 import LoadingSpinner from '../LoadingSpinner'
 import BottomTabBar, { BOTTOM_BAR_PADDING } from './BottomTabBar'
+import CommandPalette from './CommandPalette'
 import MobileTopBar from './MobileTopBar'
 import MoreSheet from './MoreSheet'
 import NoTeamState from './NoTeamState'
@@ -13,6 +15,9 @@ export default function AppShell({ session }) {
   const { teams, loading } = useTeams()
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  useHotkey('mod+k', () => setPaletteOpen(true))
 
   const isProfileRoute = location.pathname.replace(/\/+$/, '') === PROFILE_ITEM.path
   const showNoTeam = teams.length === 0 && !loading && !isProfileRoute
@@ -20,10 +25,10 @@ export default function AppShell({ session }) {
   return (
     // h-screen tartalék a dvh-t nem ismerő böngészőknek; a dvh követi a mobil címsor mozgását.
     <div className="flex h-screen bg-bg supports-[height:100dvh]:h-dvh text-fg">
-      <Sidebar session={session} className="hidden w-[248px] lg:flex" />
+      <Sidebar session={session} onOpenPalette={() => setPaletteOpen(true)} className="hidden w-[248px] lg:flex" />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <MobileTopBar />
+        <MobileTopBar onOpenPalette={() => setPaletteOpen(true)} />
 
         <main className={`min-h-0 flex-1 overflow-y-auto lg:pb-0 ${BOTTOM_BAR_PADDING}`}>
           {showNoTeam ? (
@@ -38,6 +43,7 @@ export default function AppShell({ session }) {
 
       <BottomTabBar moreOpen={moreOpen} onOpenMore={() => setMoreOpen(true)} />
       <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} session={session} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   )
 }
