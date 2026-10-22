@@ -2,6 +2,25 @@
 <html lang="hu">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Téma boot script: a stíluslapok előtt beállítja a data-theme attribútumot,
+      // hogy ne villanjon rossz téma. A szabályok ugyanazok, mint a src/lib/theme.js-ben
+      // (effectiveMode + resolveTheme). Változtatáskor mindkét helyet frissítsd.
+      (function () {
+        var THEME_SWITCH_ENABLED = false; // tükrözi: src/lib/theme.js THEME_SWITCH_ENABLED
+        var theme = 'dark';
+        try {
+          if (THEME_SWITCH_ENABLED) {
+            var mode = localStorage.getItem('tf-theme');
+            if (mode !== 'light' && mode !== 'dark') mode = 'system';
+            theme = mode === 'system'
+              ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+              : mode;
+          }
+        } catch (e) {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TeamFlow - Csapatsport Edzés Menedzsment</title>
