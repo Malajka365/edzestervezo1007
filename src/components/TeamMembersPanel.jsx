@@ -3,10 +3,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ROLES, MODULES, ACCESS_LEVELS } from '../lib/permissions'
-import { UserPlus, Trash2, Copy, X } from 'lucide-react'
+import { UserPlus, Trash2, Copy, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
 import LoadingSpinner from './LoadingSpinner'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import Modal from './ui/Modal'
+import Panel from './ui/Panel'
+import StatusPill from './ui/StatusPill'
+import { Field, Input, Select } from './ui/Field'
 
 export default function TeamMembersPanel({ team, isOwner }) {
   const [members, setMembers] = useState([])
@@ -188,68 +194,102 @@ export default function TeamMembersPanel({ team, isOwner }) {
 
   const roleLabel = (roleKey) => ROLES.find((r) => r.key === roleKey)?.name || roleKey
 
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedLink)
+      toast.success('Link a vágólapra másolva')
+    } catch (error) {
+      console.error('Error copying invite link:', error)
+      toast.error('A link másolása nem sikerült')
+    }
+  }
+
+  const closeInviteForm = () => setShowInviteForm(false)
+
+  // Egy jogosultság-választó (modul × szerepkör) – asztali és mobil nézet is ezt használja.
+  const permissionSelect = (mod, r, id) => (
+    <Select
+      id={id}
+      aria-label={`${mod.name} – ${r.name}`}
+      value={permissions[r.key]?.[mod.key] || 'none'}
+      onChange={(e) => handlePermissionChange(r.key, mod.key, e.target.value)}
+    >
+      {ACCESS_LEVELS.map((lvl) => (
+        <option key={lvl.key} value={lvl.key}>
+          {lvl.name}
+        </option>
+      ))}
+    </Select>
+  )
+
   if (loading) return <LoadingSpinner size="xs" />
 
   return (
     <div className="space-y-6">
-      <div className="card">
-        <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
-          <h3 className="text-lg font-bold text-white">Csapattagok</h3>
-          {isOwner && (
-            <button
+      <Panel
+        title="Csapattagok"
+        actions={
+          isOwner && (
+            <Button
+              variant="primary"
+              icon={UserPlus}
               onClick={() => {
                 setShowInviteForm(true)
                 setGeneratedLink(null)
                 setInviteEmail('')
               }}
-              className="btn btn-primary flex items-center gap-2"
             >
-              <UserPlus className="w-4 h-4" /> Tag meghívása
-            </button>
-          )}
-        </div>
-
+              Tag meghívása
+            </Button>
+          )
+        }
+      >
         <div className="space-y-2">
           {members.map((m) => (
-            <div key={m.id} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-              <div>
-                <p className="text-white font-medium">{m.profiles?.full_name || m.profiles?.email}</p>
-                <p className="text-sm text-slate-400">{roleLabel(m.role)}</p>
+            <div
+              key={m.id}
+              className="flex items-center justify-between gap-3 rounded-[10px] bg-surface-2 p-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium text-fg">
+                  {m.profiles?.full_name || m.profiles?.email}
+                </p>
+                <div className="mt-1">
+                  <StatusPill status="neutral">{roleLabel(m.role)}</StatusPill>
+                </div>
               </div>
               {isOwner && m.role !== 'coach' && (
-                <button onClick={() => handleRemoveMember(m.id)} className="p-2 hover:bg-slate-600 rounded-lg">
-                  <Trash2 className="w-4 h-4 text-red-400" />
-                </button>
+                <IconButton
+                  icon={Trash2}
+                  label="Tag eltávolítása"
+                  className="text-bad hover:bg-bad-soft hover:text-bad"
+                  onClick={() => handleRemoveMember(m.id)}
+                />
               )}
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {isOwner && (
-        <div className="card">
-          <h3 className="text-lg font-bold text-white mb-4">Jogosultságok</h3>
-
+        <Panel title="Jogosultságok">
           {/* Mobilon (< md): egy kártya modulonként, benne a 3 szerep legördülővel */}
           <div className="space-y-3 md:hidden">
             {MODULES.map((mod) => (
-              <div key={mod.key} className="bg-slate-700/50 rounded-lg p-3">
-                <p className="text-white font-medium mb-3">{mod.name}</p>
+              <div key={mod.key} className="rounded-[10px] bg-surface-2 p-3">
+                <p className="mb-3 font-medium text-fg">{mod.name}</p>
                 <div className="space-y-2">
                   {ROLES.map((r) => (
                     <div key={r.key} className="flex items-center justify-between gap-3">
-                      <label className="text-sm text-slate-400 flex-shrink-0">{r.name}</label>
-                      <select
-                        value={permissions[r.key]?.[mod.key] || 'none'}
-                        onChange={(e) => handlePermissionChange(r.key, mod.key, e.target.value)}
-                        className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm min-w-0 flex-shrink-0"
+                      <label
+                        htmlFor={`perm-m-${mod.key}-${r.key}`}
+                        className="flex-shrink-0 text-sm text-muted"
                       >
-                        {ACCESS_LEVELS.map((lvl) => (
-                          <option key={lvl.key} value={lvl.key}>
-                            {lvl.name}
-                          </option>
-                        ))}
-                      </select>
+                        {r.name}
+                      </label>
+                      <div className="w-40 min-w-0">
+                        {permissionSelect(mod, r, `perm-m-${mod.key}-${r.key}`)}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -258,13 +298,13 @@ export default function TeamMembersPanel({ team, isOwner }) {
           </div>
 
           {/* md és afelett: eredeti táblázat nézet */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th className="text-left text-slate-400 p-2">Modul</th>
+                  <th className="p-2 text-left font-semibold text-muted">Modul</th>
                   {ROLES.map((r) => (
-                    <th key={r.key} className="text-left text-slate-400 p-2">
+                    <th key={r.key} className="p-2 text-left font-semibold text-muted">
                       {r.name}
                     </th>
                   ))}
@@ -272,21 +312,11 @@ export default function TeamMembersPanel({ team, isOwner }) {
               </thead>
               <tbody>
                 {MODULES.map((mod) => (
-                  <tr key={mod.key} className="border-t border-slate-700">
-                    <td className="p-2 text-white">{mod.name}</td>
+                  <tr key={mod.key} className="border-t border-line">
+                    <td className="p-2 text-fg">{mod.name}</td>
                     {ROLES.map((r) => (
                       <td key={r.key} className="p-2">
-                        <select
-                          value={permissions[r.key]?.[mod.key] || 'none'}
-                          onChange={(e) => handlePermissionChange(r.key, mod.key, e.target.value)}
-                          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                        >
-                          {ACCESS_LEVELS.map((lvl) => (
-                            <option key={lvl.key} value={lvl.key}>
-                              {lvl.name}
-                            </option>
-                          ))}
-                        </select>
+                        {permissionSelect(mod, r, `perm-d-${mod.key}-${r.key}`)}
                       </td>
                     ))}
                   </tr>
@@ -294,107 +324,109 @@ export default function TeamMembersPanel({ team, isOwner }) {
               </tbody>
             </table>
           </div>
-          <button
+          <Button
+            variant="primary"
+            icon={Save}
             onClick={handleSavePermissions}
-            disabled={savingPermissions}
-            className="btn btn-primary mt-4 disabled:opacity-50 w-full sm:w-auto"
+            loading={savingPermissions}
+            className="mt-4 w-full sm:w-auto"
           >
             {savingPermissions ? 'Mentés...' : 'Jogosultságok mentése'}
-          </button>
-        </div>
+          </Button>
+        </Panel>
       )}
 
       {isOwner && pendingInvites.length > 0 && (
-        <div className="card">
-          <h3 className="text-lg font-bold text-white mb-4">Függő meghívók</h3>
+        <Panel title="Függő meghívók">
           <div className="space-y-2">
             {pendingInvites.map((inv) => (
-              <div key={inv.id} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                <div>
-                  <p className="text-white font-medium">{roleLabel(inv.role)}</p>
+              <div
+                key={inv.id}
+                className="flex items-center justify-between gap-3 rounded-[10px] bg-surface-2 p-3"
+              >
+                <div className="min-w-0">
+                  <StatusPill status="neutral">{roleLabel(inv.role)}</StatusPill>
                   {inv.invited_email && (
-                    <p className="text-sm text-slate-300 break-all">{inv.invited_email}</p>
+                    <p className="mt-1 break-all text-sm text-fg">{inv.invited_email}</p>
                   )}
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-muted">
                     Lejár: {new Date(inv.expires_at).toLocaleDateString('hu-HU')}
                   </p>
                 </div>
-                <button onClick={() => handleRevokeInvite(inv.id)} className="p-2 hover:bg-slate-600 rounded-lg">
-                  <Trash2 className="w-4 h-4 text-red-400" />
-                </button>
+                <IconButton
+                  icon={Trash2}
+                  label="Meghívó visszavonása"
+                  className="text-bad hover:bg-bad-soft hover:text-bad"
+                  onClick={() => handleRevokeInvite(inv.id)}
+                />
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
       )}
 
-      {showInviteForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="card max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">Tag meghívása</h3>
-              <button onClick={() => setShowInviteForm(false)}>
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-
-            {!generatedLink ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Meghívott e-mail címe</label>
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="pelda@email.hu"
-                    required
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Szerepkör</label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value)}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  >
-                    {ROLES.map((r) => (
-                      <option key={r.key} value={r.key}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleGenerateInvite}
-                  disabled={!isValidEmail(inviteEmail)}
-                  className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Meghívó link generálása
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-slate-400">
-                  Küldd el ezt a linket ({roleLabel(inviteRole)} szerepkörrel, 7 napig érvényes):
-                </p>
-                <div className="flex items-center gap-2 p-3 bg-slate-700 rounded-lg">
-                  <code className="text-sm text-white flex-1 truncate">{generatedLink}</code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(generatedLink)}
-                    className="p-2 hover:bg-slate-600 rounded-lg"
-                  >
-                    <Copy className="w-4 h-4 text-slate-300" />
-                  </button>
-                </div>
-                <button onClick={() => setShowInviteForm(false)} className="btn btn-primary w-full">
-                  Kész
-                </button>
-              </div>
-            )}
+      <Modal
+        open={showInviteForm}
+        onClose={closeInviteForm}
+        title="Tag meghívása"
+        size="sm"
+        footer={
+          !generatedLink ? (
+            <>
+              <Button onClick={closeInviteForm}>Mégse</Button>
+              <Button
+                variant="primary"
+                onClick={handleGenerateInvite}
+                disabled={!isValidEmail(inviteEmail)}
+              >
+                Meghívó link generálása
+              </Button>
+            </>
+          ) : (
+            <Button variant="primary" onClick={closeInviteForm}>
+              Kész
+            </Button>
+          )
+        }
+      >
+        {!generatedLink ? (
+          <div className="grid gap-4">
+            <Field label="Meghívott e-mail címe" htmlFor="invite-email">
+              <Input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="pelda@email.hu"
+                required
+              />
+            </Field>
+            <Field label="Szerepkör" htmlFor="invite-role">
+              <Select
+                id="invite-role"
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value)}
+              >
+                {ROLES.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-muted">
+              Küldd el ezt a linket ({roleLabel(inviteRole)} szerepkörrel, 7 napig érvényes):
+            </p>
+            <div className="flex items-center gap-2 rounded-[10px] bg-surface-2 p-3">
+              <code className="flex-1 truncate font-mono text-sm text-fg">{generatedLink}</code>
+              <IconButton icon={Copy} label="Link másolása" onClick={handleCopyLink} />
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <ConfirmDialog
         open={!!confirmState}

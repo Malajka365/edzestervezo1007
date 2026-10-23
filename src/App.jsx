@@ -3,11 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { supabase } from './lib/supabase'
+import { useTheme } from './hooks/useTheme'
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import JoinTeam from './pages/JoinTeam'
 import LoadingSpinner from './components/LoadingSpinner'
 import ErrorBoundary from './components/ErrorBoundary'
+import Button from './components/ui/Button'
+import Panel from './components/ui/Panel'
 
 // Dashboard module routes — lazy-loaded; one <Suspense> around the layout's
 // <Outlet> (in Dashboard.jsx) catches all of these.
@@ -39,6 +42,9 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  // A téma az egész appra érvényes (Auth, csatlakozás, irányítópult): itt él a
+  // rendszer-téma követése, a kapcsoló (UserMenu) csak módot vált.
+  useTheme({ apply: true })
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [connError, setConnError] = useState(null)
@@ -75,17 +81,17 @@ function App() {
   // A backend nem válaszolt: egyértelmű hibaképernyő a végtelen spinner helyett.
   if (connError) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="card max-w-md w-full text-center">
-          <h1 className="text-xl font-bold text-white mb-2">Nem érhető el a szerver</h1>
-          <p className="text-slate-400 mb-6">
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+        <Panel className="max-w-md w-full text-center">
+          <h1 className="text-xl font-bold text-fg mb-2">Nem érhető el a szerver</h1>
+          <p className="text-muted mb-6">
             Az alkalmazás nem tudott csatlakozni az adatbázishoz. Ellenőrizd az
             internetkapcsolatot és a Supabase projekt állapotát (VITE_SUPABASE_URL).
           </p>
-          <button onClick={() => window.location.reload()} className="btn-primary">
+          <Button variant="primary" onClick={() => window.location.reload()}>
             Újratöltés
-          </button>
-        </div>
+          </Button>
+        </Panel>
       </div>
     )
   }
@@ -98,20 +104,20 @@ function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#1e293b',
-            color: '#ffffff',
-            border: '1px solid #334155',
+            background: 'rgb(var(--surface))',
+            color: 'rgb(var(--fg))',
+            border: '1px solid rgb(var(--line))',
           },
           success: {
             iconTheme: {
-              primary: '#22c55e',
-              secondary: '#1e293b',
+              primary: 'rgb(var(--ok))',
+              secondary: 'rgb(var(--surface))',
             },
           },
           error: {
             iconTheme: {
-              primary: '#ef4444',
-              secondary: '#1e293b',
+              primary: 'rgb(var(--bad))',
+              secondary: 'rgb(var(--surface))',
             },
           },
         }}
@@ -141,11 +147,7 @@ function App() {
             <Route path="rehabilitacio" element={<Rehabilitation />} />
             <Route
               path="profil"
-              element={
-                <main className="p-6">
-                  <Profile session={session} />
-                </main>
-              }
+              element={<Profile session={session} />}
             />
             {/* Unknown /dashboard/* slug → back to the dashboard home */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

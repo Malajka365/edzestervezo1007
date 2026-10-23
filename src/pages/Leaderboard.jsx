@@ -7,12 +7,14 @@ import {
   Trophy,
   Medal,
   TrendingUp,
-  Filter,
   Award,
-  User,
   Download,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
+import Button from '../components/ui/Button'
+import EmptyState from '../components/ui/EmptyState'
+import { Select } from '../components/ui/Field'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
 import LoadingSpinner from '../components/LoadingSpinner'
 import toast from 'react-hot-toast'
 import { exportTablePdf } from '../lib/pdfExport'
@@ -117,17 +119,17 @@ export default function Leaderboard() {
   }
 
   const getMedalIcon = (rank) => {
-    if (rank === 1) return <Trophy className="w-6 h-6 text-yellow-400" />
-    if (rank === 2) return <Medal className="w-6 h-6 text-slate-400" />
-    if (rank === 3) return <Medal className="w-6 h-6 text-amber-600" />
-    return <span className="text-slate-500 font-bold">#{rank}</span>
+    if (rank === 1) return <Trophy className="w-6 h-6 text-warn" aria-hidden="true" />
+    if (rank === 2) return <Medal className="w-6 h-6 text-muted" />
+    if (rank === 3) return <Medal className="w-6 h-6 text-warn" />
+    return <span className="text-muted font-bold">#{rank}</span>
   }
 
   const getMedalColor = (rank) => {
-    if (rank === 1) return 'bg-yellow-500/20 border-yellow-500'
-    if (rank === 2) return 'bg-slate-500/20 border-slate-400'
-    if (rank === 3) return 'bg-amber-600/20 border-amber-600'
-    return 'bg-slate-800 border-slate-700'
+    if (rank === 1) return 'bg-warn-soft border-warn'
+    if (rank === 2) return 'bg-surface-2 border-line-strong'
+    if (rank === 3) return 'bg-surface-2 border-warn'
+    return 'bg-surface border-line'
   }
 
   const exportToPDF = async () => {
@@ -199,123 +201,71 @@ export default function Leaderboard() {
 
   if (!selectedTeam) {
     return (
-      <div className="h-screen flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white flex items-center space-x-3">
-                <Trophy className="w-6 h-6 text-yellow-400" />
-                <span>Ranglista</span>
-              </h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Relatív megerősödés alapján - 1RM / Teststúly</p>
-            </div>
-            <div className="flex-shrink-0">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
-        </div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        <PageHeader title="Ranglista" description="Relatív megerősödés alapján - 1RM / Testsúly" />
+        <EmptyState
+          icon={Trophy}
+          title="Nincs kiválasztott csapat"
+          description="Válassz ki egy csapatot a folytatáshoz."
+        />
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white flex items-center space-x-3">
-                <Trophy className="w-6 h-6 text-yellow-400" />
-                <span>Ranglista</span>
-              </h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                Relatív megerősödés alapján - 1RM / Teststúly
-              </p>
-            </div>
-
-            {/* Gyakorlat selector */}
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Ranglista"
+        description={`${selectedTeam.name} · Relatív megerősödés alapján - 1RM / Testsúly`}
+        actions={
+          <>
             {exercises.length > 0 && (
-              <div className="flex items-center gap-3">
-                <select
-                  value={selectedExercise}
-                  onChange={(e) => setSelectedExercise(e.target.value)}
-                  className="input-field text-sm"
-                >
-                  {exercises.map((exercise) => (
-                    <option key={exercise.id} value={exercise.id}>
-                      {exercise.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Középső gombok */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {selectedExercise && leaderboardData.length > 0 && (
-              <button
-                onClick={exportToPDF}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="PDF Exportálás"
+              <Select
+                value={selectedExercise}
+                onChange={(e) => setSelectedExercise(e.target.value)}
+                aria-label="Gyakorlat"
+                className="min-w-[200px]"
               >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">PDF Exportálás</span>
-              </button>
+                {exercises.map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>
+                    {exercise.name}
+                  </option>
+                ))}
+              </Select>
             )}
-          </div>
-
-          {/* Jobb oldal: TeamSelector */}
-          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {selectedExercise && leaderboardData.length > 0 && (
+              <Button variant="primary" icon={Download} onClick={exportToPDF}>
+                PDF exportálás
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Leaderboard */}
       {loading ? (
-        <div className="card">
+        <Panel>
           <LoadingSpinner size="inline" />
-        </div>
+        </Panel>
       ) : leaderboardData.length === 0 ? (
-        <div className="card text-center py-12">
-          <Award className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">Nincs adat</h3>
-          <p className="text-slate-400">
-            Ehhez a gyakorlathoz még nincs mérési adat vagy testsúly adat rögzítve
-          </p>
-        </div>
+        <EmptyState
+          icon={Award}
+          title="Nincs adat"
+          description="Ehhez a gyakorlathoz még nincs mérési adat vagy testsúly adat rögzítve"
+        />
       ) : (
-        <div className="card">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <TrendingUp className="w-5 h-5 text-primary-400" />
-              <h3 className="text-lg font-semibold text-white">
-                {exercises.find((e) => e.id === selectedExercise)?.name} - Ranglista
-              </h3>
-            </div>
-            <div className="text-sm text-slate-400">
-              {leaderboardData.length} játékos
-            </div>
-          </div>
-
+        <Panel
+          title={`${exercises.find((e) => e.id === selectedExercise)?.name} - Ranglista`}
+          icon={TrendingUp}
+          actions={<span className="text-sm font-normal text-muted">{leaderboardData.length} játékos</span>}
+        >
           <div className="space-y-3">
             {leaderboardData.map((entry, index) => {
               const rank = index + 1
               return (
                 <div
                   key={entry.player.id}
-                  className={`flex items-center space-x-4 p-4 rounded-lg border-2 transition-all ${getMedalColor(rank)} ${
-                    rank <= 3 ? 'shadow-lg' : ''
-                  }`}
+                  className={`flex flex-wrap items-center gap-x-4 gap-y-3 p-4 rounded-[9px] border transition-colors ${getMedalColor(rank)}`}
                 >
                   {/* Rank */}
                   <div className="flex items-center justify-center w-12">
@@ -323,38 +273,38 @@ export default function Leaderboard() {
                   </div>
 
                   {/* Player Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
+                  <div className="flex-1 min-w-[140px]">
+                    <div className="flex items-center gap-2">
                       {entry.player.jersey_number && (
-                        <span className="text-lg font-bold text-primary-400">
+                        <span className="font-mono text-lg font-semibold text-accent">
                           #{entry.player.jersey_number}
                         </span>
                       )}
-                      <span className="text-white font-semibold text-lg">
+                      <span className="text-fg font-semibold text-lg">
                         {entry.player.name}
                       </span>
                     </div>
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center space-x-6 text-sm">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                     <div className="text-center">
-                      <div className="text-slate-400 text-xs mb-1">1RM</div>
-                      <div className="text-white font-bold">{entry.oneRM} kg</div>
+                      <div className="text-muted text-xs mb-1">1RM</div>
+                      <div className="text-fg font-semibold">{entry.oneRM} kg</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-slate-400 text-xs mb-1">Testsúly</div>
-                      <div className="text-white font-bold">{entry.bodyWeight} kg</div>
+                      <div className="text-muted text-xs mb-1">Testsúly</div>
+                      <div className="text-fg font-semibold">{entry.bodyWeight} kg</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-slate-400 text-xs mb-1">Mérés dátuma</div>
-                      <div className="text-slate-300 font-medium">
+                      <div className="text-muted text-xs mb-1">Mérés dátuma</div>
+                      <div className="text-fg font-medium">
                         {new Date(entry.measuredAt).toLocaleDateString('hu-HU')}
                       </div>
                     </div>
-                    <div className="text-center bg-primary-900/30 px-4 py-2 rounded-lg">
-                      <div className="text-primary-300 text-xs mb-1">Relatív Erő</div>
-                      <div className="text-primary-400 font-bold text-xl">
+                    <div className="text-center bg-accent-soft px-4 py-2 rounded-[9px]">
+                      <div className="text-accent text-xs mb-1">Relatív erő</div>
+                      <div className="font-mono text-accent font-semibold text-xl">
                         {entry.relativeStrength}
                       </div>
                     </div>
@@ -365,17 +315,15 @@ export default function Leaderboard() {
           </div>
 
           {/* Info Box */}
-          <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
-            <p className="text-sm text-slate-300">
-              <strong>Relatív Erő:</strong> Az 1RM és a testsúly aránya. Minél magasabb az érték, 
-              annál erősebb a játékos a saját testsúlyához képest. Ez objektívebb összehasonlítást 
+          <div className="mt-6 rounded-[9px] bg-surface-2 p-4">
+            <p className="text-sm text-fg">
+              <strong>Relatív erő:</strong> Az 1RM és a testsúly aránya. Minél magasabb az érték,
+              annál erősebb a játékos a saját testsúlyához képest. Ez objektívebb összehasonlítást
               tesz lehetővé különböző testsúlyú játékosok között.
             </p>
           </div>
-        </div>
+        </Panel>
       )}
-
-      </div>
     </div>
   )
 }

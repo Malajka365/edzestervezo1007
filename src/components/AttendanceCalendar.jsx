@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Plus, Edit, Trash2, X, Save } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Save, Clock, ClipboardList, StickyNote } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from './ui/ConfirmDialog'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import Modal from './ui/Modal'
+import Panel from './ui/Panel'
+import { Field, Input, Select, Textarea } from './ui/Field'
 import LoadingSpinner from './LoadingSpinner'
 import {
   ATTENDANCE_STATUSES,
@@ -12,6 +17,8 @@ import {
   saveAttendance,
   deleteAttendance,
 } from '../lib/attendance'
+
+const ATTENDANCE_FORM_ID = 'attendance-form'
 
 export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
   const [attendance, setAttendance] = useState([])
@@ -139,101 +146,111 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
   }
 
   return (
-    <div className="card flex flex-col h-full">
+    <Panel>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-white">Jelenlét történet</h3>
-        <div className="flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-[15px] font-semibold text-fg">Jelenlét történet</h3>
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
-            <input
+            <Input
               type="date"
+              aria-label="Kezdő dátum"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-              placeholder="Tól"
+              className="!w-auto"
             />
-            <span className="text-slate-400 text-sm">-</span>
-            <input
+            <span className="text-sm text-muted" aria-hidden="true">-</span>
+            <Input
               type="date"
+              aria-label="Záró dátum"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="px-3 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
-              placeholder="Ig"
+              className="!w-auto"
             />
             {(dateFrom || dateTo) && (
-              <button
+              <IconButton
+                icon={X}
+                label="Szűrés törlése"
+                size="sm"
                 onClick={() => {
                   setDateFrom('')
                   setDateTo('')
                 }}
-                className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
-                title="Szűrés törlése"
-              >
-                <X className="w-4 h-4 text-slate-400" />
-              </button>
+              />
             )}
           </div>
           {canEdit && (
-            <button
-              onClick={handleNewClick}
-              className="btn btn-primary flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
+            <Button variant="primary" icon={Plus} onClick={handleNewClick}>
               Új jelenlét
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Attendance List */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div className="space-y-2">
         {loading ? (
           <LoadingSpinner size="inline" />
         ) : attendance.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">
+          <div className="py-12 text-center text-muted">
             <p>Még nincs jelenlét rögzítve</p>
           </div>
         ) : (
           attendance.map((att) => (
             <div
               key={att.id}
-              className="bg-slate-700 rounded-lg p-3 hover:bg-slate-600 transition-colors"
+              className="rounded-[10px] bg-surface-2 p-3 transition-colors hover:bg-surface-3"
             >
-              <div className="grid grid-cols-[auto_1fr_auto] gap-4 items-center">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 {/* Státusz és Dátum */}
-                <div className="flex items-center gap-2 min-w-[200px]">
-                  <div className={`w-3 h-3 ${getStatusColor(att.status)} rounded-full flex-shrink-0`}></div>
-                  <span className="font-bold text-white text-sm">{formatDate(att.date)}</span>
+                <div className="flex min-w-0 items-center gap-2 sm:min-w-[200px]">
+                  <span
+                    className={`h-3 w-3 flex-shrink-0 rounded-full ${getStatusColor(att.status)}`}
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm font-bold text-fg">{formatDate(att.date)}</span>
                 </div>
 
                 {/* Információk */}
-                <div className="flex items-center gap-4 text-sm text-slate-300 flex-wrap">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-fg">
                   {att.event_time && (
-                    <span className="whitespace-nowrap">🕐 {att.event_time.slice(0, 5)}</span>
+                    <span className="flex items-center gap-1.5 whitespace-nowrap">
+                      <Clock className="h-3.5 w-3.5 text-muted" aria-hidden="true" />
+                      {att.event_time.slice(0, 5)}
+                    </span>
                   )}
                   {att.training_type && (
-                    <span className="whitespace-nowrap">📋 {att.training_type}</span>
+                    <span className="flex items-center gap-1.5 whitespace-nowrap">
+                      <ClipboardList className="h-3.5 w-3.5 text-muted" aria-hidden="true" />
+                      {att.training_type}
+                    </span>
                   )}
                   <span className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span className={`w-2 h-2 ${getStatusColor(att.status)} rounded-full`}></span>
+                    <span
+                      className={`h-2 w-2 rounded-full ${getStatusColor(att.status)}`}
+                      aria-hidden="true"
+                    />
                     {getStatusLabel(att.status)}
                   </span>
                   {att.notes && (
-                    <span className="text-slate-400 truncate max-w-md" title={att.notes}>📝 {att.notes}</span>
+                    <span
+                      className="flex min-w-0 max-w-md items-center gap-1.5 text-muted"
+                      title={att.notes}
+                    >
+                      <StickyNote className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+                      <span className="truncate">{att.notes}</span>
+                    </span>
                   )}
                 </div>
 
                 {/* Szerkesztés gomb */}
                 {canEdit && (
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => handleEditClick(att)}
-                      className="p-2 hover:bg-slate-500 rounded-lg transition-colors"
-                      title="Szerkesztés"
-                    >
-                      <Edit className="w-4 h-4 text-slate-300" />
-                    </button>
-                  </div>
+                  <IconButton
+                    icon={Pencil}
+                    label="Szerkesztés"
+                    size="sm"
+                    onClick={() => handleEditClick(att)}
+                  />
                 )}
               </div>
             </div>
@@ -242,115 +259,81 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
       </div>
 
       {/* Attendance Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <h3 className="text-xl font-bold text-white">
-                {selectedAttendance ? 'Jelenlét szerkesztése' : 'Új jelenlét'}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={selectedAttendance ? 'Jelenlét szerkesztése' : 'Új jelenlét'}
+        size="sm"
+        footer={
+          <>
+            {selectedAttendance && (
+              <Button variant="danger" icon={Trash2} onClick={handleDelete}>
+                Törlés
+              </Button>
+            )}
+            <Button type="submit" form={ATTENDANCE_FORM_ID} variant="primary" icon={Save}>
+              {selectedAttendance ? 'Frissítés' : 'Mentés'}
+            </Button>
+          </>
+        }
+      >
+        <form id={ATTENDANCE_FORM_ID} onSubmit={handleSave} className="space-y-4">
+          <Field label="Dátum *" htmlFor="att-date">
+            <Input
+              id="att-date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              required
+            />
+          </Field>
 
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Dátum *
-                </label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({...formData, date: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  required
-                />
-              </div>
+          <Field label="Státusz *" htmlFor="att-status">
+            <Select
+              id="att-status"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              required
+            >
+              {ATTENDANCE_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </Select>
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Státusz *
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  required
-                >
-                  {ATTENDANCE_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
+          <Field label="Edzés jellege" htmlFor="att-type">
+            <Select
+              id="att-type"
+              value={formData.training_type}
+              onChange={(e) => setFormData({ ...formData, training_type: e.target.value })}
+            >
+              {TRAINING_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </Select>
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Edzés jellege
-                </label>
-                <select
-                  value={formData.training_type}
-                  onChange={(e) => setFormData({...formData, training_type: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                >
-                  {TRAINING_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
+          <Field label="Időpont" htmlFor="att-time">
+            <Input
+              id="att-time"
+              type="time"
+              value={formData.event_time}
+              onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+              placeholder="pl. 14:30"
+            />
+          </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Időpont
-                </label>
-                <input
-                  type="time"
-                  value={formData.event_time}
-                  onChange={(e) => setFormData({...formData, event_time: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  placeholder="pl. 14:30"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Megjegyzés
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
-                  rows="3"
-                  placeholder="Opcionális megjegyzés..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                {selectedAttendance && (
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Törlés
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  className="flex-1 btn btn-primary flex items-center justify-center gap-2"
-                >
-                  <Save className="w-5 h-5" />
-                  {selectedAttendance ? 'Frissítés' : 'Mentés'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <Field label="Megjegyzés" htmlFor="att-notes">
+            <Textarea
+              id="att-notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows="3"
+              placeholder="Opcionális megjegyzés..."
+            />
+          </Field>
+        </form>
+      </Modal>
 
       <ConfirmDialog
         open={!!confirmState}
@@ -362,6 +345,6 @@ export default function AttendanceCalendar({ player, teamId, canEdit = true }) {
         }}
         onCancel={() => setConfirmState(null)}
       />
-    </div>
+    </Panel>
   )
 }

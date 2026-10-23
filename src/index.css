@@ -1,15 +1,12 @@
+@import './styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0f172a;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,23 +21,24 @@
 }
 
 body {
+  @apply bg-bg text-fg font-sans;
   min-height: 100vh;
 }
 
 @layer components {
-  .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  .table {
+    @apply w-full border-collapse text-sm;
   }
 
-  .btn-secondary {
-    @apply bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200;
+  .table th {
+    @apply px-3 py-2 text-left font-mono text-[10.5px] font-medium uppercase tracking-wider text-muted border-b border-line;
   }
 
-  .input-field {
-    @apply w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  .table td {
+    @apply px-3 py-2.5 border-b border-line;
   }
 
-  .card {
-    @apply bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700;
+  .table .num {
+    @apply text-right tabular-nums;
   }
 }

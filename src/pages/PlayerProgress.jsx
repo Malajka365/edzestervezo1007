@@ -1,18 +1,20 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { usePlayers } from '../hooks/usePlayers'
 import { useExercises } from '../hooks/useExercises'
 import {
   TrendingUp,
-  Users,
-  Dumbbell,
   Calendar,
   BarChart3,
-  Filter,
   Download,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
+import Button from '../components/ui/Button'
+import EmptyState from '../components/ui/EmptyState'
+import { Field, Input, Select } from '../components/ui/Field'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
+import { readThemeColors, useThemeColors } from '../hooks/useThemeColors'
 import LoadingSpinner from '../components/LoadingSpinner'
 import {
   LineChart,
@@ -30,6 +32,22 @@ import { exportTablePdf } from '../lib/pdfExport'
 
 export default function PlayerProgress() {
   const { selectedTeam } = useTeams()
+  // Recharts-ban nem használható Tailwind osztály: a témaszíneket a tokenekből olvassuk.
+  // A tartalék értékek csak olyan környezetben számítanak, ahol nincs betöltött téma (pl. jsdom).
+  const liveColors = useThemeColors()
+  // PDF-exportkor a diagram világos palettát kap (a fehér PDF-oldalhoz), függetlenül az aktív témától.
+  const [exporting, setExporting] = useState(false)
+  const lightColors = useMemo(() => (exporting ? readThemeColors('light') : null), [exporting])
+  const themeColors = lightColors ?? liveColors
+  const chart = {
+    grid: themeColors.line ?? 'gray',
+    axis: themeColors.muted ?? 'gray',
+    surface: themeColors.surface ?? 'white',
+    accent: themeColors.accent ?? 'blue',
+    ok: themeColors.ok ?? 'green',
+    warn: themeColors.warn ?? 'orange',
+    bad: themeColors.bad ?? 'red',
+  }
   // Players come from the shared, cached usePlayers query (was a local fetch).
   const { data: players = [] } = usePlayers(selectedTeam?.id)
   // Exercises come from the shared, cached useExercises query (was a local fetch).
@@ -142,10 +160,10 @@ export default function PlayerProgress() {
 
       if (index < phvIndex) {
         // Before PHV
-        return { status: 'pre-phv', color: '#f59e0b', label: 'PHV előtt' }
+        return { status: 'pre-phv', color: chart.warn, label: 'PHV előtt' }
       } else if (index === phvIndex && maxGrowthRate >= 7) {
         // At PHV (if growth rate >= 7 cm/year)
-        return { status: 'phv', color: '#ef4444', label: 'PHV' }
+        return { status: 'phv', color: chart.bad, label: 'PHV' }
       } else {
         // After PHV - check if growth consistently below 3 cm/year
         const recentGrowth = data.slice(Math.max(0, index - 2), index + 1)
@@ -155,9 +173,9 @@ export default function PlayerProgress() {
         const avgRecentGrowth = recentGrowth.reduce((a, b) => a + b, 0) / recentGrowth.length
         
         if (avgRecentGrowth < 3) {
-          return { status: 'post-phv-stable', color: '#3b82f6', label: 'PHV után (stabil)' }
+          return { status: 'post-phv-stable', color: chart.accent, label: 'PHV után (stabil)' }
         } else {
-          return { status: 'post-phv', color: '#10b981', label: 'PHV után' }
+          return { status: 'post-phv', color: chart.ok, label: 'PHV után' }
         }
       }
     })
@@ -169,6 +187,17 @@ export default function PlayerProgress() {
 
     if (!player || !exercise) return
 
+    // A diagram újrarajzolása világos palettával, majd két képkocka várakozás a rögzítés előtt.
+    setExporting(true)
+    try {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      await buildPdf(player, exercise)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const buildPdf = async (player, exercise) => {
     const dateRange = dateFrom && dateTo
       ? `${new Date(dateFrom).toLocaleDateString('hu-HU')} - ${new Date(dateTo).toLocaleDateString('hu-HU')}`
       : dateFrom
@@ -210,11 +239,8 @@ export default function PlayerProgress() {
       beforeTable: async (doc) => {
         // Capture chart as image
         if (chartRef.current) {
-          const { default: html2canvas } = await import('html2canvas')
-          const canvas = await html2canvas(chartRef.current, {
-            backgroundColor: '#1e293b',
-            scale: 2,
-          })
+          const { captureForPdf } = await import('../lib/pdfCapture')
+          const canvas = await captureForPdf(chartRef.current, { scale: 2 })
           const imgData = canvas.toDataURL('image/png')
           doc.addImage(imgData, 'PNG', 14, 35, 180, 90)
         }
@@ -254,13 +280,13 @@ export default function PlayerProgress() {
       const phvStatus = phvStatuses[currentIndex]
 
       return (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 shadow-lg">
-          <p className="text-white font-semibold mb-2">{data.fullDate}</p>
-          <p className="text-primary-400 text-sm">
+        <div className="bg-surface border border-line rounded-lg p-3 shadow-lg">
+          <p className="text-fg font-semibold mb-2">{data.fullDate}</p>
+          <p className="text-accent text-sm">
             Érték: {data.value} {getSelectedExercise()?.unit}
           </p>
           {data.growthRate !== undefined && (
-            <p className="text-yellow-400 text-sm">
+            <p className="text-warn text-sm">
               Növekedés: {data.growthRate.toFixed(1)} cm/év
             </p>
           )}
@@ -270,15 +296,15 @@ export default function PlayerProgress() {
             </p>
           )}
           {data.reps && data.reps > 1 && (
-            <p className="text-slate-300 text-sm">Ismétlések: {data.reps}</p>
+            <p className="text-fg text-sm">Ismétlések: {data.reps}</p>
           )}
           {data.oneRM && (
-            <p className="text-green-400 text-sm font-semibold">
+            <p className="text-ok text-sm font-semibold">
               1RM: {data.oneRM} {getSelectedExercise()?.unit}
             </p>
           )}
           {data.notes && (
-            <p className="text-slate-400 text-xs mt-1">{data.notes}</p>
+            <p className="text-muted text-xs mt-1">{data.notes}</p>
           )}
         </div>
       )
@@ -288,53 +314,33 @@ export default function PlayerProgress() {
 
   if (!selectedTeam) {
     return (
-      <div className="h-screen flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Játékos Progresszió</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Játékosok fejlődése</p>
-            </div>
-            <div className="flex-shrink-0">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <TrendingUp className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Válassz csapatot</h3>
-            <p className="text-slate-400">Válassz egy csapatot a progresszió megtekintéséhez</p>
-          </div>
-        </div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        <PageHeader title="Progresszió" description="Játékosok fejlődése" />
+        <EmptyState
+          icon={TrendingUp}
+          title="Válassz csapatot"
+          description="Válassz egy csapatot a progresszió megtekintéséhez."
+        />
       </div>
     )
   }
 
-  return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary-400" />
-                <span>Játékos Progresszió</span>
-              </h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                Kövesd nyomon a játékosok fejlődését gyakorlatonként
-              </p>
-            </div>
-          </div>
+  const selectedExerciseInfo = getSelectedExercise()
+  const isHeight = selectedExerciseInfo?.name === 'Testmagasság'
+  const unit = selectedExerciseInfo?.unit
 
-          {/* Közép: Játékos és Gyakorlat selector */}
-          <div className="flex items-center gap-2">
-            <select
+  return (
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Progresszió"
+        description={`${selectedTeam.name} · Kövesd nyomon a játékosok fejlődését gyakorlatonként`}
+        actions={
+          <>
+            <Select
               value={selectedPlayer}
               onChange={(e) => setSelectedPlayer(e.target.value)}
-              className="input-field min-w-[180px]"
+              aria-label="Játékos"
+              className="min-w-[180px]"
             >
               <option value="">Válassz játékost...</option>
               {players.map((player) => (
@@ -343,11 +349,12 @@ export default function PlayerProgress() {
                   {player.name}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               value={selectedExercise}
               onChange={(e) => setSelectedExercise(e.target.value)}
-              className="input-field min-w-[180px]"
+              aria-label="Gyakorlat"
+              className="min-w-[180px]"
             >
               <option value="">Válassz gyakorlatot...</option>
               {exercises.map((exercise) => (
@@ -355,370 +362,325 @@ export default function PlayerProgress() {
                   {exercise.name} ({exercise.unit})
                 </option>
               ))}
-            </select>
-          </div>
-
-          {/* Jobb oldal: PDF Export + TeamSelector */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+            </Select>
             {selectedPlayer && selectedExercise && chartData.length > 0 && (
-              <button
-                onClick={exportToPDF}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="PDF Exportálás"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">PDF Exportálás</span>
-              </button>
+              <Button variant="primary" icon={Download} onClick={exportToPDF} loading={exporting}>
+                PDF exportálás
+              </Button>
             )}
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="space-y-6">
+        {/* Dátum szűrők */}
+        {selectedPlayer && selectedExercise && (
+          <Panel title="Dátum szűrés" icon={Calendar}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Dátum-tól" htmlFor="progress-date-from">
+                <Input
+                  id="progress-date-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </Field>
+              <Field label="Dátum-ig" htmlFor="progress-date-to">
+                <Input
+                  id="progress-date-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </Field>
+            </div>
+            {(dateFrom || dateTo) && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[9px] bg-surface-2 p-3">
+                <p className="text-sm text-fg">
+                  {dateFrom && dateTo
+                    ? `Szűrés: ${new Date(dateFrom).toLocaleDateString('hu-HU')} - ${new Date(dateTo).toLocaleDateString('hu-HU')}`
+                    : dateFrom
+                    ? `Szűrés: ${new Date(dateFrom).toLocaleDateString('hu-HU')} -tól`
+                    : `Szűrés: ${new Date(dateTo).toLocaleDateString('hu-HU')} -ig`}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setDateFrom('')
+                    setDateTo('')
+                  }}
+                >
+                  Szűrő törlése
+                </Button>
+              </div>
+            )}
+          </Panel>
+        )}
 
-      {/* Dátum Szűrők */}
-      {(selectedPlayer && selectedExercise) && (
-        <div className="card mb-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <Calendar className="w-5 h-5 text-primary-400" />
-            <h3 className="text-lg font-semibold text-white">Dátum Szűrés</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Dátum-tól</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Dátum-ig</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="input-field"
-              />
-            </div>
-          </div>
-          {(dateFrom || dateTo) && (
-            <div className="mt-4 flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-              <p className="text-sm text-slate-300">
-                {dateFrom && dateTo
-                  ? `Szűrés: ${new Date(dateFrom).toLocaleDateString('hu-HU')} - ${new Date(dateTo).toLocaleDateString('hu-HU')}`
-                  : dateFrom
-                  ? `Szűrés: ${new Date(dateFrom).toLocaleDateString('hu-HU')} -tól`
-                  : `Szűrés: ${new Date(dateTo).toLocaleDateString('hu-HU')} -ig`}
-              </p>
-              <button
-                onClick={() => {
-                  setDateFrom('')
-                  setDateTo('')
-                }}
-                className="text-sm text-primary-400 hover:text-primary-300 font-medium"
-              >
-                Szűrő törlése
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Chart */}
-      {loading ? (
-        <div className="card">
-          <LoadingSpinner size="inline" />
-        </div>
-      ) : !selectedPlayer || !selectedExercise ? (
-        <div className="card text-center py-12">
-          <BarChart3 className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">
-            Válassz játékost és gyakorlatot
-          </h3>
-          <p className="text-slate-400">
-            A diagram megjelenítéséhez válassz ki egy játékost és egy gyakorlatot
-          </p>
-        </div>
-      ) : chartData.length === 0 ? (
-        <div className="card text-center py-12">
-          <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2">Nincs mérési adat</h3>
-          <p className="text-slate-400">
-            {getSelectedPlayer()?.name} játékosnak még nincs mérése a(z){' '}
-            {getSelectedExercise()?.name} gyakorlatban
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Chart Card */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-white">
-                  {getSelectedPlayer()?.name} - {getSelectedExercise()?.name}
+        {/* Chart */}
+        {loading ? (
+          <Panel>
+            <LoadingSpinner size="inline" />
+          </Panel>
+        ) : !selectedPlayer || !selectedExercise ? (
+          <EmptyState
+            icon={BarChart3}
+            title="Válassz játékost és gyakorlatot"
+            description="A diagram megjelenítéséhez válassz ki egy játékost és egy gyakorlatot"
+          />
+        ) : chartData.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="Nincs mérési adat"
+            description={`${getSelectedPlayer()?.name} játékosnak még nincs mérése a(z) ${selectedExerciseInfo?.name} gyakorlatban`}
+          />
+        ) : (
+          <>
+            {/* Chart Card */}
+            <Panel>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-fg">
+                  {getSelectedPlayer()?.name} - {selectedExerciseInfo?.name}
                 </h3>
-                <p className="text-sm text-slate-400 mt-1">
+                <p className="text-sm text-muted mt-1">
                   {chartData.length} mérés • {chartData[0].fullDate} -{' '}
                   {chartData[chartData.length - 1].fullDate}
                 </p>
               </div>
-              <button
-                onClick={exportToPDF}
-                className="btn-primary flex items-center space-x-2"
-              >
-                <Download className="w-5 h-5" />
-                <span>PDF Exportálás</span>
-              </button>
-            </div>
 
-            <div ref={chartRef} className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis
-                    dataKey="date"
-                    stroke="#94a3b8"
-                    style={{ fontSize: '12px' }}
-                  />
-                  <YAxis
-                    stroke="#94a3b8"
-                    style={{ fontSize: '12px' }}
-                    label={{
-                      value: getSelectedExercise()?.unit || '',
-                      angle: -90,
-                      position: 'insideLeft',
-                      style: { fill: '#94a3b8' },
-                    }}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    wrapperStyle={{ paddingTop: '20px' }}
-                    iconType="line"
-                  />
-                  
-                  {/* PHV Marker for Height measurements */}
-                  {getSelectedExercise()?.name === 'Testmagasság' &&
-                    (() => {
-                      const phvStatuses = calculatePHVStatus(chartData)
-                      const phvIndex = phvStatuses.findIndex(s => s && s.status === 'phv')
-                      if (phvIndex !== -1) {
-                        const phvPoint = chartData[phvIndex]
-                        return (
-                          <ReferenceDot
-                            x={phvPoint.date}
-                            y={phvPoint.value}
-                            r={8}
-                            fill="#ef4444"
-                            stroke="#fff"
-                            strokeWidth={2}
-                            label={{
-                              value: 'PHV',
-                              position: 'bottom',
-                              fill: '#ef4444',
-                              fontSize: 14,
-                              fontWeight: 'bold',
-                              offset: 10,
-                            }}
-                          />
-                        )
-                      }
-                      return null
-                    })()}
-                  
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    dot={(props) => {
-                      if (getSelectedExercise()?.name === 'Testmagasság') {
+              <div ref={chartRef} className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                    <XAxis dataKey="date" stroke={chart.axis} style={{ fontSize: '12px' }} />
+                    <YAxis
+                      stroke={chart.axis}
+                      style={{ fontSize: '12px' }}
+                      label={{
+                        value: unit || '',
+                        angle: -90,
+                        position: 'insideLeft',
+                        style: { fill: chart.axis },
+                      }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend
+                      wrapperStyle={{ paddingTop: '20px', color: chart.axis }}
+                      iconType="line"
+                    />
+
+                    {/* PHV Marker for Height measurements */}
+                    {isHeight &&
+                      (() => {
                         const phvStatuses = calculatePHVStatus(chartData)
-                        const index = chartData.findIndex(p => p.date === props.payload.date)
-                        const phvStatus = phvStatuses[index]
-                        if (phvStatus) {
+                        const phvIndex = phvStatuses.findIndex((s) => s && s.status === 'phv')
+                        if (phvIndex !== -1) {
+                          const phvPoint = chartData[phvIndex]
                           return (
-                            <circle
-                              cx={props.cx}
-                              cy={props.cy}
-                              r={5}
-                              fill={phvStatus.color}
-                              stroke="#fff"
-                              strokeWidth={1}
+                            <ReferenceDot
+                              x={phvPoint.date}
+                              y={phvPoint.value}
+                              r={8}
+                              fill={chart.bad}
+                              stroke={chart.surface}
+                              strokeWidth={2}
+                              label={{
+                                value: 'PHV',
+                                position: 'bottom',
+                                fill: chart.bad,
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                                offset: 10,
+                              }}
                             />
                           )
                         }
-                      }
-                      return <circle cx={props.cx} cy={props.cy} r={5} fill="#3b82f6" />
-                    }}
-                    activeDot={{ r: 7 }}
-                    name={`Érték (${getSelectedExercise()?.unit})`}
-                  />
-                  {chartData.some((d) => d.oneRM) && (
+                        return null
+                      })()}
+
                     <Line
                       type="monotone"
-                      dataKey="oneRM"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={{ fill: '#10b981', r: 4 }}
-                      name={`1RM (${getSelectedExercise()?.unit})`}
+                      dataKey="value"
+                      stroke={chart.accent}
+                      strokeWidth={3}
+                      dot={(props) => {
+                        if (isHeight) {
+                          const phvStatuses = calculatePHVStatus(chartData)
+                          const index = chartData.findIndex((p) => p.date === props.payload.date)
+                          const phvStatus = phvStatuses[index]
+                          if (phvStatus) {
+                            return (
+                              <circle
+                                key={props.key}
+                                cx={props.cx}
+                                cy={props.cy}
+                                r={5}
+                                fill={phvStatus.color}
+                                stroke={chart.surface}
+                                strokeWidth={1}
+                              />
+                            )
+                          }
+                        }
+                        return (
+                          <circle key={props.key} cx={props.cx} cy={props.cy} r={5} fill={chart.accent} />
+                        )
+                      }}
+                      activeDot={{ r: 7 }}
+                      name={`Érték (${unit})`}
                     />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+                    {chartData.some((d) => d.oneRM) && (
+                      <Line
+                        type="monotone"
+                        dataKey="oneRM"
+                        stroke={chart.ok}
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ fill: chart.ok, r: 4 }}
+                        name={`1RM (${unit})`}
+                      />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
 
-            {/* PHV Legend for Height */}
-            {getSelectedExercise()?.name === 'Testmagasság' && chartData.length > 1 && (
-              <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
-                <p className="text-xs font-semibold text-slate-300 mb-2">PHV Státusz:</p>
-                <div className="flex flex-wrap gap-3 text-xs">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }}></div>
-                    <span className="text-slate-300">PHV előtt (gyorsuló növekedés)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }}></div>
-                    <span className="text-slate-300">PHV (csúcs növekedés ≥7 cm/év)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10b981' }}></div>
-                    <span className="text-slate-300">PHV után (lassuló növekedés)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span className="text-slate-300">Stabil (&lt;3 cm/év)</span>
+              {/* PHV Legend for Height */}
+              {isHeight && chartData.length > 1 && (
+                <div className="mt-4 rounded-[9px] bg-surface-2 p-3">
+                  <p className="text-xs font-semibold text-fg mb-2">PHV státusz:</p>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-warn"></div>
+                      <span className="text-fg">PHV előtt (gyorsuló növekedés)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-bad"></div>
+                      <span className="text-fg">PHV (csúcs növekedés ≥7 cm/év)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-ok"></div>
+                      <span className="text-fg">PHV után (lassuló növekedés)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-accent"></div>
+                      <span className="text-fg">Stabil (&lt;3 cm/év)</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </Panel>
 
-          {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="card">
-              <p className="text-sm text-slate-400 mb-1">Első mérés</p>
-              <p className="text-2xl font-bold text-white">
-                {chartData[0].value} {getSelectedExercise()?.unit}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">{chartData[0].fullDate}</p>
+            {/* Stats Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Panel>
+                <p className="text-sm text-muted mb-1">Első mérés</p>
+                <p className="font-mono text-2xl font-semibold text-fg">
+                  {chartData[0].value} {unit}
+                </p>
+                <p className="text-xs text-muted mt-1">{chartData[0].fullDate}</p>
+              </Panel>
+
+              <Panel>
+                <p className="text-sm text-muted mb-1">Legutóbbi mérés</p>
+                <p className="font-mono text-2xl font-semibold text-fg">
+                  {chartData[chartData.length - 1].value} {unit}
+                </p>
+                <p className="text-xs text-muted mt-1">
+                  {chartData[chartData.length - 1].fullDate}
+                </p>
+              </Panel>
+
+              <Panel>
+                <p className="text-sm text-muted mb-1">Fejlődés</p>
+                <p
+                  className={`font-mono text-2xl font-semibold ${
+                    chartData[chartData.length - 1].value - chartData[0].value >= 0
+                      ? 'text-ok'
+                      : 'text-bad'
+                  }`}
+                >
+                  {chartData[chartData.length - 1].value - chartData[0].value > 0 ? '+' : ''}
+                  {(chartData[chartData.length - 1].value - chartData[0].value).toFixed(1)} {unit}
+                </p>
+                <p className="text-xs text-muted mt-1">
+                  {(
+                    ((chartData[chartData.length - 1].value - chartData[0].value) /
+                      chartData[0].value) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </p>
+              </Panel>
+
+              <Panel>
+                <p className="text-sm text-muted mb-1">Legjobb eredmény</p>
+                <p className="font-mono text-2xl font-semibold text-accent">
+                  {Math.max(...chartData.map((d) => d.value))} {unit}
+                </p>
+                <p className="text-xs text-muted mt-1">
+                  {
+                    chartData.find((d) => d.value === Math.max(...chartData.map((d) => d.value)))
+                      ?.fullDate
+                  }
+                </p>
+              </Panel>
             </div>
 
-            <div className="card">
-              <p className="text-sm text-slate-400 mb-1">Legutóbbi mérés</p>
-              <p className="text-2xl font-bold text-white">
-                {chartData[chartData.length - 1].value} {getSelectedExercise()?.unit}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                {chartData[chartData.length - 1].fullDate}
-              </p>
-            </div>
-
-            <div className="card">
-              <p className="text-sm text-slate-400 mb-1">Fejlődés</p>
-              <p
-                className={`text-2xl font-bold ${
-                  chartData[chartData.length - 1].value - chartData[0].value >= 0
-                    ? 'text-green-400'
-                    : 'text-red-400'
-                }`}
-              >
-                {chartData[chartData.length - 1].value - chartData[0].value > 0
-                  ? '+'
-                  : ''}
-                {(chartData[chartData.length - 1].value - chartData[0].value).toFixed(
-                  1
-                )}{' '}
-                {getSelectedExercise()?.unit}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                {(
-                  ((chartData[chartData.length - 1].value - chartData[0].value) /
-                    chartData[0].value) *
-                  100
-                ).toFixed(1)}
-                %
-              </p>
-            </div>
-
-            <div className="card">
-              <p className="text-sm text-slate-400 mb-1">Legjobb eredmény</p>
-              <p className="text-2xl font-bold text-primary-400">
-                {Math.max(...chartData.map((d) => d.value))}{' '}
-                {getSelectedExercise()?.unit}
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                {
-                  chartData.find(
-                    (d) => d.value === Math.max(...chartData.map((d) => d.value))
-                  )?.fullDate
-                }
-              </p>
-            </div>
-          </div>
-
-          {/* Measurements Table */}
-          <div className="card">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Mérések Részletesen ({measurements.length})
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-700">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase">
-                      Dátum
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase">
-                      Érték
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase">
-                      Ismétlések
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase">
-                      1RM
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase">
-                      Jegyzetek
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700">
-                  {measurements.map((measurement) => (
-                    <tr
-                      key={measurement.id}
-                      className="hover:bg-slate-700/50 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-slate-300">
-                        {new Date(measurement.measured_at).toLocaleDateString('hu-HU')}
-                      </td>
-                      <td className="px-4 py-3 text-center text-white font-semibold">
-                        {measurement.value} {measurement.exercise?.unit}
-                      </td>
-                      <td className="px-4 py-3 text-center text-slate-300">
-                        {measurement.reps || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-center text-green-400 font-semibold">
-                        {measurement.one_rm && measurement.exercise?.unit !== 'cm'
-                          ? `${measurement.one_rm} ${measurement.exercise?.unit}`
-                          : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-slate-400 text-sm">
-                        {measurement.notes || '-'}
-                      </td>
+            {/* Measurements Table */}
+            <Panel title={`Mérések részletesen (${measurements.length})`}>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-line">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                        Dátum
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted uppercase">
+                        Érték
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted uppercase">
+                        Ismétlések
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted uppercase">
+                        1RM
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase">
+                        Jegyzetek
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
-
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {measurements.map((measurement) => (
+                      <tr
+                        key={measurement.id}
+                        className="hover:bg-surface-2/50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-fg">
+                          {new Date(measurement.measured_at).toLocaleDateString('hu-HU')}
+                        </td>
+                        <td className="px-4 py-3 text-center text-fg font-semibold">
+                          {measurement.value} {measurement.exercise?.unit}
+                        </td>
+                        <td className="px-4 py-3 text-center text-fg">
+                          {measurement.reps || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-ok font-semibold">
+                          {measurement.one_rm && measurement.exercise?.unit !== 'cm'
+                            ? `${measurement.one_rm} ${measurement.exercise?.unit}`
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-muted text-sm">
+                          {measurement.notes || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          </>
+        )}
       </div>
     </div>
   )

@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Upload, X, File, FileText, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { Upload, FileText, Image as ImageIcon } from 'lucide-react'
+import Button from './ui/Button'
+import Modal from './ui/Modal'
+import { Field, Input, Select, Textarea } from './ui/Field'
 import toast from 'react-hot-toast'
+
+const UPLOAD_FORM_ID = 'document-upload-form'
 
 export default function DocumentUpload({ player, teamId, onUploaded, canEdit = true }) {
   const [uploading, setUploading] = useState(false)
@@ -17,6 +22,8 @@ export default function DocumentUpload({ player, teamId, onUploaded, canEdit = t
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0]
+    // A mező kiürítése, hogy ugyanaz a fájl Mégse után újra kiválasztható legyen.
+    e.target.value = ''
     if (file) {
       // Ellenőrizzük a fájl típust
       const allowedTypes = ['image/jpeg', 'image/jpg', 'application/pdf']
@@ -94,157 +101,118 @@ export default function DocumentUpload({ player, teamId, onUploaded, canEdit = t
     return null
   }
 
+  const closeForm = () => {
+    setShowForm(false)
+    setSelectedFile(null)
+  }
+
   return (
     <div>
-      {!showForm ? (
-        <label className="block cursor-pointer">
-          <div className="card hover:border-primary-500 transition-all duration-200 text-center py-8">
-            <div className="w-16 h-16 bg-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Upload className="w-8 h-8 text-primary-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-2">
-              Dokumentum feltöltése
-            </h3>
-            <p className="text-sm text-slate-400">
-              JPEG, JPG vagy PDF (max 10MB)
-            </p>
-          </div>
-          <input
-            type="file"
-            accept="image/jpeg,image/jpg,application/pdf"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-        </label>
-      ) : (
-        <div className="card">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">Dokumentum adatok</h3>
-            <button
-              onClick={() => {
-                setShowForm(false)
-                setSelectedFile(null)
-              }}
-              className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-slate-400" />
-            </button>
-          </div>
+      <label className="block cursor-pointer rounded-[14px] border border-line bg-surface px-4 py-8 text-center transition-colors hover:border-accent focus-within:ring-2 focus-within:ring-accent">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft">
+          <Upload className="h-8 w-8 text-accent" aria-hidden="true" />
+        </div>
+        <h3 className="mb-2 text-lg font-semibold text-fg">Dokumentum feltöltése</h3>
+        <p className="text-sm text-muted">JPEG, JPG vagy PDF (max 10MB)</p>
+        <input
+          type="file"
+          accept="image/jpeg,image/jpg,application/pdf"
+          onChange={handleFileSelect}
+          className="sr-only"
+        />
+      </label>
 
-          <form onSubmit={handleUpload} className="space-y-4">
+      <Modal
+        open={showForm && !!selectedFile}
+        onClose={closeForm}
+        title="Dokumentum adatok"
+        footer={
+          <>
+            <Button onClick={closeForm}>Mégse</Button>
+            <Button
+              type="submit"
+              form={UPLOAD_FORM_ID}
+              variant="primary"
+              loading={uploading}
+            >
+              {uploading ? 'Feltöltés...' : 'Feltöltés'}
+            </Button>
+          </>
+        }
+      >
+        {selectedFile && (
+          <form id={UPLOAD_FORM_ID} onSubmit={handleUpload} className="space-y-4">
             {/* Selected File Info */}
-            <div className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg">
+            <div className="flex items-center gap-3 rounded-[10px] bg-surface-2 p-3">
               {selectedFile.type.startsWith('image/') ? (
-                <ImageIcon className="w-8 h-8 text-blue-400" />
+                <ImageIcon className="h-8 w-8 flex-shrink-0 text-accent" aria-hidden="true" />
               ) : (
-                <FileText className="w-8 h-8 text-red-400" />
+                <FileText className="h-8 w-8 flex-shrink-0 text-bad" aria-hidden="true" />
               )}
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium truncate">{selectedFile.name}</p>
-                <p className="text-sm text-slate-400">
-                  {(selectedFile.size / 1024).toFixed(1)} KB
-                </p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-fg">{selectedFile.name}</p>
+                <p className="text-sm text-muted">{(selectedFile.size / 1024).toFixed(1)} KB</p>
               </div>
             </div>
 
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Cím *
-              </label>
-              <input
+            <Field label="Cím *" htmlFor="doc-title">
+              <Input
+                id="doc-title"
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="pl. MRI lelet 2025.01"
                 required
               />
-            </div>
+            </Field>
 
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Leírás
-              </label>
-              <textarea
+            <Field label="Leírás" htmlFor="doc-description">
+              <Textarea
+                id="doc-description"
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows="3"
                 placeholder="Rövid leírás a dokumentumról..."
               />
-            </div>
+            </Field>
 
-            {/* Category and Date */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Kategória
-                </label>
-                <select
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Kategória" htmlFor="doc-category">
+                <Select
+                  id="doc-category"
                   value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
                   <option value="anamnézis">Anamnézis</option>
                   <option value="lelet">Lelet</option>
                   <option value="rtg">RTG</option>
                   <option value="mri">MRI</option>
                   <option value="egyéb">Egyéb</option>
-                </select>
-              </div>
+                </Select>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Dátum
-                </label>
-                <input
+              <Field label="Dátum" htmlFor="doc-date">
+                <Input
+                  id="doc-date"
                   type="date"
                   value={formData.document_date}
-                  onChange={(e) => setFormData({...formData, document_date: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                  onChange={(e) => setFormData({ ...formData, document_date: e.target.value })}
                 />
-              </div>
+              </Field>
             </div>
 
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Címkék
-              </label>
-              <input
+            <Field label="Címkék" htmlFor="doc-tags">
+              <Input
+                id="doc-tags"
                 type="text"
                 value={formData.tags}
-                onChange={(e) => setFormData({...formData, tags: e.target.value})}
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                 placeholder="pl. térd, műtét, kontroll (vesszővel elválasztva)"
               />
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false)
-                  setSelectedFile(null)
-                }}
-                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
-              >
-                Mégse
-              </button>
-              <button
-                type="submit"
-                disabled={uploading}
-                className="flex-1 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {uploading ? 'Feltöltés...' : 'Feltöltés'}
-              </button>
-            </div>
+            </Field>
           </form>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }

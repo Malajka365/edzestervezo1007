@@ -9,7 +9,7 @@ export default function TeamSelector() {
 
   if (loading) {
     return (
-      <div className="flex items-center space-x-2 px-4 py-2 bg-slate-700 rounded-lg">
+      <div className="flex items-center space-x-2 px-4 py-2 bg-surface-2 rounded-lg">
         <LoadingSpinner size="xs" />
       </div>
     )
@@ -17,9 +17,9 @@ export default function TeamSelector() {
 
   if (teams.length === 0) {
     return (
-      <div className="flex items-center space-x-2 px-4 py-2 bg-slate-700 rounded-lg">
-        <Users className="w-5 h-5 text-slate-400" />
-        <span className="text-sm text-slate-300">Nincs csapat</span>
+      <div className="flex items-center space-x-2 px-4 py-2 bg-surface-2 rounded-lg">
+        <Users className="w-5 h-5 text-muted" />
+        <span className="text-sm text-muted">Nincs csapat</span>
       </div>
     )
   }
@@ -28,19 +28,19 @@ export default function TeamSelector() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-3 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors min-w-[200px]"
+        className="flex items-center space-x-3 px-4 py-2 bg-surface-2 hover:bg-surface-3 rounded-lg transition-colors min-w-[200px]"
       >
-        <Users className="w-5 h-5 text-primary-400" />
+        <Users className="w-5 h-5 text-accent" />
         <div className="flex-1 text-left min-w-0">
-          <p className="text-sm font-semibold text-white truncate">
+          <p className="text-sm font-semibold text-fg truncate">
             {selectedTeam?.name || 'Válassz csapatot'}
           </p>
           {selectedTeam?.sport && (
-            <p className="text-xs text-slate-400 truncate">{selectedTeam.sport}</p>
+            <p className="text-xs text-muted truncate">{selectedTeam.sport}</p>
           )}
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-slate-400 transition-transform ${
+          className={`w-4 h-4 text-muted transition-transform ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -53,9 +53,9 @@ export default function TeamSelector() {
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full left-0 mt-2 w-full min-w-[250px] bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-20 overflow-hidden">
-            <div className="p-2 border-b border-slate-700">
-              <p className="text-xs text-slate-400 uppercase font-semibold px-2 py-1">
+          <div className="absolute top-full left-0 mt-2 w-full min-w-[250px] bg-surface border border-line rounded-lg shadow-xl z-20 overflow-hidden">
+            <div className="p-2 border-b border-line">
+              <p className="text-xs text-muted uppercase font-semibold px-2 py-1">
                 Csapatok ({teams.length})
               </p>
             </div>
@@ -69,8 +69,8 @@ export default function TeamSelector() {
                   }}
                   className={`w-full flex items-center space-x-3 px-3 py-2 transition-colors ${
                     selectedTeam?.id === team.id
-                      ? 'bg-primary-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-700'
+                      ? 'bg-accent text-accent-fg'
+                      : 'text-fg hover:bg-surface-2'
                   }`}
                 >
                   <Users className="w-4 h-4" />

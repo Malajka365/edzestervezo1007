@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import { ArrowUp, ArrowDown, RotateCcw, Save, X } from 'lucide-react'
+import { ArrowUp, ArrowDown, RotateCcw, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getDefaultWidgets, WIDGETS_BY_KEY } from '../../lib/dashboardWidgets'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
+import IconButton from '../../components/ui/IconButton'
 
 // A mentett/default sorrendet (baseList) egészíti ki azokkal az engedélyezett
 // widgetekkel, amelyek még nincsenek benne (visible:false-ként, a registry
@@ -86,98 +89,66 @@ export default function CustomizeEditor({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="card max-w-lg w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-white">Kezdőlap testreszabása</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-400 hover:text-white"
-            aria-label="Bezárás"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {items.length === 0 ? (
-          <p className="text-sm text-slate-400 py-6 text-center">Nincs testreszabható elem.</p>
-        ) : (
-          <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {items.map((item, index) => {
-              const widget = WIDGETS_BY_KEY[item.key]
-              if (!widget) return null
-              const Icon = widget.icon
-              return (
-                <li
-                  key={item.key}
-                  className="flex items-center gap-3 px-3 py-2 bg-slate-800/60 border border-slate-700 rounded-lg"
-                >
-                  <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={item.visible}
-                      onChange={() => toggleVisible(index)}
-                      className="w-4 h-4 rounded border-slate-600 text-primary-600 focus:ring-primary-500"
-                    />
-                    <Icon className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    <span className="text-sm text-white truncate">{widget.name}</span>
-                  </label>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => moveUp(index)}
-                      disabled={index === 0}
-                      aria-label="Feljebb"
-                      className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400"
-                    >
-                      <ArrowUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveDown(index)}
-                      disabled={index === items.length - 1}
-                      aria-label="Lejjebb"
-                      className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-slate-400"
-                    >
-                      <ArrowDown className="w-4 h-4" />
-                    </button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-
-        <div className="flex items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-700">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-slate-300 hover:text-white transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
+    <Modal
+      open
+      onClose={onClose}
+      title="Kezdőlap testreszabása"
+      footer={
+        <>
+          <Button variant="ghost" icon={RotateCcw} onClick={handleReset} className="mr-auto">
             Alaphelyzet
-          </button>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-            >
-              Mégse
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Mentés...' : 'Mentés'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <Button onClick={onClose}>Mégse</Button>
+          <Button variant="primary" icon={Save} onClick={handleSave} loading={saving}>
+            {saving ? 'Mentés...' : 'Mentés'}
+          </Button>
+        </>
+      }
+    >
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted">Nincs testreszabható elem.</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item, index) => {
+            const widget = WIDGETS_BY_KEY[item.key]
+            if (!widget) return null
+            const Icon = widget.icon
+            return (
+              <li
+                key={item.key}
+                className="flex items-center gap-3 rounded-[9px] border border-line bg-surface-2 px-3 py-2"
+              >
+                <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={item.visible}
+                    onChange={() => toggleVisible(index)}
+                    className="h-4 w-4 flex-shrink-0 rounded accent-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  />
+                  <Icon className="h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />
+                  <span className="truncate text-sm text-fg">{widget.name}</span>
+                </label>
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  <IconButton
+                    icon={ArrowUp}
+                    label="Feljebb"
+                    size="sm"
+                    onClick={() => moveUp(index)}
+                    disabled={index === 0}
+                  />
+                  <IconButton
+                    icon={ArrowDown}
+                    label="Lejjebb"
+                    size="sm"
+                    onClick={() => moveDown(index)}
+                    disabled={index === items.length - 1}
+                  />
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </Modal>
   )
 }

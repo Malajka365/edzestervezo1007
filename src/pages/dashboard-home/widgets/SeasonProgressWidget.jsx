@@ -57,18 +57,18 @@ export default function SeasonProgressWidget() {
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : isError ? (
-        <p className="text-sm text-red-400">Nem sikerült betölteni</p>
+        <p className="text-sm text-bad">Nem sikerült betölteni</p>
       ) : !season ? (
-        <p className="text-sm text-slate-400">Nincs aktív szezon.</p>
+        <p className="text-sm text-muted">Nincs aktív szezon.</p>
       ) : (
         <div className="space-y-3">
-          <p className="text-white font-medium text-sm truncate">{season.name}</p>
-          <p className="text-sm text-slate-300">
+          <p className="text-fg font-medium text-sm truncate">{season.name}</p>
+          <p className="text-sm text-fg">
             {currentWeek === 0 ? 'Még nem kezdődött el' : `${currentWeek}. hét / ${totalWeeks}`}
           </p>
-          <div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-surface-2 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all"
+              className="h-full bg-ok rounded-full transition-all"
               style={{ width: `${progressPct}%` }}
             />
           </div>

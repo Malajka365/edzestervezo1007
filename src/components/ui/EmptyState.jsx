@@ -1,8 +1,8 @@
 // src/components/ui/EmptyState.jsx
 //
 // Reusable empty-state block for list/grid views with no data yet.
-// Matches the app's `.card` aesthetic — centered icon, title, short
-// description and an optional action button.
+// Panel-style block — centered icon, title, short description and an
+// optional action button.
 //
 //   <EmptyState
 //     icon={Users}
@@ -12,16 +12,18 @@
 //     onAction={() => setShowAddModal(true)}
 //   />
 
+import Button from './Button'
+
 export default function EmptyState({ icon: Icon, title, description, actionLabel, onAction }) {
   return (
-    <div className="card text-center py-12">
-      {Icon && <Icon className="w-16 h-16 text-slate-600 mx-auto mb-4" />}
-      {title && <h3 className="text-xl font-bold text-white mb-2">{title}</h3>}
-      {description && <p className="text-slate-400 mb-6">{description}</p>}
+    <div className="rounded-[14px] border border-line bg-surface px-6 py-12 text-center">
+      {Icon && <Icon className="mx-auto mb-4 h-14 w-14 text-subtle" aria-hidden="true" />}
+      {title && <h3 className="mb-2 text-lg font-semibold text-fg">{title}</h3>}
+      {description && <p className="mx-auto mb-6 max-w-md text-sm text-muted">{description}</p>}
       {actionLabel && onAction && (
-        <button type="button" onClick={onAction} className="btn btn-primary">
+        <Button variant="primary" onClick={onAction}>
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   )

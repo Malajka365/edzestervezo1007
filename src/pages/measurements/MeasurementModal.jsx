@@ -1,4 +1,7 @@
-import { X, Save, TrendingUp } from 'lucide-react'
+import { Save, TrendingUp } from 'lucide-react'
+import Button from '../../components/ui/Button'
+import Modal from '../../components/ui/Modal'
+import { Field, Input, Select, Textarea } from '../../components/ui/Field'
 
 export default function MeasurementModal({
   players,
@@ -9,124 +12,168 @@ export default function MeasurementModal({
   handleCreateMeasurement,
   calculate1RM,
 }) {
+  const close = () => setShowMeasurementModal(false)
+  const selectedExercise = measurementForm.exercise_id
+    ? exercises.find((e) => e.id === measurementForm.exercise_id)
+    : undefined
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-slate-800 rounded-xl max-w-lg w-full p-6 border border-slate-700 my-8">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-white">Új Mérés Rögzítése</h3>
-          <button onClick={() => setShowMeasurementModal(false)} className="text-slate-400 hover:text-white">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        <form onSubmit={handleCreateMeasurement} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Játékos *</label>
-            <select value={measurementForm.player_id} onChange={(e) => setMeasurementForm({ ...measurementForm, player_id: e.target.value })} required className="input-field">
-              <option value="">Válassz játékost</option>
-              {players.map((player) => (
-                <option key={player.id} value={player.id}>
-                  {player.jersey_number ? `#${player.jersey_number} ` : ''}{player.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Gyakorlat *</label>
-            <select value={measurementForm.exercise_id} onChange={(e) => setMeasurementForm({ ...measurementForm, exercise_id: e.target.value })} required className="input-field">
-              <option value="">Válassz gyakorlatot</option>
-              {exercises.map((exercise) => (
-                <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
-              ))}
-            </select>
-          </div>
-          {measurementForm.exercise_id && exercises.find(e => e.id === measurementForm.exercise_id)?.unit === 'reps' ? (
-            // Only show "Ismétlések" for reps exercises
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Ismétlések *</label>
-              <input
+    <Modal
+      open
+      onClose={close}
+      title="Új mérés rögzítése"
+      footer={
+        <>
+          <Button onClick={close}>Mégse</Button>
+          <Button type="submit" form="measurement-form" variant="primary" icon={Save}>
+            Rögzítés
+          </Button>
+        </>
+      }
+    >
+      <form id="measurement-form" onSubmit={handleCreateMeasurement} className="space-y-4">
+        <Field label="Játékos *" htmlFor="measurement-player">
+          <Select
+            id="measurement-player"
+            value={measurementForm.player_id}
+            onChange={(e) => setMeasurementForm({ ...measurementForm, player_id: e.target.value })}
+            required
+          >
+            <option value="">Válassz játékost</option>
+            {players.map((player) => (
+              <option key={player.id} value={player.id}>
+                {player.jersey_number ? `#${player.jersey_number} ` : ''}
+                {player.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Gyakorlat *" htmlFor="measurement-exercise">
+          <Select
+            id="measurement-exercise"
+            value={measurementForm.exercise_id}
+            onChange={(e) => setMeasurementForm({ ...measurementForm, exercise_id: e.target.value })}
+            required
+          >
+            <option value="">Válassz gyakorlatot</option>
+            {exercises.map((exercise) => (
+              <option key={exercise.id} value={exercise.id}>
+                {exercise.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {selectedExercise?.unit === 'reps' ? (
+          // Only show "Ismétlések" for reps exercises
+          <Field label="Ismétlések *" htmlFor="measurement-value">
+            <Input
+              id="measurement-value"
+              type="number"
+              min="1"
+              value={measurementForm.value}
+              onChange={(e) =>
+                setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })
+              }
+              required
+              placeholder="pl. 15"
+            />
+          </Field>
+        ) : selectedExercise?.unit === 'cm' ? (
+          // Only show single field for cm exercises (e.g., height)
+          <Field label={`${selectedExercise.name} (cm) *`} htmlFor="measurement-value">
+            <Input
+              id="measurement-value"
+              type="number"
+              step="0.1"
+              min="0"
+              value={measurementForm.value}
+              onChange={(e) =>
+                setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })
+              }
+              required
+              placeholder="pl. 180"
+            />
+          </Field>
+        ) : selectedExercise?.category === 'player_params' ? (
+          // Only show single field for player parameter exercises (e.g., weight)
+          <Field
+            label={`${selectedExercise.name} (${selectedExercise.unit}) *`}
+            htmlFor="measurement-value"
+          >
+            <Input
+              id="measurement-value"
+              type="number"
+              step="0.1"
+              min="0"
+              value={measurementForm.value}
+              onChange={(e) =>
+                setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })
+              }
+              required
+              placeholder={selectedExercise.unit === 'kg' ? 'pl. 75' : 'pl. 100'}
+            />
+          </Field>
+        ) : (
+          // Show both fields for other exercises (kg, etc.)
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Érték *" htmlFor="measurement-value">
+              <Input
+                id="measurement-value"
+                type="number"
+                step="0.1"
+                value={measurementForm.value}
+                onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value })}
+                required
+                placeholder="pl. 100"
+              />
+            </Field>
+            <Field label="Ismétlések" htmlFor="measurement-reps">
+              <Input
+                id="measurement-reps"
                 type="number"
                 min="1"
-                value={measurementForm.value}
-                onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })}
-                required
-                className="input-field"
-                placeholder="pl. 15"
+                value={measurementForm.reps}
+                onChange={(e) => setMeasurementForm({ ...measurementForm, reps: e.target.value })}
               />
-            </div>
-          ) : measurementForm.exercise_id && exercises.find(e => e.id === measurementForm.exercise_id)?.unit === 'cm' ? (
-            // Only show single field for cm exercises (e.g., height)
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                {exercises.find(e => e.id === measurementForm.exercise_id)?.name} (cm) *
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={measurementForm.value}
-                onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })}
-                required
-                className="input-field"
-                placeholder="pl. 180"
-              />
-            </div>
-          ) : measurementForm.exercise_id && exercises.find(e => e.id === measurementForm.exercise_id)?.category === 'player_params' ? (
-            // Only show single field for player parameter exercises (e.g., weight)
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                {exercises.find(e => e.id === measurementForm.exercise_id)?.name} ({exercises.find(e => e.id === measurementForm.exercise_id)?.unit}) *
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={measurementForm.value}
-                onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value, reps: '1' })}
-                required
-                className="input-field"
-                placeholder={exercises.find(e => e.id === measurementForm.exercise_id)?.unit === 'kg' ? "pl. 75" : "pl. 100"}
-              />
-            </div>
-          ) : (
-            // Show both fields for other exercises (kg, etc.)
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Érték *</label>
-                <input type="number" step="0.1" value={measurementForm.value} onChange={(e) => setMeasurementForm({ ...measurementForm, value: e.target.value })} required className="input-field" placeholder="pl. 100" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Ismétlések</label>
-                <input type="number" min="1" value={measurementForm.reps} onChange={(e) => setMeasurementForm({ ...measurementForm, reps: e.target.value })} className="input-field" />
-              </div>
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Dátum *</label>
-            <input type="date" value={measurementForm.measured_at} onChange={(e) => setMeasurementForm({ ...measurementForm, measured_at: e.target.value })} required className="input-field" />
+            </Field>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Jegyzetek</label>
-            <textarea value={measurementForm.notes} onChange={(e) => setMeasurementForm({ ...measurementForm, notes: e.target.value })} className="input-field resize-none" rows="3" placeholder="Opcionális jegyzetek..." />
-          </div>
-          {measurementForm.value && measurementForm.reps && measurementForm.exercise_id &&
-           exercises.find(e => e.id === measurementForm.exercise_id)?.unit !== 'reps' &&
-           exercises.find(e => e.id === measurementForm.exercise_id)?.unit !== 'cm' && (
-            <div className="bg-primary-900/30 border border-primary-700 rounded-lg p-3">
-              <p className="text-sm text-primary-300">
-                <TrendingUp className="w-4 h-4 inline mr-1" />
-                Kalkulált 1RM: <strong>{calculate1RM(parseFloat(measurementForm.value), parseInt(measurementForm.reps))} {exercises.find(e => e.id === measurementForm.exercise_id)?.unit}</strong>
+        )}
+        <Field label="Dátum *" htmlFor="measurement-date">
+          <Input
+            id="measurement-date"
+            type="date"
+            value={measurementForm.measured_at}
+            onChange={(e) => setMeasurementForm({ ...measurementForm, measured_at: e.target.value })}
+            required
+          />
+        </Field>
+        <Field label="Jegyzetek" htmlFor="measurement-notes">
+          <Textarea
+            id="measurement-notes"
+            value={measurementForm.notes}
+            onChange={(e) => setMeasurementForm({ ...measurementForm, notes: e.target.value })}
+            className="resize-none"
+            rows="3"
+            placeholder="Opcionális jegyzetek..."
+          />
+        </Field>
+        {measurementForm.value &&
+          measurementForm.reps &&
+          selectedExercise &&
+          selectedExercise.unit !== 'reps' &&
+          selectedExercise.unit !== 'cm' && (
+            <div className="rounded-[9px] border border-accent bg-accent-soft p-3">
+              <p className="text-sm text-accent">
+                <TrendingUp className="mr-1 inline h-4 w-4" aria-hidden="true" />
+                Kalkulált 1RM:{' '}
+                <strong>
+                  {calculate1RM(parseFloat(measurementForm.value), parseInt(measurementForm.reps))}{' '}
+                  {selectedExercise.unit}
+                </strong>
               </p>
             </div>
           )}
-          <div className="flex items-center space-x-3 pt-4">
-            <button type="submit" className="flex-1 btn-primary flex items-center justify-center space-x-2">
-              <Save className="w-5 h-5" />
-              <span>Rögzítés</span>
-            </button>
-            <button type="button" onClick={() => setShowMeasurementModal(false)} className="flex-1 btn-secondary">Mégse</button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   )
 }

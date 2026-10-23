@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
+import { toMatchRow } from '../lib/matches'
 import {
   Plus,
   Calendar,
@@ -11,10 +12,17 @@ import {
   Plane,
   Edit,
   Trash2,
-  X,
   Clock,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
+import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import Modal from '../components/ui/Modal'
+import PageHeader from '../components/ui/PageHeader'
+import Skeleton from '../components/ui/Skeleton'
+import StatusPill from '../components/ui/StatusPill'
+import Tabs from '../components/ui/Tabs'
+import EmptyState from '../components/ui/EmptyState'
+import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import toast from 'react-hot-toast'
 
@@ -77,7 +85,7 @@ export default function Matches() {
     let confirmMessage = 'Biztosan törölni szeretnéd ezt a mérkőzést?'
 
     if (match?.created_from_macrocycle) {
-      confirmMessage += '\n\n⚠️ Figyelem: Ez a mérkőzés a makrociklusból lett létrehozva.\nA törlés NEM érinti a makrociklust, csak ezt a mérkőzés rekordot törli.'
+      confirmMessage += '\n\nFigyelem: Ez a mérkőzés a makrociklusból lett létrehozva.\nA törlés NEM érinti a makrociklust, csak ezt a mérkőzés rekordot törli.'
     }
 
     setConfirmState({
@@ -109,139 +117,62 @@ export default function Matches() {
     return labels[type] || type
   }
 
-  const getMatchTypeColor = (type) => {
-    const colors = {
-      friendly: 'bg-blue-600',
-      league: 'bg-green-600',
-      cup: 'bg-yellow-600',
-      tournament: 'bg-purple-600',
-    }
-    return colors[type] || 'bg-slate-600'
+  const FILTER_TABS = [
+    { id: 'all', label: 'Összes', icon: Trophy },
+    { id: 'upcoming', label: 'Közelgő', icon: Calendar },
+    { id: 'past', label: 'Lejátszott', icon: Clock },
+  ]
+
+  const openNewMatch = () => {
+    setEditingMatch(null)
+    setShowModal(true)
   }
 
   if (!selectedTeam) {
     return (
-      <div className="h-screen flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Mérkőzések</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Mérkőzések, elemzések és eredmények</p>
-            </div>
-            <div className="flex-shrink-0">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
-        </div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        <PageHeader title="Mérkőzések" description="Mérkőzések, elemzések és eredmények" />
+        <EmptyState
+          icon={Trophy}
+          title="Nincs kiválasztott csapat"
+          description="Válassz ki egy csapatot a folytatáshoz."
+        />
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Mérkőzések</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                {selectedTeam.name} - Mérkőzések, elemzések és eredmények
-              </p>
-            </div>
-          </div>
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Mérkőzések"
+        description={`${selectedTeam.name} · Mérkőzések, elemzések és eredmények`}
+        actions={
+          canEdit && (
+            <Button variant="primary" icon={Plus} onClick={openNewMatch}>
+              Új mérkőzés
+            </Button>
+          )
+        }
+        tabs={<Tabs items={FILTER_TABS} value={selectedFilter} onChange={setSelectedFilter} />}
+      />
 
-          {/* Közép: Tab menü */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setSelectedFilter('all')}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
-                selectedFilter === 'all'
-                  ? 'text-primary-400 border-primary-400'
-                  : 'text-slate-400 border-transparent hover:text-white'
-              }`}
-            >
-              <Trophy className="w-5 h-5" />
-              <span>Összes</span>
-            </button>
-            <button
-              onClick={() => setSelectedFilter('upcoming')}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
-                selectedFilter === 'upcoming'
-                  ? 'text-primary-400 border-primary-400'
-                  : 'text-slate-400 border-transparent hover:text-white'
-              }`}
-            >
-              <Calendar className="w-5 h-5" />
-              <span>Közelgő</span>
-            </button>
-            <button
-              onClick={() => setSelectedFilter('past')}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors border-b-2 ${
-                selectedFilter === 'past'
-                  ? 'text-primary-400 border-primary-400'
-                  : 'text-slate-400 border-transparent hover:text-white'
-              }`}
-            >
-              <Clock className="w-5 h-5" />
-              <span>Lejátszott</span>
-            </button>
-          </div>
-
-          {/* Jobb oldal: Új mérkőzés + TeamSelector */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {canEdit && (
-              <button
-                onClick={() => {
-                  setEditingMatch(null)
-                  setShowModal(true)
-                }}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="Új mérkőzés"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Új mérkőzés</span>
-              </button>
-            )}
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="space-y-6">
 
       {/* Matches List */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+        <div className="space-y-4">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
         </div>
       ) : filteredMatches.length === 0 ? (
-        <div className="card text-center py-12">
-          <Trophy className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">
-            Nincs még mérkőzés
-          </h3>
-          <p className="text-slate-400 mb-4">
-            Add hozzá az első mérkőzést a naptárhoz!
-          </p>
-          {canEdit && (
-            <button
-              onClick={() => {
-                setEditingMatch(null)
-                setShowModal(true)
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Első mérkőzés hozzáadása</span>
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={Trophy}
+          title="Nincs még mérkőzés"
+          description="Add hozzá az első mérkőzést a naptárhoz!"
+          actionLabel={canEdit ? 'Első mérkőzés hozzáadása' : undefined}
+          onAction={canEdit ? openNewMatch : undefined}
+        />
       ) : (
         <div className="space-y-4">
           {filteredMatches.map((match) => {
@@ -251,13 +182,13 @@ export default function Matches() {
             return (
               <div
                 key={match.id}
-                className="card hover:border-primary-500 transition-all"
+                className="rounded-[14px] border border-line bg-surface p-4 transition-colors hover:border-accent"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     {/* Date and Time */}
                     <div className="flex items-center gap-4 mb-3">
-                      <div className="flex items-center gap-2 text-slate-400">
+                      <div className="flex items-center gap-2 text-muted">
                         <Calendar className="w-4 h-4" />
                         <span>
                           {new Date(match.date).toLocaleDateString('hu-HU', {
@@ -270,8 +201,8 @@ export default function Matches() {
                       </div>
                       {match.time && (
                         <>
-                          <span className="text-slate-600">•</span>
-                          <div className="flex items-center gap-2 text-slate-400">
+                          <span className="text-subtle">•</span>
+                          <div className="flex items-center gap-2 text-muted">
                             <Clock className="w-4 h-4" />
                             <span>{match.time}</span>
                           </div>
@@ -283,18 +214,18 @@ export default function Matches() {
                     <div className="flex items-center gap-4 mb-3">
                       <div className="flex items-center gap-2">
                         {match.home_away === 'home' ? (
-                          <HomeIcon className="w-5 h-5 text-green-500" />
+                          <HomeIcon className="w-5 h-5 text-ok" />
                         ) : (
-                          <Plane className="w-5 h-5 text-blue-500" />
+                          <Plane className="w-5 h-5 text-accent" />
                         )}
-                        <span className={`text-lg font-semibold ${match.home_away === 'home' ? 'text-white' : 'text-slate-300'}`}>
+                        <span className="text-lg font-semibold text-fg">
                           {selectedTeam.name}
                         </span>
                       </div>
 
-                      <span className="text-2xl font-bold text-slate-500">vs</span>
+                      <span className="text-2xl font-bold text-muted">vs</span>
 
-                      <span className={`text-lg font-semibold ${match.home_away === 'away' ? 'text-white' : 'text-slate-300'}`}>
+                      <span className="text-lg font-semibold text-fg">
                         {match.opponent || '(Ellenfél nincs megadva)'}
                       </span>
                     </div>
@@ -302,13 +233,13 @@ export default function Matches() {
                     {/* Result */}
                     {hasResult && (
                       <div className="flex items-center gap-3 mb-3">
-                        <span className="text-sm text-slate-400">Eredmény:</span>
+                        <span className="text-sm text-muted">Eredmény:</span>
                         <div className="flex items-center gap-2 text-2xl font-bold">
-                          <span className={match.our_score > match.opponent_score ? 'text-green-500' : match.our_score < match.opponent_score ? 'text-red-500' : 'text-yellow-500'}>
+                          <span className={match.our_score > match.opponent_score ? 'text-ok' : match.our_score < match.opponent_score ? 'text-bad' : 'text-warn'}>
                             {match.our_score}
                           </span>
-                          <span className="text-slate-600">:</span>
-                          <span className={match.opponent_score > match.our_score ? 'text-green-500' : match.opponent_score < match.our_score ? 'text-red-500' : 'text-yellow-500'}>
+                          <span className="text-subtle">:</span>
+                          <span className={match.opponent_score > match.our_score ? 'text-ok' : match.opponent_score < match.our_score ? 'text-bad' : 'text-warn'}>
                             {match.opponent_score}
                           </span>
                         </div>
@@ -318,19 +249,17 @@ export default function Matches() {
                     {/* Location and Type */}
                     <div className="flex items-center gap-4 flex-wrap">
                       {match.location && (
-                        <div className="flex items-center gap-2 text-sm text-slate-400">
+                        <div className="flex items-center gap-2 text-sm text-muted">
                           <MapPin className="w-4 h-4" />
                           <span>{match.location}</span>
                         </div>
                       )}
-                      {match.match_type && (
-                        <span className={`inline-block px-3 py-1 ${getMatchTypeColor(match.match_type)} text-white text-xs rounded-full`}>
-                          {getMatchTypeLabel(match.match_type)}
-                        </span>
+                      {match.type && (
+                        <StatusPill status="neutral">{getMatchTypeLabel(match.type)}</StatusPill>
                       )}
                       {/* Macrocycle indicator */}
                       {match.created_from_macrocycle && (
-                        <div className="flex items-center gap-1 text-xs text-teal-400 bg-teal-500/10 px-2 py-1 rounded">
+                        <div className="flex items-center gap-1 text-xs text-accent bg-accent-soft px-2 py-1 rounded-full">
                           <Calendar className="w-3 h-3" />
                           <span>
                             Makrociklus: Hét {(match.macrocycle_week_index || 0) + 1}, 
@@ -345,31 +274,27 @@ export default function Matches() {
                   {/* Actions */}
                   {canEdit && (
                     <div className="flex items-center gap-2">
-                      <button
+                      <IconButton
+                        icon={Edit}
+                        label="Szerkesztés"
                         onClick={() => {
                           setEditingMatch(match)
                           setShowModal(true)
                         }}
-                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-                        title="Szerkesztés"
-                      >
-                        <Edit className="w-4 h-4 text-slate-400" />
-                      </button>
-                      <button
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        label="Törlés"
                         onClick={() => deleteMatch(match.id, match)}
-                        className="p-2 hover:bg-red-600 rounded-lg transition-colors"
-                        title="Törlés"
-                      >
-                        <Trash2 className="w-4 h-4 text-slate-400" />
-                      </button>
+                      />
                     </div>
                   )}
                 </div>
 
                 {/* Notes */}
                 {match.notes && (
-                  <div className="mt-3 p-3 bg-slate-700/50 rounded-lg">
-                    <p className="text-sm text-slate-300">{match.notes}</p>
+                  <div className="mt-3 rounded-[9px] bg-surface-2 p-3">
+                    <p className="text-sm text-fg">{match.notes}</p>
                   </div>
                 )}
               </div>
@@ -418,7 +343,7 @@ function MatchModal({ match, selectedTeam, onClose, onSave }) {
     time: match?.time || '',
     location: match?.location || '',
     opponent: match?.opponent || '',
-    match_type: match?.match_type || 'league',
+    type: match?.type || 'league',
     home_away: match?.home_away || 'home',
     our_score: match?.our_score ?? '',
     opponent_score: match?.opponent_score ?? '',
@@ -431,11 +356,7 @@ function MatchModal({ match, selectedTeam, onClose, onSave }) {
     setLoading(true)
 
     try {
-      const dataToSave = {
-        ...formData,
-        our_score: formData.our_score === '' ? null : parseInt(formData.our_score),
-        opponent_score: formData.opponent_score === '' ? null : parseInt(formData.opponent_score),
-      }
+      const dataToSave = toMatchRow(formData)
 
       if (match) {
         // Update
@@ -467,162 +388,121 @@ function MatchModal({ match, selectedTeam, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">
-            {match ? 'Mérkőzés szerkesztése' : 'Új mérkőzés'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-400" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Dátum *
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Időpont
-              </label>
-              <input
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                className="input-field w-full"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Ellenfél *
-            </label>
-            <input
-              type="text"
-              value={formData.opponent}
-              onChange={(e) => setFormData({ ...formData, opponent: e.target.value })}
-              className="input-field w-full"
-              placeholder="pl. Veszprém KC"
+    <Modal
+      open
+      onClose={onClose}
+      title={match ? 'Mérkőzés szerkesztése' : 'Új mérkőzés'}
+      size="lg"
+      footer={
+        <>
+          <Button onClick={onClose}>Mégse</Button>
+          <Button type="submit" form="match-form" variant="primary" disabled={loading}>
+            {loading ? 'Mentés...' : 'Mentés'}
+          </Button>
+        </>
+      }
+    >
+      <form id="match-form" onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Dátum *" htmlFor="match-date">
+            <Input
+              id="match-date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Helyszín
-            </label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="input-field w-full"
-              placeholder="pl. Városi Sportcsarnok"
+          <Field label="Időpont" htmlFor="match-time">
+            <Input
+              id="match-time"
+              type="time"
+              value={formData.time}
+              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
             />
-          </div>
+          </Field>
+        </div>
 
+        <Field label="Ellenfél *" htmlFor="match-opponent">
+          <Input
+            id="match-opponent"
+            type="text"
+            value={formData.opponent}
+            onChange={(e) => setFormData({ ...formData, opponent: e.target.value })}
+            placeholder="pl. Veszprém KC"
+            required
+          />
+        </Field>
+
+        <Field label="Helyszín" htmlFor="match-location">
+          <Input
+            id="match-location"
+            type="text"
+            value={formData.location}
+            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+            placeholder="pl. Városi Sportcsarnok"
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Típus" htmlFor="match-type">
+            <Select
+              id="match-type"
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            >
+              <option value="league">Bajnoki</option>
+              <option value="cup">Kupa</option>
+              <option value="friendly">Felkészülési</option>
+              <option value="tournament">Torna</option>
+            </Select>
+          </Field>
+
+          <Field label="Hazai/Idegen" htmlFor="match-home-away">
+            <Select
+              id="match-home-away"
+              value={formData.home_away}
+              onChange={(e) => setFormData({ ...formData, home_away: e.target.value })}
+            >
+              <option value="home">Hazai</option>
+              <option value="away">Idegen</option>
+            </Select>
+          </Field>
+        </div>
+
+        <div className="grid gap-1.5">
+          <span className="text-xs font-semibold text-muted">Eredmény (opcionális)</span>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Típus
-              </label>
-              <select
-                value={formData.match_type}
-                onChange={(e) => setFormData({ ...formData, match_type: e.target.value })}
-                className="input-field w-full"
-              >
-                <option value="league">Bajnoki</option>
-                <option value="cup">Kupa</option>
-                <option value="friendly">Felkészülési</option>
-                <option value="tournament">Torna</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Hazai/Idegen
-              </label>
-              <select
-                value={formData.home_away}
-                onChange={(e) => setFormData({ ...formData, home_away: e.target.value })}
-                className="input-field w-full"
-              >
-                <option value="home">Hazai</option>
-                <option value="away">Idegen</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Eredmény (opcionális)
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <input
-                type="number"
-                value={formData.our_score}
-                onChange={(e) => setFormData({ ...formData, our_score: e.target.value })}
-                className="input-field w-full"
-                placeholder="Saját gólok"
-                min="0"
-              />
-              <input
-                type="number"
-                value={formData.opponent_score}
-                onChange={(e) => setFormData({ ...formData, opponent_score: e.target.value })}
-                className="input-field w-full"
-                placeholder="Ellenfél gólok"
-                min="0"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Megjegyzések
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="input-field w-full"
-              rows="3"
-              placeholder="Megjegyzések a mérkőzésről..."
+            <Input
+              type="number"
+              aria-label="Saját gólok"
+              value={formData.our_score}
+              onChange={(e) => setFormData({ ...formData, our_score: e.target.value })}
+              placeholder="Saját gólok"
+              min="0"
+            />
+            <Input
+              type="number"
+              aria-label="Ellenfél gólok"
+              value={formData.opponent_score}
+              onChange={(e) => setFormData({ ...formData, opponent_score: e.target.value })}
+              placeholder="Ellenfél gólok"
+              min="0"
             />
           </div>
+        </div>
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-            >
-              Mégse
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Mentés...' : 'Mentés'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <Field label="Megjegyzések" htmlFor="match-notes">
+          <Textarea
+            id="match-notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            rows="3"
+            placeholder="Megjegyzések a mérkőzésről..."
+          />
+        </Field>
+      </form>
+    </Modal>
   )
 }

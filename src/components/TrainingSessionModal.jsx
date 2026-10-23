@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { X, Copy, Upload } from 'lucide-react'
+import { X, Check, Copy, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import Modal from './ui/Modal'
+import { Field, Input, Select, Textarea } from './ui/Field'
+import { getSessionType } from '../pages/calendar/sessionTypes'
 
 export default function TrainingSessionModal({ 
   date, 
@@ -156,245 +161,204 @@ export default function TrainingSessionModal({
       setLoading(false)
     }
   }
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">
-            {session ? 'Edzés szerkesztése' : 'Új edzés hozzáadása'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+    <Modal
+      open
+      onClose={onClose}
+      title={session ? 'Edzés szerkesztése' : 'Új edzés hozzáadása'}
+      size="lg"
+      footer={
+        <>
+          <Button onClick={onClose}>Mégse</Button>
+          <Button type="submit" form="training-session-form" variant="primary" loading={loading}>
+            {loading ? 'Mentés...' : 'Mentés'}
+          </Button>
+        </>
+      }
+    >
+      {/* Template Selector */}
+      {!showTemplateSelector ? (
+        <div className="mb-4">
+          <Button
+            icon={Upload}
+            onClick={() => setShowTemplateSelector(true)}
+            className="w-full"
           >
-            <X className="w-5 h-5 text-slate-400" />
-          </button>
+            Sablon betöltése
+          </Button>
         </div>
-
-        {/* Template Selector */}
-        {!showTemplateSelector ? (
-          <div className="mb-4">
-            <button
-              type="button"
-              onClick={() => setShowTemplateSelector(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-600/20 border border-primary-600/50 hover:bg-primary-600/30 text-primary-400 rounded-lg transition-colors"
-            >
-              <Upload className="w-5 h-5" />
-              <span>Sablon betöltése</span>
-            </button>
+      ) : (
+        <div className="mb-6 rounded-lg border border-line bg-surface-2/50 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-fg">Válassz sablont</h3>
+            <Button variant="ghost" size="sm" onClick={() => setShowTemplateSelector(false)}>
+              Mégse
+            </Button>
           </div>
-        ) : (
-          <div className="mb-6 bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-white">Válassz sablont</h3>
-              <button
-                onClick={() => setShowTemplateSelector(false)}
-                className="text-sm text-slate-400 hover:text-white"
-              >
-                Mégse
-              </button>
-            </div>
-            
-            {templates.length === 0 ? (
-              <p className="text-sm text-slate-400">Nincs elérhető sablon</p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {templates.map((template) => (
+
+          {templates.length === 0 ? (
+            <p className="text-sm text-muted">Nincs elérhető sablon</p>
+          ) : (
+            <div className="max-h-60 space-y-2 overflow-y-auto">
+              {templates.map((template) => {
+                const templateType = getSessionType(template.type)
+                const TypeIcon = templateType.icon
+
+                return (
                   <button
                     key={template.id}
                     type="button"
                     onClick={() => loadTemplate(template)}
-                    className="w-full text-left px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                    className="w-full rounded-lg bg-surface px-3 py-2 text-left transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   >
                     <div className="flex items-center gap-2">
-                      <Copy className="w-4 h-4 text-primary-400" />
+                      <Copy className="h-4 w-4 text-accent" aria-hidden="true" />
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-white">{template.name}</div>
-                        <div className="text-xs text-slate-400">
-                          {template.type === 'gym' ? '🏋️ Konditerem' : 
-                           template.type === 'ball' ? '⚽ Labdás' : 
-                           template.type === 'tactic' ? '🎯 Taktika' : '📝 Egyéb'}
+                        <div className="text-sm font-medium text-fg">{template.name}</div>
+                        <div className="flex items-center gap-1.5 text-xs text-muted">
+                          <TypeIcon className="h-3 w-3" aria-hidden="true" />
+                          {templateType.label}
                           {template.duration && ` • ${template.duration} perc`}
                         </div>
                       </div>
                     </div>
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Date and Times */}
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Dátum *
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Kezdés (opcionális)
-              </label>
-              <input
-                type="time"
-                value={formData.start_time || ''}
-                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                className="input-field w-full"
-                placeholder="--:--"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Befejezés (opcionális)
-              </label>
-              <input
-                type="time"
-                value={formData.end_time || ''}
-                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                className="input-field w-full"
-                placeholder="--:--"
-              />
-            </div>
-          </div>
-
-          {/* Type and Location */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Típus *
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="input-field w-full"
-                required
-              >
-                <option value="gym">Konditerem</option>
-                <option value="ball">Labdás edzés</option>
-                <option value="tactic">Taktika & Technika</option>
-                <option value="other">Egyéb</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Helyszín
-              </label>
-              {!showNewLocationInput ? (
-                <div className="flex gap-2">
-                  <select
-                    value={formData.location}
-                    onChange={(e) => {
-                      if (e.target.value === '__new__') {
-                        setShowNewLocationInput(true)
-                      } else {
-                        setFormData({ ...formData, location: e.target.value })
-                      }
-                    }}
-                    className="input-field flex-1"
-                  >
-                    <option value="">Válassz helyszínt...</option>
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.name}>
-                        {loc.name} {loc.is_default ? '⭐' : ''}
-                      </option>
-                    ))}
-                    <option value="__new__">+ Új helyszín hozzáadása</option>
-                  </select>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newLocationName}
-                    onChange={(e) => setNewLocationName(e.target.value)}
-                    className="input-field flex-1"
-                    placeholder="Új helyszín neve..."
-                    autoFocus
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddNewLocation()
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddNewLocation}
-                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                  >
-                    ✓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNewLocationInput(false)
-                      setNewLocationName('')
-                    }}
-                    className="px-3 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Megjegyzések
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="input-field w-full"
-              rows="3"
-              placeholder="Jegyzetek az edzésről..."
-            />
-          </div>
-
-          {/* Template Info */}
-          {formData.template_id && (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-sm text-green-400">
-                <Copy className="w-4 h-4" />
-                <span>Sablon betöltve</span>
-              </div>
+                )
+              })}
             </div>
           )}
+        </div>
+      )}
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+      <form id="training-session-form" onSubmit={handleSubmit} className="space-y-4">
+        {/* Date and Times */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="Dátum *" htmlFor="session-date">
+            <Input
+              id="session-date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              required
+            />
+          </Field>
+
+          <Field label="Kezdés (opcionális)" htmlFor="session-start">
+            <Input
+              id="session-start"
+              type="time"
+              value={formData.start_time || ''}
+              onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+              placeholder="--:--"
+            />
+          </Field>
+
+          <Field label="Befejezés (opcionális)" htmlFor="session-end">
+            <Input
+              id="session-end"
+              type="time"
+              value={formData.end_time || ''}
+              onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+              placeholder="--:--"
+            />
+          </Field>
+        </div>
+
+        {/* Type and Location */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Típus *" htmlFor="session-type">
+            <Select
+              id="session-type"
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              required
             >
-              Mégse
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Mentés...' : 'Mentés'}
-            </button>
+              <option value="gym">Konditerem</option>
+              <option value="ball">Labdás edzés</option>
+              <option value="tactic">Taktika & Technika</option>
+              <option value="other">Egyéb</option>
+            </Select>
+          </Field>
+
+          <Field label="Helyszín" htmlFor="session-location">
+            {!showNewLocationInput ? (
+              <Select
+                id="session-location"
+                value={formData.location}
+                onChange={(e) => {
+                  if (e.target.value === '__new__') {
+                    setShowNewLocationInput(true)
+                  } else {
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                }}
+              >
+                <option value="">Válassz helyszínt...</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.name}>
+                    {loc.name}{loc.is_default ? ' (alapértelmezett)' : ''}
+                  </option>
+                ))}
+                <option value="__new__">+ Új helyszín hozzáadása</option>
+              </Select>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  id="session-location"
+                  type="text"
+                  value={newLocationName}
+                  onChange={(e) => setNewLocationName(e.target.value)}
+                  className="flex-1"
+                  placeholder="Új helyszín neve..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddNewLocation()
+                    }
+                  }}
+                />
+                <IconButton
+                  icon={Check}
+                  label="Helyszín hozzáadása"
+                  onClick={handleAddNewLocation}
+                  className="flex-shrink-0 !bg-ok-soft !text-ok"
+                />
+                <IconButton
+                  icon={X}
+                  label="Mégse"
+                  onClick={() => {
+                    setShowNewLocationInput(false)
+                    setNewLocationName('')
+                  }}
+                  className="flex-shrink-0"
+                />
+              </div>
+            )}
+          </Field>
+        </div>
+
+        {/* Notes */}
+        <Field label="Megjegyzések" htmlFor="session-notes">
+          <Textarea
+            id="session-notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            rows="3"
+            placeholder="Jegyzetek az edzésről..."
+          />
+        </Field>
+
+        {/* Template Info */}
+        {formData.template_id && (
+          <div className="rounded-lg border border-ok/30 bg-ok-soft p-3">
+            <div className="flex items-center gap-2 text-sm text-ok">
+              <Copy className="h-4 w-4" aria-hidden="true" />
+              <span>Sablon betöltve</span>
+            </div>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+      </form>
+    </Modal>
   )
 }

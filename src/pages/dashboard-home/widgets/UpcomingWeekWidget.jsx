@@ -90,18 +90,18 @@ export default function UpcomingWeekWidget() {
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : error ? (
-        <p className="text-sm text-red-400">Nem sikerült betölteni</p>
+        <p className="text-sm text-bad">Nem sikerült betölteni</p>
       ) : !items || items.length === 0 ? (
-        <p className="text-sm text-slate-400">Nincs esemény a következő 7 napban.</p>
+        <p className="text-sm text-muted">Nincs esemény a következő 7 napban.</p>
       ) : (
         <ul className="space-y-2">
           {items.map((item) => {
             const Icon = item.kind === 'match' ? Medal : Dumbbell
             return (
               <li key={item.id} className="flex items-center gap-2 text-sm">
-                <Icon className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="text-slate-400 flex-shrink-0">{formatShortDate(item.date)}</span>
-                <span className="text-slate-300 truncate">{item.title}</span>
+                <Icon className="w-4 h-4 text-muted flex-shrink-0" />
+                <span className="text-muted flex-shrink-0">{formatShortDate(item.date)}</span>
+                <span className="text-fg truncate">{item.title}</span>
               </li>
             )
           })}

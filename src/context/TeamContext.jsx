@@ -2,12 +2,13 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
-const TeamContext = createContext()
+export const TeamContext = createContext()
 
 export function TeamProvider({ children, session }) {
   const [teams, setTeams] = useState([])
   const [selectedTeam, setSelectedTeam] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [teamsError, setTeamsError] = useState(null)
   const [currentUserRole, setCurrentUserRole] = useState(null)
   const [currentUserPermissions, setCurrentUserPermissions] = useState({})
   const [permissionsLoading, setPermissionsLoading] = useState(true)
@@ -37,6 +38,7 @@ export function TeamProvider({ children, session }) {
   const fetchTeams = async () => {
     try {
       setLoading(true)
+      setTeamsError(null)
       const { data: memberships, error: memberError } = await supabase
         .from('team_members')
         .select('team_id, role, teams(*)')
@@ -56,6 +58,7 @@ export function TeamProvider({ children, session }) {
       }
     } catch (error) {
       console.error('Error fetching teams:', error)
+      setTeamsError(error)
       toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
     } finally {
       setLoading(false)
@@ -162,6 +165,7 @@ export function TeamProvider({ children, session }) {
     selectedTeam,
     setSelectedTeam,
     loading,
+    teamsError,
     fetchTeams,
     createTeam,
     updateTeam,

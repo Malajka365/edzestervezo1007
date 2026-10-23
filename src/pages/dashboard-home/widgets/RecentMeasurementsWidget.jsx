@@ -43,20 +43,20 @@ export default function RecentMeasurementsWidget() {
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : isError ? (
-        <p className="text-sm text-red-400">Nem sikerült betölteni</p>
+        <p className="text-sm text-bad">Nem sikerült betölteni</p>
       ) : measurements.length === 0 ? (
-        <p className="text-sm text-slate-400">Még nincs mérés.</p>
+        <p className="text-sm text-muted">Még nincs mérés.</p>
       ) : (
         <ul className="space-y-2 text-sm">
           {measurements.map((m) => (
-            <li key={m.id} className="flex items-center justify-between gap-2 text-slate-300">
+            <li key={m.id} className="flex items-center justify-between gap-2 text-fg">
               <span className="min-w-0 truncate">
-                <span className="text-white font-medium">{m.player?.name || '—'}</span>
+                <span className="text-fg font-medium">{m.player?.name || '—'}</span>
                 {' · '}
-                <span className="text-slate-400">{m.exercise?.name || '—'}</span>
+                <span className="text-muted">{m.exercise?.name || '—'}</span>
               </span>
-              <span className="flex-shrink-0 text-slate-400 flex items-center gap-2">
-                <span className="text-white font-semibold">
+              <span className="flex-shrink-0 text-muted flex items-center gap-2">
+                <span className="text-fg font-semibold">
                   {m.value} {m.exercise?.unit}
                 </span>
                 <span>{new Date(m.measured_at).toLocaleDateString('hu-HU')}</span>

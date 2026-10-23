@@ -1,0 +1,1034 @@
+<meta charset="utf-8">
+<title>TeamFlow újratervezés</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+/* Layout: proposal reads top-to-bottom; the working mockup is the centrepiece, framed like a device on a pitch-dark/paper ground. */
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --surface-2:#ECEFF5; --line:#DCE1EA; --fg:#111725; --muted:#5A6578;
+  --accent:#2747E0; --accent-fg:#FFFFFF; --accent-soft:#E5EAFF;
+  --ok:#15805A; --ok-soft:#DDF3EA; --warn:#A86B12; --warn-soft:#FBEFD6; --bad:#C2352B; --bad-soft:#FBE3E0;
+  --t-strength:#2747E0; --t-ball:#0B8585; --t-tactic:#7448D0; --t-match:#D2480E; --t-rest:#8892A6;
+  --shadow:0 1px 2px rgba(17,23,37,.06),0 8px 24px rgba(17,23,37,.06);
+  --display:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
+  --body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0A0E16; --surface:#121826; --surface-2:#1A2232; --line:#273149; --fg:#E7EBF3; --muted:#8D98AE;
+  --accent:#7B93FF; --accent-fg:#0A0E16; --accent-soft:#1C2652;
+  --ok:#3FCB8C; --ok-soft:#123326; --warn:#E8B24C; --warn-soft:#3A2C10; --bad:#FF7366; --bad-soft:#3D1715;
+  --t-strength:#7B93FF; --t-ball:#2BC4C4; --t-tactic:#A88BF0; --t-match:#FF8A4D; --t-rest:#6F7A90;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0A0E16; --surface:#121826; --surface-2:#1A2232; --line:#273149; --fg:#E7EBF3; --muted:#8D98AE;
+  --accent:#7B93FF; --accent-fg:#0A0E16; --accent-soft:#1C2652;
+  --ok:#3FCB8C; --ok-soft:#123326; --warn:#E8B24C; --warn-soft:#3A2C10; --bad:#FF7366; --bad-soft:#3D1715;
+  --t-strength:#7B93FF; --t-ball:#2BC4C4; --t-tactic:#A88BF0; --t-match:#FF8A4D; --t-rest:#6F7A90;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.35); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.005em;line-height:1.02;text-wrap:balance;margin:0}
+h1{font-size:clamp(44px,7vw,82px);text-transform:uppercase}
+h2{font-size:clamp(30px,4vw,42px);text-transform:uppercase}
+h3{font-size:22px;text-transform:uppercase;letter-spacing:.02em}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:19px;max-width:62ch;color:var(--muted);margin-top:18px}
+.lede b{color:var(--fg);font-weight:600}
+section{margin-top:84px}
+.sec-head{display:grid;gap:10px;margin-bottom:28px;max-width:70ch}
+.sec-head p{color:var(--muted)}
+.mono{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+button{font:inherit;color:inherit}
+
+/* hero */
+.hero{display:grid;gap:28px;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:end}
+.scoreboard{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;box-shadow:var(--shadow)}
+.scoreboard div{display:grid;gap:2px}
+.scoreboard strong{font-family:var(--display);font-size:46px;line-height:1;font-variant-numeric:tabular-nums}
+.scoreboard span{font-size:12.5px;color:var(--muted);line-height:1.3}
+.scoreboard .arrow{color:var(--accent)}
+
+/* findings */
+.findings{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.finding{background:var(--surface);padding:20px 22px;display:grid;gap:8px;align-content:start}
+.finding h4{margin:0;font-size:16.5px;font-weight:650}
+.finding p{color:var(--muted);font-size:14px}
+.finding .ev{font-family:var(--mono);font-size:11.5px;color:var(--muted);opacity:.85;word-break:break-word}
+.sev{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.sev::before{content:"";width:8px;height:8px;border-radius:2px;background:currentColor}
+.sev.hi{color:var(--bad)} .sev.md{color:var(--warn)} .sev.lo{color:var(--muted)}
+
+/* IA */
+.ia{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(0,1.5fr);gap:18px;align-items:start}
+.ia-col{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.ia-col h3{font-size:18px;margin-bottom:12px}
+.ia-old li{padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.ia-old li:last-child{border:0}
+.ia-old em{font-style:normal;font-family:var(--mono);font-size:11px}
+ul{list-style:none;margin:0;padding:0}
+.ia-arrow{align-self:center;justify-self:center;color:var(--accent)}
+.ia-new{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px}
+.ia-group{border-top:3px solid var(--accent);padding-top:10px}
+.ia-group .eyebrow{color:var(--accent)}
+.ia-group li{font-weight:600;font-size:14.5px;padding:3px 0}
+.ia-group li small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;line-height:1.35}
+
+/* ===== MOCKUP ===== */
+.stage-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:7px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+.seg svg{width:15px;height:15px}
+.sample-note{font-size:12.5px;color:var(--muted)}
+.device{border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);overflow:hidden;margin:0 auto;transition:max-width .35s ease}
+.device.mobile{max-width:400px}
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);height:720px;background:var(--bg);font-size:14px;position:relative}
+.side{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.team{margin:12px;padding:10px;border:1px solid var(--line);border-radius:12px;display:flex;gap:10px;align-items:center;cursor:pointer;background:var(--surface)}
+.team:hover{background:var(--surface-2)}
+.crest{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:17px;flex:none}
+.team b{display:block;font-size:13.5px;line-height:1.2}
+.team span{font-size:11.5px;color:var(--muted)}
+.team .chev{margin-left:auto;color:var(--muted);width:16px}
+.search-btn{margin:0 12px 6px;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:13px;cursor:pointer}
+.search-btn kbd{margin-left:auto;font-family:var(--mono);font-size:10.5px;border:1px solid var(--line);border-radius:5px;padding:1px 5px;background:var(--surface)}
+.search-btn svg{width:15px}
+.nav{overflow:auto;padding:6px 8px 10px;flex:1}
+.nav .grp{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px}
+.nav button{width:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:7px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--fg);cursor:pointer;text-align:left}
+.nav button svg{width:17px;height:17px;color:var(--muted);flex:none}
+.nav button:hover{background:var(--surface-2)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:650}
+.nav button[aria-current="page"] svg{color:var(--accent)}
+.nav .badge{margin-left:auto;font-family:var(--mono);font-size:10.5px;background:var(--bad-soft);color:var(--bad);border-radius:999px;padding:0 7px}
+.side-foot{border-top:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:10px}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:none}
+.side-foot b{display:block;font-size:12.5px;line-height:1.2}
+.side-foot span{font-size:11px;color:var(--muted)}
+.side-foot button{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px}
+.side-foot button:hover{background:var(--surface-2)}
+.side-foot svg{width:16px}
+
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;container-type:inline-size}
+@container (max-width:760px){.g-2,.g-3{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.week{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.topbar{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
+.crumbs{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.topbar h2{font-size:26px;line-height:1}
+.topbar .actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn svg{width:15px;height:15px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{border-color:transparent;background:transparent}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:9px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.icon-btn svg{width:16px}
+.content{flex:1;overflow:auto;padding:20px 22px 28px;min-height:0}
+.mob-top,.tabbar{display:none}
+
+/* mockup building blocks */
+.grid{display:grid;gap:14px}
+.g-2{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+.g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.panel-h{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.panel-h h4{margin:0;font-size:13px;font-weight:650;letter-spacing:.02em}
+.panel-h .more{margin-left:auto;font-size:12px;color:var(--accent);font-weight:600;cursor:pointer;background:none;border:0}
+.panel-h svg{width:16px;color:var(--muted)}
+.hello{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.hello h3{font-size:30px;text-transform:none;letter-spacing:0}
+.hello p{color:var(--muted);font-size:13.5px}
+.today{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center}
+.today>div:nth-child(2){flex:1 1 220px;min-width:0}
+.timechip{font-family:var(--display);font-size:38px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.timechip small{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);font-weight:400;letter-spacing:.06em}
+.today h5{margin:0 0 4px;font-size:17px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:12.5px}
+.meta span{display:inline-flex;align-items:center;gap:5px}
+.meta svg{width:13px}
+.blocks{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.blk{font-size:11.5px;padding:3px 8px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.avail{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.avail div{border-radius:10px;padding:10px;background:var(--surface-2)}
+.avail strong{font-family:var(--display);font-size:30px;line-height:1;display:block;font-variant-numeric:tabular-nums}
+.avail span{font-size:11.5px;color:var(--muted)}
+.avail .ok strong{color:var(--ok)} .avail .warn strong{color:var(--warn)} .avail .bad strong{color:var(--bad)}
+.plist li{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.plist li:first-child{border-top:0}
+.plist .sub{color:var(--muted);font-size:12px}
+.plist .pill{margin-left:auto}
+.match{display:grid;gap:10px}
+.match .vs{display:flex;align-items:center;gap:12px;font-family:var(--display);font-size:22px;font-weight:700;text-transform:uppercase}
+.match .vs i{font-style:normal;color:var(--muted);font-size:15px}
+.count{display:flex;gap:8px}
+.count div{background:var(--surface-2);border-radius:9px;padding:6px 10px;text-align:center;min-width:54px}
+.count b{font-family:var(--display);font-size:26px;display:block;line-height:1}
+.count span{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.alerts li{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:13px;align-items:flex-start}
+.alerts li:first-child{border-top:0}
+.alerts svg{width:16px;flex:none;margin-top:2px}
+.alerts .w svg{color:var(--warn)} .alerts .b svg{color:var(--bad)} .alerts .i svg{color:var(--accent)}
+.alerts small{display:block;color:var(--muted);font-size:12px}
+.phase{display:flex;gap:3px;margin:8px 0 6px}
+.phase div{height:8px;border-radius:3px;background:var(--surface-2);flex:1}
+.phase div.done{background:var(--accent);opacity:.45}
+.phase div.now{background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--muted)}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+svg.chart text{fill:var(--muted);font-family:var(--mono);font-size:10px}
+
+/* calendar */
+.cal-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.cal-head b{font-family:var(--display);font-size:22px;text-transform:uppercase;margin-right:6px}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;min-height:300px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.day.today-col{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.day-h{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;color:var(--muted);font-family:var(--mono);text-transform:uppercase}
+.day-h b{font-family:var(--display);font-size:22px;color:var(--fg)}
+.sess{border-radius:9px;padding:7px 8px;font-size:12px;border-left:3px solid var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface));cursor:pointer;min-width:0}
+.sess b{display:block;font-size:12.5px;line-height:1.25;overflow-wrap:anywhere}
+.sess span{color:var(--muted);font-size:11px;font-family:var(--mono)}
+.add-slot{margin-top:auto;border:1px dashed var(--line);border-radius:9px;padding:6px;font-size:11.5px;color:var(--muted);text-align:center;cursor:pointer;background:transparent}
+.add-slot:hover{border-color:var(--accent);color:var(--accent)}
+.load{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:90px;margin-top:6px}
+.load div{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%}
+.load i{display:block;width:100%;max-width:34px;border-radius:5px 5px 2px 2px;background:var(--accent)}
+.load i.hi{background:var(--warn)}
+.load span{font-size:10px;color:var(--muted);font-family:var(--mono)}
+
+/* library */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.input{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 10px;min-width:min(100%,260px);flex:1;max-width:360px;color:var(--muted)}
+.input svg{width:15px}
+.input input{border:0;background:transparent;outline:0;font:inherit;color:var(--fg);width:100%}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;gap:6px;align-items:center;color:var(--fg)}
+.chip svg{width:13px}
+.chip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.ex{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;padding:0;display:flex;flex-direction:column}
+.ex:hover{border-color:var(--accent)}
+.thumb{aspect-ratio:4/3;max-width:100%;position:relative;display:grid;place-items:center;background:linear-gradient(135deg,var(--surface-2),color-mix(in srgb,var(--c) 22%,var(--surface-2)))}
+.thumb svg{width:56px;height:56px;color:var(--c);opacity:.85}
+.thumb .fav{position:absolute;top:8px;right:8px;width:16px;height:16px;color:var(--muted);opacity:1}
+.ex .b{padding:9px 10px 11px;display:grid;gap:4px}
+.ex b{font-size:13px;line-height:1.25}
+.ex .tags{display:flex;gap:5px;flex-wrap:wrap}
+.tag{font-size:10.5px;padding:1px 6px;border-radius:5px;background:var(--surface-2);color:var(--muted)}
+.skel .thumb,.skel .ln{background:linear-gradient(90deg,var(--surface-2) 0%,var(--line) 50%,var(--surface-2) 100%);background-size:200% 100%;animation:sh 1.1s linear infinite}
+.skel .ln{height:10px;border-radius:5px}
+@keyframes sh{to{background-position:-200% 0}}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(400px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(105%);transition:transform .25s ease;display:flex;flex-direction:column;z-index:5}
+.drawer.open{transform:none}
+.drawer-h{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.drawer-h h4{margin:0;font-size:16px}
+.drawer-b{padding:16px;overflow:auto;display:grid;gap:14px;align-content:start}
+.drawer .thumb{border-radius:12px;aspect-ratio:16/10}
+.muscles{display:flex;flex-wrap:wrap;gap:6px}
+.steps{counter-reset:s;display:grid;gap:8px;font-size:13px}
+.steps li{display:grid;grid-template-columns:22px 1fr;gap:8px}
+.steps li::before{counter-increment:s;content:counter(s);font-family:var(--mono);font-size:11px;width:22px;height:22px;border-radius:6px;background:var(--surface-2);display:grid;place-items:center}
+
+/* players/table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono)}
+.who{display:flex;align-items:center;gap:9px}
+.who .avatar{width:28px;height:28px}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);position:relative;min-width:60px}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent)}
+
+/* profile */
+.prof-h{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.jersey{width:64px;height:64px;border-radius:16px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-family:var(--display);font-size:34px;font-weight:700;flex:none}
+.prof-h h3{font-size:30px;text-transform:none;letter-spacing:0}
+.prof-h .meta{margin-top:4px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:9px 12px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.tabs button svg{width:15px}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi span{font-size:11.5px;color:var(--muted)}
+.kpi strong{display:block;font-family:var(--display);font-size:32px;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi strong small{font-size:16px;color:var(--muted);font-weight:600}
+.kpi em{font-style:normal;font-size:11.5px;font-family:var(--mono)}
+.up{color:var(--ok)} .down{color:var(--bad)}
+
+/* palette overlay */
+.cmdk{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(2px);display:none;align-items:flex-start;justify-content:center;padding-top:80px;z-index:10}
+.cmdk.open{display:flex}
+.cmdk-box{width:min(520px,92%);background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.cmdk-box .input{max-width:none;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:12px 14px}
+.cmdk-list{padding:6px;max-height:320px;overflow:auto}
+.cmdk-list .grp{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:8px 10px 4px}
+.cmdk-list button{width:100%;display:flex;gap:10px;align-items:center;border:0;background:transparent;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;text-align:left}
+.cmdk-list button:hover,.cmdk-list button.sel{background:var(--surface-2)}
+.cmdk-list svg{width:16px;color:var(--muted)}
+.cmdk-list kbd{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.toast{position:absolute;bottom:18px;left:50%;transform:translate(-50%,20px);opacity:0;background:var(--fg);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center;transition:.2s;z-index:20;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast svg{width:16px}
+
+/* mobile mode */
+.device.mobile .app{grid-template-columns:minmax(0,1fr);height:760px}
+.device.mobile .side{display:none}
+.device.mobile .topbar{display:none}
+.device.mobile .mob-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.mob-top .crest{width:30px;height:30px;font-size:15px}
+.mob-top b{font-size:13px;display:block;line-height:1.2}
+.mob-top span{font-size:11px;color:var(--muted)}
+.mob-top .icon-btn{margin-left:auto}
+.device.mobile .content{padding:14px 14px 90px}
+.device.mobile .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px 10px;z-index:4}
+.tabbar button{border:0;background:transparent;display:grid;justify-items:center;gap:2px;font-size:10.5px;font-weight:600;color:var(--muted);cursor:pointer;padding:4px 0}
+.tabbar svg{width:20px;height:20px}
+.tabbar button[aria-current="page"]{color:var(--accent)}
+.device.mobile .g-2,.device.mobile .g-3,.device.mobile .today{grid-template-columns:minmax(0,1fr)}
+.device.mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.device.mobile .week{grid-template-columns:minmax(0,1fr)}
+.device.mobile .day{min-height:0}
+.device.mobile .day:not(.today-col):not(.has){display:none}
+.device.mobile .lib{grid-template-columns:repeat(2,minmax(0,1fr))}
+.device.mobile .hide-m{display:none}
+.device.mobile .drawer{width:100%}
+
+/* system */
+.sys{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.sys .panel{padding:20px}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sw{border-radius:10px;border:1px solid var(--line);overflow:hidden;font-size:11px}
+.sw i{display:block;height:44px}
+.sw span{display:block;padding:5px 7px;font-family:var(--mono);color:var(--muted)}
+.typespec{display:grid;gap:10px}
+.typespec .d{font-family:var(--display);font-size:44px;font-weight:700;line-height:1;text-transform:uppercase}
+.typespec .m{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.comp-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* load timeline */
+.wf{display:grid;gap:8px;font-size:12.5px}
+.wf-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center}
+.wf-row span{color:var(--muted);text-align:right}
+.wf-track{position:relative;height:20px;background:var(--surface-2);border-radius:5px}
+.wf-track i{position:absolute;top:3px;bottom:3px;border-radius:4px;background:var(--accent)}
+.wf-track i.slow{background:var(--bad)}
+.wf-track i.dim{background:var(--muted);opacity:.55}
+.wf-mark{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.wf-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.fixlist li{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.fixlist li:first-child{border-top:0}
+.fixlist svg{width:18px;color:var(--ok);margin-top:2px}
+.fixlist small{display:block;color:var(--muted);font-size:12.5px}
+
+/* roadmap */
+.road{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.stage{padding:20px;border-right:1px solid var(--line);display:grid;gap:10px;align-content:start}
+.stage:last-child{border-right:0}
+.stage .eyebrow{color:var(--accent)}
+.stage h3{font-size:24px}
+.stage li{font-size:13.5px;padding:3px 0 3px 14px;position:relative;color:var(--fg)}
+.stage li::before{content:"";position:absolute;left:0;top:11px;width:6px;height:2px;background:var(--accent)}
+.stage .out{font-size:12.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px}
+.qs{display:grid;gap:10px;counter-reset:q}
+.qs li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 52px;position:relative;font-size:14.5px}
+.qs li::before{counter-increment:q;content:counter(q);position:absolute;left:16px;top:13px;font-family:var(--display);font-size:24px;font-weight:700;color:var(--accent);line-height:1}
+.qs small{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+
+
+.strip-wrap{position:relative;padding-top:16px}
+.strip{display:flex;height:20px;border-radius:6px;overflow:hidden;background:var(--surface-2)}
+.strip i{display:block;height:100%}
+.strip i.ok{background:var(--ok)} .strip i.warn{background:var(--warn)} .strip i.bad{background:var(--bad)}
+.today-mark{position:absolute;top:0;bottom:-4px;border-left:2px solid var(--fg);font-family:var(--mono);font-size:10px;padding-left:4px;line-height:1;color:var(--fg)}
+.months{display:grid;grid-template-columns:repeat(12,1fr);font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px}
+.hours{display:grid;gap:6px}
+.hrow{display:grid;grid-template-columns:44px 40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.hrow:first-child{border-top:0}
+.hrow b{font-family:var(--display);font-size:18px}
+.hrow input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+.hrow .times{display:flex;gap:6px;align-items:center;color:var(--muted)}
+.hrow select{font:inherit;font-family:var(--mono);font-size:12.5px;color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:4px 6px}
+.hrow .cnt{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.hrow.off .times{opacity:.35;pointer-events:none}
+@media (max-width:860px){.hours-grid{grid-template-columns:minmax(0,1fr)}}
+/* features */
+.lanes{display:grid;gap:10px}
+.lane{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lane .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);width:92px}
+.node{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:13px;font-weight:600;line-height:1.25}
+.node small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+.node.new{border-color:var(--accent);background:var(--accent-soft)}
+.node.new small{color:var(--fg);opacity:.75}
+.lane .arr{color:var(--muted);font-family:var(--mono)}
+.tier-h{display:flex;gap:6px 14px;align-items:baseline;flex-wrap:wrap;margin:34px 0 12px}
+.tier-h h3{font-size:26px}
+.tier-h p{color:var(--muted);font-size:14px}
+.tier{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.feat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:7px;align-content:start}
+.feat h4{margin:0;font-size:15.5px;display:flex;gap:8px;align-items:center}
+.feat h4 svg{width:18px;height:18px;color:var(--accent);flex:none}
+.feat p{font-size:13.5px;color:var(--muted)}
+.feat .why{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:7px;display:flex;gap:6px}
+.feat .why svg{width:14px;flex:none;margin-top:2px;color:var(--ok)}
+.later{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.later li{font-size:13.5px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
+.later b{color:var(--fg);display:block;font-size:13.5px}
+.phones{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+.phone{width:290px;max-width:100%;display:grid;gap:10px;justify-items:center}
+.phone-frame{width:100%;border:1px solid var(--line);border-radius:30px;background:var(--surface);padding:10px;box-shadow:var(--shadow)}
+.phone-in{background:var(--bg);border-radius:22px;padding:14px 12px 16px;display:grid;gap:10px;font-size:13px;min-height:520px;align-content:start}
+.phone-top{display:flex;align-items:center;gap:8px}
+.phone-top .crest{width:28px;height:28px;font-size:14px}
+.phone-top b{font-size:13px;display:block;line-height:1.2}
+.phone-top span{font-size:11px;color:var(--muted)}
+.phone-cap{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:center}
+.ph-h{font-family:var(--display);font-size:24px;font-weight:700;text-transform:uppercase;line-height:1}
+.ph-sub{font-size:12px;color:var(--muted);margin-top:-6px}
+.wq-row{display:grid;gap:4px}
+.wq-row>span{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.wq-row>span em{font-style:normal;font-size:10.5px;opacity:.8}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.scale button,.rpe button{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--fg)}
+.scale button[aria-pressed="true"],.rpe button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.rpe button{padding:4px 0;font-size:11px}
+.task{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}
+.task input{width:18px;height:18px;accent-color:var(--accent);margin-top:1px;flex:none}
+.task b{display:block;font-size:13px;line-height:1.25}
+.task span{font-size:11.5px;color:var(--muted)}
+.task em{font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--accent)}
+.task.done b{text-decoration:line-through;color:var(--muted)}
+.upload{border:1px dashed var(--line);border-radius:10px;padding:10px;text-align:center;font-size:12px;color:var(--muted);display:grid;gap:3px;justify-items:center;background:transparent;cursor:pointer;width:100%}
+.upload svg{width:20px;color:var(--accent)}
+.upload.ok{border-style:solid;border-color:var(--ok);color:var(--ok)}
+.upload.ok svg{color:var(--ok)}
+.daychips{display:flex;gap:5px}
+.daychips button{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:6px 0;font-size:11px;cursor:pointer;color:var(--fg);display:grid;justify-items:center;line-height:1.15}
+.daychips b{font-family:var(--display);font-size:18px}
+.daychips button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.slots button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 0;font-family:var(--mono);font-size:12px;cursor:pointer;color:var(--fg)}
+.slots button:disabled{opacity:.4;text-decoration:line-through;cursor:not-allowed}
+.slots button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.ph-ok{font-size:12.5px;color:var(--ok);font-weight:600;display:flex;gap:6px;align-items:center;min-height:18px}
+.ph-ok svg{width:15px}
+.who-card{display:flex;gap:10px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.who-card b{display:block;font-size:13px} .who-card span{font-size:11.5px;color:var(--muted)}
+.note{background:var(--warn-soft);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13.5px;display:flex;gap:10px;margin-top:18px}
+.note svg{width:18px;color:var(--warn);flex:none;margin-top:2px}
+.sources{display:grid;gap:4px;margin-top:14px}
+.sources li{font-size:12.5px;color:var(--muted)}
+.sources a{color:var(--accent)}
+.decided li{display:flex;gap:10px;font-size:14px;padding:8px 0;border-top:1px solid var(--line)}
+.decided li:first-child{border-top:0}
+.decided svg{width:17px;color:var(--ok);flex:none;margin-top:2px}
+
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr}
+  .ia{grid-template-columns:1fr}
+  .ia-arrow{transform:rotate(90deg)}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .device:not(.mobile) .side{display:none}
+  .device:not(.mobile) .mob-top{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .device:not(.mobile) .mob-top .icon-btn{margin-left:auto}
+  .device:not(.mobile) .topbar{display:none}
+  .device:not(.mobile) .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px 10px;z-index:4}
+  .device:not(.mobile) .content{padding:14px 14px 90px}
+  .g-2,.g-3,.today{grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .week{grid-template-columns:minmax(0,1fr)}
+  .day{min-height:0}
+  .day:not(.today-col):not(.has){display:none}
+  .lib{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hide-m{display:none}
+  .wf-row{grid-template-columns:96px minmax(0,1fr)}
+  .stage{border-right:0;border-bottom:1px solid var(--line)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div>
+    <p class="eyebrow">TeamFlow · UI/UX javaslat · 2026. október 20.</p>
+    <h1>Kevesebb menü,<br>több edzés.</h1>
+    <p class="lede">Az app tudása megvan, csak <b>szét van szórva</b>: 12 egyforma menüpont, három külön hely a tervezésre, négy a mérési adatokra. A javaslat egy egységes vizuális rendszer, öt logikus csoport, és egy „Ma” kezdőképernyő, ami megmondja az edzőnek, mi a dolga aznap.</p>
+  </div>
+  <div class="scoreboard" aria-label="Fő számok">
+    <div><strong>12<span class="arrow"> → </span>5</strong><span>menüpont helyett menücsoport</span></div>
+    <div><strong>4<span class="arrow"> → </span>1</strong><span>hely a mérési adatokra (Teljesítmény)</span></div>
+    <div><strong>2<span class="arrow"> → </span>1</strong><span>játékosprofil (edzői + rehab egyben)</span></div>
+  </div>
+</header>
+
+<section id="findings">
+  <div class="sec-head">
+    <p class="eyebrow">01 · Mit találtam</p>
+    <h2>A hat legfontosabb probléma</h2>
+    <p>A kódból készült teljes átnézés alapján, a felhasználóra gyakorolt hatás szerint sorba rakva. A korábbi review javításai (toast, megerősítő ablak, URL-ek) már bent vannak, ezek a következő szint.</p>
+  </div>
+  <div class="findings">
+    <article class="finding"><span class="sev hi">Nagy hatás</span><h4>Nincs közös dizájnrendszer</h4><p>Minden oldal saját fejlécet, modalt, fület épít. A Makrociklus fejlécében 7 különböző színű gomb van. Az Inter font be van állítva, de sosem töltődik be, így rendszerfont jelenik meg.</p><p class="ev">MacrocyclePlanner.jsx:670-741 · index.css:6 · nincs Button/Modal/Tabs komponens</p></article>
+    <article class="finding"><span class="sev hi">Nagy hatás</span><h4>Szétszórt tervezés és mérés</h4><p>Napi terhelést három helyen lehet szerkeszteni (Makrociklus, Naptár heti nézet, Terhelés). Mérési adat négy helyen jelenik meg (Mérések, Progresszió, Ranglista, Játékosprofil), mind másképp.</p><p class="ev">WeekView.jsx:155-400 · PlayerProfile.jsx:452-606 · PlayerProgress.jsx:478</p></article>
+    <article class="finding"><span class="sev hi">Nagy hatás</span><h4>Lassú gyakorlattár, visszajelzés nélkül</h4><p>Öt adatlekérés fut egymás után, köztük kb. 4000 izomsor 1000-es lapokban. Közben üres az oldal. Hiányzó bélyegképnél a teljes, több MB-os GIF töltődik be a kártyára.</p><p class="ev">useExerciseLibraryData.js:30-90 · ExerciseLibrary.jsx:402-407, 117-123</p></article>
+    <article class="finding"><span class="sev md">Közepes</span><h4>Mobilon nehezen használható</h4><p>Fix 7 oszlopos naptár, 18-38 px széles makrociklus-cellák, dupla görgetés a fejléc miatt, kétoszlopos űrlapok. Pedig az edző a pálya szélén telefonról dolgozna.</p><p class="ev">WeekView.jsx:24 · MonthView.jsx:28 · MacrocyclePlanner.jsx:809-811</p></article>
+    <article class="finding"><span class="sev md">Közepes</span><h4>Részletnézeteknek nincs címe</h4><p>A játékosprofil és a rehab-részletek belső állapotból nyílnak. A „Vissza” gomb kidob a modulból, és nem lehet linket küldeni egy játékosra.</p><p class="ev">Teams.jsx:233 · Rehabilitation.jsx:30</p></article>
+    <article class="finding"><span class="sev lo">Kisebb</span><h4>Csiszolatlan részletek</h4><p>Emoji ikonként, fejlesztői adatbázisteszt a belépő oldalon, keveredő angol feliratok („Max Power”, „Home/Away”), „Teststúly” elírás, jelenlét a rehab jogosultság mögé zárva.</p><p class="ev">Auth.jsx:113-128 · DayView.jsx:37-136 · Leaderboard.jsx:210</p></article>
+  </div>
+</section>
+
+<section id="ia">
+  <div class="sec-head">
+    <p class="eyebrow">02 · Új szerkezet</p>
+    <h2>Öt csoport, egy csapatválasztó</h2>
+    <p>A menü azt követi, ahogy egy edző gondolkodik: mi van ma, mit tervezek, mit gyakoroltatok, hogy fejlődnek, kik a játékosaim. A csapatválasztó a menü tetejére kerül, egyszer, nem minden oldal fejlécében külön.</p>
+  </div>
+  <div class="ia">
+    <div class="ia-col ia-old">
+      <h3>Most · lapos lista</h3>
+      <ul>
+        <li>Dashboard</li><li>Csapatok</li><li>Makrociklus Tervező</li><li>Edzésnaptár</li><li>Gyakorlat Könyvtár</li><li>Edzéssablonok</li><li>Mérkőzések</li><li>Mérési modul <em>→ Teljesítmény</em></li><li>1RM Kalkulátor <em>→ Teljesítmény</em></li><li>Ranglista <em>→ Teljesítmény</em></li><li>Progresszió <em>→ Teljesítmény</em></li><li>Rehabilitáció <em>→ Egészség</em></li>
+      </ul>
+    </div>
+    <div class="ia-arrow"><i data-lucide="arrow-right" style="width:32px;height:32px"></i></div>
+    <div class="ia-col">
+      <h3>Javasolt · csoportosítva</h3>
+      <div class="ia-new">
+        <div class="ia-group"><p class="eyebrow">Áttekintés</p><ul><li>Ma<small>napi edzés, elérhetőség, figyelmeztetések</small></li><li>Mérkőzések<small>sorsolás, eredmények, mérleg</small></li></ul></div>
+        <div class="ia-group"><p class="eyebrow">Tervezés</p><ul><li>Szezonterv<small>a makrociklus, áttekinthetőbb néven</small></li><li>Naptár<small>edzések létrehozása bármely nézetből</small></li><li>Edzéssablonok<small>a gyakorlattárra hivatkozva</small></li></ul></div>
+        <div class="ia-group"><p class="eyebrow">Edzéstartalom</p><ul><li>Gyakorlattár<small>gyors, szűrhető, oldalpanelos részlet</small></li></ul></div>
+        <div class="ia-group"><p class="eyebrow">Teljesítmény</p><ul><li>Mérések<small>fülek: Rögzítés · Ranglista · Progresszió · 1RM táblázat</small></li></ul></div>
+        <div class="ia-group"><p class="eyebrow">Csapat</p><ul><li>Játékosok<small>egy profil: teljesítmény, egészség, jelenlét</small></li><li>Jelenlét<small>kiemelve a rehab alól</small></li><li>Egészség<small>a rehabilitáció, anamnézis, dokumentumok</small></li></ul></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="mockup">
+  <div class="sec-head">
+    <p class="eyebrow">03 · Kattintható terv</p>
+    <h2>Próbáld ki</h2>
+    <p>Kattints a menüpontokra, egy játékos sorára (a profilban nézd meg az Egészség fület), egy gyakorlatra. A keresőt a <span class="mono">Ctrl K</span> nyitja. Válts mobil nézetre és sötét/világos témára. Az adatok kitalált mintaadatok.</p>
+  </div>
+  <div class="stage-bar">
+    <div class="seg" role="group" aria-label="Eszköz">
+      <button id="v-desk" aria-pressed="true"><i data-lucide="monitor"></i>Asztali</button>
+      <button id="v-mob" aria-pressed="false"><i data-lucide="smartphone"></i>Mobil</button>
+    </div>
+    <div class="seg" role="group" aria-label="Téma">
+      <button id="th-sys" aria-pressed="true">Rendszer</button>
+      <button id="th-light" aria-pressed="false"><i data-lucide="sun"></i>Világos</button>
+      <button id="th-dark" aria-pressed="false"><i data-lucide="moon"></i>Sötét</button>
+    </div>
+  </div>
+
+  <div class="device" id="device">
+    <div class="app" id="app">
+      <aside class="side">
+        <div class="team" title="Csapat váltása">
+          <div class="crest">TF</div>
+          <div><b>Kék SE · Felnőtt</b><span>2026/27 · NB I/B · Alapozó</span></div>
+          <i data-lucide="chevrons-up-down" class="chev"></i>
+        </div>
+        <button class="search-btn" data-cmdk><i data-lucide="search"></i>Keresés, parancsok<kbd>Ctrl K</kbd></button>
+        <nav class="nav" id="nav"></nav>
+        <div class="side-foot">
+          <div class="avatar">BD</div>
+          <div><b>Balogh Dávid</b><span>Vezetőedző</span></div>
+          <button title="Beállítások"><i data-lucide="settings"></i></button>
+        </div>
+      </aside>
+      <div class="main">
+        <div class="mob-top">
+          <div class="crest">TF</div>
+          <div><b>Kék SE · Felnőtt</b><span id="mob-title">Ma</span></div>
+          <button class="icon-btn" data-cmdk title="Keresés"><i data-lucide="search"></i></button>
+        </div>
+        <div class="topbar">
+          <div><div class="crumbs" id="crumbs">Áttekintés</div><h2 id="title">Ma</h2></div>
+          <div class="actions" id="actions"></div>
+        </div>
+        <div class="content" id="content"></div>
+      </div>
+      <nav class="tabbar" id="tabbar"></nav>
+      <div class="drawer" id="drawer" aria-hidden="true"></div>
+      <div class="cmdk" id="cmdk">
+        <div class="cmdk-box" role="dialog" aria-label="Keresés">
+          <label class="input"><i data-lucide="search"></i><input id="cmdk-in" placeholder="Játékos, gyakorlat, oldal vagy művelet…"></label>
+          <div class="cmdk-list" id="cmdk-list"></div>
+        </div>
+      </div>
+      <div class="toast" id="toast"><i data-lucide="check-circle-2"></i><span></span></div>
+    </div>
+  </div>
+</section>
+
+<section id="system">
+  <div class="sec-head">
+    <p class="eyebrow">04 · Vizuális rendszer</p>
+    <h2>Egy kiemelőszín, a többi jelent valamit</h2>
+    <p>A mostani 10 modulszín helyett egyetlen kobaltkék kiemelőszín jelöli, mire lehet kattintani. Minden más szín jelentést hordoz: zöld/sárga/piros az elérhetőség és a terhelés, öt szín az edzéstípus. Világos és sötét téma is, a rendszerbeállítást követve.</p>
+  </div>
+  <div class="sys">
+    <div class="panel">
+      <div class="panel-h"><h4>SZÍNEK</h4></div>
+      <div class="swatches">
+        <div class="sw"><i style="background:var(--accent)"></i><span>kiemelés</span></div>
+        <div class="sw"><i style="background:var(--ok)"></i><span>bevethető</span></div>
+        <div class="sw"><i style="background:var(--warn)"></i><span>korlátozott</span></div>
+        <div class="sw"><i style="background:var(--bad)"></i><span>sérült</span></div>
+        <div class="sw"><i style="background:var(--t-strength)"></i><span>erő</span></div>
+        <div class="sw"><i style="background:var(--t-ball)"></i><span>labdás</span></div>
+        <div class="sw"><i style="background:var(--t-tactic)"></i><span>taktika</span></div>
+        <div class="sw"><i style="background:var(--t-match)"></i><span>meccs</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h4>BETŰK</h4></div>
+      <div class="typespec">
+        <div class="d">Szombat 14:00 · 120 kg</div>
+        <p>Barlow Condensed a címekhez és nagy számokhoz: eredménytábla-hangulat, keskeny, jól olvasható. Figtree a szövegekhez: barátságos, jó ékezetkészlet.</p>
+        <p class="m">IBM Plex Mono · táblázatok, dátumok, kódok · 1RM 82,5% → 99 kg</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h4>ALAPELEMEK</h4></div>
+      <div class="grid">
+        <div class="comp-row"><button class="btn primary"><i data-lucide="plus"></i>Új edzés</button><button class="btn"><i data-lucide="download"></i>PDF</button><button class="btn ghost">Mégse</button></div>
+        <div class="comp-row"><span class="pill ok">Bevethető</span><span class="pill warn">Korlátozott</span><span class="pill bad">Sérült</span></div>
+        <div class="comp-row"><span class="chip" aria-pressed="true">Mind</span><span class="chip">Comb</span><span class="chip">Törzs</span><span class="chip"><i data-lucide="star"></i>Kedvencek</span></div>
+        <p style="font-size:13px;color:var(--muted)">Közös React komponensek: Button, PageHeader, Tabs, Modal/Drawer, Select, DataTable, StatusPill, Skeleton. Emoji helyett mindenhol Lucide ikon.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="speed">
+  <div class="sec-head">
+    <p class="eyebrow">05 · Gyakorlattár sebesség</p>
+    <h2>Előbb a lista, aztán a részletek</h2>
+    <p>A lassúság nem a szerver, hanem a sorrend: minden adatra vár, mielőtt bármit mutatna. A sávok a lekérések sorrendjét mutatják, nem mért időt.</p>
+  </div>
+  <div class="wf-cols">
+    <div class="panel">
+      <div class="panel-h"><h4>MOST · EGYMÁS UTÁN</h4></div>
+      <div class="wf">
+        <div class="wf-row"><span>gyakorlatok</span><div class="wf-track"><i style="left:0;width:16%"></i></div></div>
+        <div class="wf-row"><span>felhasználó</span><div class="wf-track"><i style="left:16%;width:6%"></i></div></div>
+        <div class="wf-row"><span>kedvencek</span><div class="wf-track"><i style="left:22%;width:7%"></i></div></div>
+        <div class="wf-row"><span>izmok, 1000-es lapok</span><div class="wf-track"><i class="slow" style="left:29%;width:48%"></i></div></div>
+        <div class="wf-row"><span>izom- és eszközlista</span><div class="wf-track"><i style="left:77%;width:11%"></i></div></div>
+        <div class="wf-row"><span>első kártya</span><div class="wf-track"><i class="dim" style="left:88%;width:12%"></i></div></div>
+        <p class="wf-mark"><i data-lucide="hourglass" style="width:13px"></i>addig: szűrők és üres terület</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h4>JAVASOLT · PÁRHUZAMOSAN</h4></div>
+      <div class="wf">
+        <div class="wf-row"><span>gyakorlatok + izmok</span><div class="wf-track"><i style="left:0;width:18%"></i></div></div>
+        <div class="wf-row"><span>kedvencek</span><div class="wf-track"><i style="left:0;width:8%"></i></div></div>
+        <div class="wf-row"><span>szűrőlisták</span><div class="wf-track"><i style="left:0;width:10%"></i></div></div>
+        <div class="wf-row"><span>első kártya</span><div class="wf-track"><i class="dim" style="left:18%;width:10%"></i></div></div>
+        <div class="wf-row"><span>bélyegképek</span><div class="wf-track"><i class="dim" style="left:20%;width:22%"></i></div></div>
+        <p class="wf-mark"><i data-lucide="zap" style="width:13px"></i>azonnal: csontváz-kártyák (skeleton)</p>
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <ul class="fixlist">
+      <li><i data-lucide="check"></i><div>Egy lekérés izmokkal együtt<small>Supabase beágyazott select (<span class="mono">training_exercises(*, exercise_muscles(*))</span>) vagy egy nézet, a többi <span class="mono">Promise.all</span>-lal párhuzamosan, React Query cache-sel.</small></div></li>
+      <li><i data-lucide="check"></i><div>Rácsban soha nem töltünk GIF-et<small>Minden gyakorlathoz legyen webp bélyegkép (a generáló script már megvan), hiányzónál semleges ikon, ne a több MB-os GIF.</small></div></li>
+      <li><i data-lucide="check"></i><div>Részlet azonnal nyílik<small>Az oldalpanel a listában már meglévő adatokkal rögtön megjelenik, a lépések és a GIF utána töltődnek, előtte a bélyegkép látszik.</small></div></li>
+      <li><i data-lucide="check"></i><div>Fix méretű képek, csontváz-kártyák<small>width/height vagy aspect-ratio, így nem ugrál a rács. Hosszú listánál fokozatos betöltés görgetésre.</small></div></li>
+    </ul>
+  </div>
+</section>
+
+<section id="features">
+  <div class="sec-head">
+    <p class="eyebrow">06 · Funkciók</p>
+    <h2>Ami a kinézeten túl hiányzik</h2>
+    <p>Az app most jól kezeli a <b>tervet</b>, de szinte semmit nem tud arról, <b>mi történt valójában</b>: hogy érezte magát a játékos, mennyire volt nehéz az edzés, megcsinálta-e az egyéni feladatát. A hasonló eszközök (pl. Catapult, TeamBuildr, Smartabase) és a sporttudomány alapján ezt a kört érdemes bezárni, kevés, gyors adatbevitellel.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><i data-lucide="workflow"></i><h4>ÖSSZEKAPCSOLT ADATOK · KÉK = ÚJ</h4></div>
+    <div class="lanes">
+      <div class="lane"><span class="lbl">Edzés</span><span class="node">Szezonterv<small>terv</small></span><span class="arr">→</span><span class="node">Naptár<small>edzés</small></span><span class="arr">→</span><span class="node new">Jelenlét + sRPE<small>edzés után 10 mp</small></span><span class="arr">→</span><span class="node new">Terhelés: terv vs. tény</span><span class="arr">→</span><span class="node">„Ma” oldal</span></div>
+      <div class="lane"><span class="lbl">Állapot</span><span class="node new">Reggeli check-in<small>5 kérdés, 20 mp</small></span><span class="arr">→</span><span class="node new">Eltérés a saját átlagtól</span><span class="arr">→</span><span class="node">„Ma”: figyelendők</span></div>
+      <div class="lane"><span class="lbl">Egészség</span><span class="node new">Visszatérési fázis<small>kritériumokkal</small></span><span class="arr">→</span><span class="node new">Elérhetőség<small>egy helyen</small></span><span class="arr">→</span><span class="node new">Sérüléstörténet<small>automatikusan</small></span><span class="arr">→</span><span class="node">Edzés, meccskeret</span></div>
+      <div class="lane"><span class="lbl">Egyéni</span><span class="node">Mérések (1RM)</span><span class="arr">→</span><span class="node new">Egyéni terv kg-ban</span><span class="arr">→</span><span class="node new">Játékos: kipipál, feltölt</span></div>
+    </div>
+  </div>
+
+  <div class="tier-h"><h3>Alap kör</h3><p>Ezek nélkül a játékos nézetnek nincs értelme. Mindegyik pár mezős, telefonról gyors.</p></div>
+  <div class="tier">
+    <article class="feat"><h4><i data-lucide="list-checks"></i>Egyéni edzésterv a játékosnak</h4><p>A gyógytornász vagy az erőnléti edző tervet ír egy játékosnak, napokra bontva, a gyakorlattárból. A játékos a telefonján látja, mikor mit kell csinálnia, képpel, és kipipálja.</p><p class="why"><i data-lucide="check"></i>A súly automatikusan a játékos saját 1RM-jéből számolódik: „3×8 @ 70% → 52,5 kg”.</p></article>
+    <article class="feat"><h4><i data-lucide="gauge"></i>Edzés utáni terhelés (sRPE)</h4><p>Edzés után a játékos egy 1-10 skálán megmondja, milyen nehéz volt. Ezt szorozva a percekkel valódi terhelési szám jön ki, nem csak a tervezett.</p><p class="why"><i data-lucide="check"></i>Fiataloknál is megbízható, ha naponta kérjük, nem heti visszaemlékezésből.</p></article>
+    <article class="feat"><h4><i data-lucide="sun"></i>Reggeli wellness check-in</h4><p>Öt kérdés 1-5 skálán: alvás, fáradtság, izomláz, stressz, hangulat (a Hooper-féle kérdőív mintájára). Az edző csak azt látja kiemelve, aki a saját szokásos értékéhez képest rosszabb.</p><p class="why"><i data-lucide="check"></i>Saját átlaghoz mérünk, nem fix határhoz, mert az egyéni különbségek nagyok.</p></article>
+    <article class="feat"><h4><i data-lucide="calendar-clock"></i>Időpontfoglalás a gyógytornászhoz</h4><p>A gyógytornász beállítja, melyik nap mettől meddig rendel, és milyen hosszú egy kezelés. Ezen belül a játékos maga választ időpontot és foglal. Amit már más lefoglalt, az nem választható. Mindketten emlékeztetőt kapnak.</p><p class="why"><i data-lucide="check"></i>Megszűnik az üzengetés az egyeztetésről.</p></article>
+    <article class="feat"><h4><i data-lucide="image-up"></i>Fotó vagy képernyőkép feltöltése</h4><p>A futás után a játékos feltölti az órája vagy futóappja képernyőképét, és beírja a fő számokat: táv, idő, átlagpulzus. Működik bármilyen órával, integráció nélkül.</p><p class="why"><i data-lucide="check"></i>Később jöhet automatikus Strava/Garmin-import, de először ez is elég.</p></article>
+    <article class="feat"><h4><i data-lucide="shield-check"></i>Elérhetőség és sérüléstörténet</h4><p>Bevethető / korlátozott / sérült: a gyógytornász állítja, és mindenhol ugyanaz látszik. Minden változás dátummal mentődik, így magától összeáll a kortörténet: mikor, mi történt, hány napot, edzést és meccset hagyott ki.</p><p class="why"><i data-lucide="check"></i>Súlyossági kategóriák a sportsérülés-nyilvántartás nemzetközi ajánlása szerint (kihagyott napok alapján). Csapatszinten is: ki mennyit hiányzott, melyik testrész a gyakori.</p></article>
+  </div>
+
+  <div class="tier-h"><h3>Második hullám</h3><p>Hasznos, ha az alap kör már működik és van adat.</p></div>
+  <div class="tier">
+    <article class="feat"><h4><i data-lucide="milestone"></i>Szakaszos visszatérés</h4><p>A rehab fázisokra bontva (pl. konditerem → pálya egyénileg → csapatedzés → meccs), minden fázishoz teljesítendő feltételek. Az edző látja: „3/5 · pályán egyénileg”.</p><p class="why"><i data-lucide="check"></i>A szakirodalom feltételhez kötött, nem idő alapú haladást javasol.</p></article>
+    <article class="feat"><h4><i data-lucide="area-chart"></i>Heti terhelés és monotónia</h4><p>Terv és tény egy grafikonon, heti összeg, és a hét egyhangúsága (monotónia). Trendet mutat, nem jósol sérülést.</p><p class="why"><i data-lucide="check"></i>Az ACWR mint sérülés-előrejelző vitatott, ezért nem építünk rá piros-zöld „kockázati” jelzést.</p></article>
+    <article class="feat"><h4><i data-lucide="bell-ring"></i>Értesítések és telepíthető app</h4><p>Az app telepíthető a telefon kezdőképernyőjére (PWA), és értesít: új terv, foglalás emlékeztető, elmaradt check-in.</p><p class="why"><i data-lucide="check"></i>Nem kell App Store, ugyanaz a weboldal.</p></article>
+    <article class="feat"><h4><i data-lucide="hand"></i>Kézilabda-specifikus monitorozás</h4><p>Váll: belső és külső rotációs erő mérése, heti dobásszám. Térd és boka: egylábas ugrás- és egyensúlytesztek. Panaszok heti, rövid kérdőívvel (OSTRC), ami a fájdalommal még végigjátszott terhelést is észreveszi.</p><p class="why"><i data-lucide="check"></i>A kézilabdában a váll- és térdsérülések a leggyakoribbak, ezek nagy része túlterheléses.</p></article>
+    <article class="feat"><h4><i data-lucide="message-square"></i>Megjegyzés a feladat alatt</h4><p>A játékos írhat egy sort egy feladathoz („a 3. sorozatnál fájt a térdem”), a terv írója látja és válaszolhat. Teljes chat helyett ennyi.</p><p class="why"><i data-lucide="check"></i>Az információ ott marad, ahol a feladat van.</p></article>
+  </div>
+
+  <div class="tier-h"><h3>Most nem</h3><p>Drága vagy bizonytalan haszon, tudatosan kihagyva.</p></div>
+  <ul class="later">
+    <li><b>Mozgáskövető- és pulzusöv-integráció</b>Kinexon, Catapult, Polar Team: drága hardver, a képernyőkép-feltöltés lefedi a lényeget.</li>
+    <li><b>Sérülés-előrejelző pontszám</b>Nincs mögötte megbízható tudomány, hamis biztonságérzetet adna.</li>
+    <li><b>Teljes chat</b>Erre ott a WhatsApp vagy a Messenger. A feladat alatti megjegyzés elég.</li>
+    <li><b>Videóelemzés</b>Külön termékkategória, nagy tárhely- és fejlesztési igénnyel.</li>
+  </ul>
+
+  <div class="note"><i data-lucide="lock"></i><div><b>Adatvédelem:</b> a wellness- és rehab-adat egészségügyi adatnak számít (GDPR 9. cikk). Mivel minden játékos felnőtt, szülői hozzájárulás nem kell, de a játékos maga egyszer kifejezetten hozzájárul a regisztrációnál. A játékos csak a saját adatát látja, az anamnézist csak a gyógytornász.</div></div>
+
+  <div class="sec-head" style="margin-top:40px;margin-bottom:16px">
+    <h3>Játékos nézet · telefonon</h3>
+    <p>Kattintható: válaszolj a check-inre, pipáld ki a feladatot, tölts fel képet, foglalj időpontot. Mintaadatok.</p>
+  </div>
+  <div class="phones" id="phones">
+    <div class="phone">
+      <div class="phone-frame"><div class="phone-in">
+        <div class="phone-top"><div class="crest">TF</div><div><b>Szia Márk!</b><span>Kedd, október 20.</span></div></div>
+        <div class="ph-h">Hogy vagy ma?</div><p class="ph-sub">5 kérdés · kb. 20 másodperc</p>
+        <div class="wq-row" data-q><span>Alvás minősége<em>1 rossz · 5 kiváló</em></span><div class="scale">1 2 3 4 5</div></div>
+        <div class="wq-row" data-q><span>Fáradtság<em>1 kimerült · 5 friss</em></span><div class="scale">1 2 3 4 5</div></div>
+        <div class="wq-row" data-q><span>Izomláz<em>1 erős · 5 nincs</em></span><div class="scale">1 2 3 4 5</div></div>
+        <div class="wq-row" data-q><span>Stressz<em>1 magas · 5 nyugodt</em></span><div class="scale">1 2 3 4 5</div></div>
+        <div class="wq-row" data-q><span>Hangulat<em>1 rossz · 5 remek</em></span><div class="scale">1 2 3 4 5</div></div>
+        <button class="btn primary" data-wsend style="justify-content:center"><i data-lucide="send"></i>Beküldés</button>
+        <p class="ph-ok" id="w-ok"></p>
+      </div></div>
+      <p class="phone-cap">Reggeli check-in</p>
+    </div>
+    <div class="phone">
+      <div class="phone-frame"><div class="phone-in">
+        <div class="phone-top"><div class="crest">TF</div><div><b>Mai feladatom</b><span>Térdstabilizáció · 2. hét</span></div></div>
+        <div class="who-card"><span class="avatar">KA</span><div><b>Kiss Anna</b><span>Gyógytornász · írta okt 18.</span></div></div>
+        <label class="task"><input type="checkbox"><div><b>Bolgár guggolás</b><span>3 × 8 / láb</span> <em>70% → 52,5 kg</em></div></label>
+        <label class="task"><input type="checkbox"><div><b>Nordic hamstring</b><span>3 × 5 · lassú lefelé</span></div></label>
+        <label class="task"><input type="checkbox"><div><b>Könnyű futás</b><span>20 perc · pulzus 150 alatt</span></div></label>
+        <button class="upload" data-upload><i data-lucide="image-up"></i><b>Futóóra képernyőkép</b>táv, idő, átlagpulzus</button>
+        <div class="wq-row"><span>Mennyire volt nehéz? (sRPE)</span><div class="rpe">1 2 3 4 5 6 7 8 9 10</div></div>
+        <p class="ph-ok" id="t-ok"></p>
+      </div></div>
+      <p class="phone-cap">Egyéni terv</p>
+    </div>
+    <div class="phone">
+      <div class="phone-frame"><div class="phone-in">
+        <div class="phone-top"><div class="crest">TF</div><div><b>Időpontfoglalás</b><span>Kiss Anna · gyógytornász</span></div></div>
+        <div class="ph-h">Melyik nap?</div>
+        <div class="daychips"><button aria-pressed="true">Sze<b>21</b></button><button>Cs<b>22</b></button><button>P<b>23</b></button><button>H<b>26</b></button></div>
+        <div class="wq-row"><span>Szabad időpontok · 30 perc<em>a rendelési időn belül</em></span><div class="slots"><button disabled>14:00</button><button>14:30</button><button disabled>15:00</button><button>15:30</button><button>16:00</button><button disabled>16:30</button></div></div>
+        <label class="input" style="max-width:none"><i data-lucide="message-square"></i><input placeholder="Megjegyzés (nem kötelező)"></label>
+        <button class="btn primary" data-book style="justify-content:center"><i data-lucide="calendar-check"></i>Foglalás</button>
+        <p class="ph-ok" id="b-ok"></p>
+      </div></div>
+      <p class="phone-cap">Rehab időpont</p>
+    </div>
+  </div>
+
+  <div class="sec-head" style="margin-top:40px;margin-bottom:16px">
+    <h3>Gyógytornász oldal · rendelési idő</h3>
+    <p>Egyszer kell beállítani, hetente ismétlődik. Kapcsold ki-be a napokat, írd át az időket, válts kezelési hosszt. A játékos ezen az időn belül foglal magának.</p>
+  </div>
+  <div class="grid g-2 hours-grid" id="hours">
+    <div class="panel">
+      <div class="panel-h"><i data-lucide="clock"></i><h4>HETI RENDELÉSI IDŐ</h4></div>
+      <div class="hours" id="hours-rows"></div>
+      <div class="wq-row" style="margin-top:14px"><span>Egy kezelés hossza</span><div class="seg" id="slotlen"><button aria-pressed="false">20'</button><button aria-pressed="true">30'</button><button aria-pressed="false">45'</button><button aria-pressed="false">60'</button></div></div>
+    </div>
+    <div class="grid">
+      <div class="panel"><div class="panel-h"><i data-lucide="calendar-check"></i><h4>EZ A HÉT</h4></div>
+        <div class="avail"><div><strong id="h-total">0</strong><span>foglalható</span></div><div class="warn"><strong>3</strong><span>foglalt</span></div><div class="ok"><strong id="h-free">0</strong><span>szabad</span></div></div>
+        <ul class="plist"><li><span class="avatar">KB</span><div>Kovács Bence<div class="sub">Sze 15:00 · térd kontroll</div></div></li><li><span class="avatar">NL</span><div>Nagy Levente<div class="sub">Cs 16:30 · váll</div></div></li><li><span class="avatar">KB</span><div>Kiss Bálint<div class="sub">P 9:30 · boka tape</div></div></li></ul></div>
+      <div class="panel"><div class="panel-h"><i data-lucide="calendar-x"></i><h4>KIVÉTELEK</h4><button class="more">+ Kivétel</button></div>
+        <ul class="plist"><li>Okt 30. – nov 1.<span class="sub" style="margin-left:auto">szabadság</span></li><li>Nov 7. szombat<span class="sub" style="margin-left:auto">meccsnap, 10:00–12:00</span></li></ul></div>
+    </div>
+  </div>
+
+  <ul class="sources">
+    <li>Források: <a href="https://acuresearchbank.acu.edu.au/item/898z8/validity-of-daily-and-weekly-self-reported-training-load-measures-in-adolescent-athletes" target="_blank" rel="noopener">sRPE megbízhatósága serdülőknél</a> · <a href="https://playertekplus.catapultsports.com/hc/en-us/articles/7443898359823-How-Players-Respond-to-the-sRPE-Wellness-Surveys" target="_blank" rel="noopener">Catapult: sRPE és wellness kérdőív a gyakorlatban</a> · <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9967008/" target="_blank" rel="noopener">Monitorozó eszközök utánpótlás-kosárlabdában</a> · <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8138569/" target="_blank" rel="noopener">ACWR: van mögötte bizonyíték?</a> · <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9760760/" target="_blank" rel="noopener">Pályás rehabilitáció és visszatérési szakaszok</a></li>
+  </ul>
+</section>
+
+<section id="roadmap">
+  <div class="sec-head">
+    <p class="eyebrow">07 · Ütemterv</p>
+    <h2>Öt lépésben, mindig működő appal</h2>
+    <p>A mostani állapot a <span class="mono">pre-redesign-2026-10</span> címkén el van mentve, minden munka külön ágon megy. Az élő oldal csak a te jóváhagyásod után változik.</p>
+  </div>
+  <div class="road">
+    <div class="stage"><p class="eyebrow">1. szakasz</p><h3>Alapok</h3><ul><li>Színek, betűk, világos és sötét téma</li><li>Közös komponensek</li><li>Új menü 5 csoporttal, csapatválasztó felül</li><li>Szerepkör szerinti menü (a játékos nézethez is)</li><li>Mobil alsó menüsor, belépő oldal</li></ul><p class="out">Minden oldal egyformán néz ki és működik.</p></div>
+    <div class="stage"><p class="eyebrow">2. szakasz</p><h3>Napi munka</h3><ul><li>„Ma” kezdőképernyő</li><li>Naptár: edzés bármely nézetből</li><li>Gyakorlattár gyorsítása</li><li>Jelenlét és elérhetőségi státusz</li></ul><p class="out">A leggyakoribb teendők 1-2 kattintásra.</p></div>
+    <div class="stage"><p class="eyebrow">3. szakasz</p><h3>Összevonás</h3><ul><li>Teljesítmény: 4 modul 1 helyen</li><li>Egy játékosprofil saját címmel</li><li>Sablonok a gyakorlattárra hivatkoznak</li></ul><p class="out">Minden adat egyszer, egy helyen.</p></div>
+    <div class="stage"><p class="eyebrow">4. szakasz</p><h3>Játékos nézet</h3><ul><li>Játékos szerepkör, meghívás, hozzájárulás</li><li>Egyéni tervek, kipipálás, feltöltés</li><li>Wellness check-in, sRPE</li><li>Gyógytornász-foglalás</li></ul><p class="out">A játékos a telefonján látja a feladatát.</p></div>
+    <div class="stage"><p class="eyebrow">5. szakasz</p><h3>Második hullám</h3><ul><li>Szakaszos visszatérés</li><li>Terhelés: terv vs. tény</li><li>Értesítések, telepíthető app</li><li>Szezonterv mobilon, PDF-ek</li></ul><p class="out">A pálya szélén, telefonról is kényelmes.</p></div>
+  </div>
+</section>
+
+<section id="questions">
+  <div class="sec-head">
+    <p class="eyebrow">08 · Döntések</p>
+    <h2>Eldöntve</h2>
+  </div>
+  <div class="panel">
+    <ul class="decided">
+      <li><i data-lucide="check"></i>Játékosok belépnek, egyszerűsített nézettel. Szülők nem.</li>
+      <li><i data-lucide="check"></i>A téma a rendszert követi, kézzel átváltható.</li>
+      <li><i data-lucide="check"></i>Kézilabda, felnőtt (18+) játékosok. Szülői hozzájárulás nem kell, posztok és pályaábrák kézilabdára.</li>
+      <li><i data-lucide="check"></i>Az 1. szakasszal kezdünk. A mostani verzió el van mentve, bármikor visszaállítható.</li>
+    </ul>
+  </div>
+  <p style="margin-top:16px;color:var(--muted)">Nyitott kérdés nincs, következik az 1. szakasz részletes terve.</p>
+</section>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const NAV=[
+  {g:'Áttekintés',items:[{id:'ma',name:'Ma',icon:'sun'},{id:'meccs',name:'Mérkőzések',icon:'trophy'}]},
+  {g:'Tervezés',items:[{id:'szezon',name:'Szezonterv',icon:'calendar-range'},{id:'naptar',name:'Naptár',icon:'calendar-days'},{id:'sablon',name:'Edzéssablonok',icon:'clipboard-list'}]},
+  {g:'Edzéstartalom',items:[{id:'gyak',name:'Gyakorlattár',icon:'dumbbell'}]},
+  {g:'Teljesítmény',items:[{id:'meres',name:'Mérések',icon:'activity'}]},
+  {g:'Csapat',items:[{id:'jatekos',name:'Játékosok',icon:'users'},{id:'jelenlet',name:'Jelenlét',icon:'check-square'},{id:'egeszseg',name:'Egészség',icon:'heart-pulse',badge:2}]}
+];
+const TABBAR=[{id:'ma',name:'Ma',icon:'sun'},{id:'naptar',name:'Naptár',icon:'calendar-days'},{id:'jatekos',name:'Játékosok',icon:'users'},{id:'gyak',name:'Gyakorlatok',icon:'dumbbell'},{id:'meres',name:'Mérések',icon:'activity'}];
+const P=[
+ {n:'Szabó Márk',no:10,pos:'Irányító',st:'ok',att:96,sq:125,rel:1.74,last:'okt 14'},
+ {n:'Tóth Dániel',no:4,pos:'Beálló',st:'ok',att:93,sq:130,rel:1.71,last:'okt 14'},
+ {n:'Horváth Ádám',no:23,pos:'Jobbszélső',st:'ok',att:91,sq:115,rel:1.66,last:'okt 14'},
+ {n:'Varga Zsombor',no:9,pos:'Balátlövő',st:'ok',att:89,sq:110,rel:1.59,last:'okt 7'},
+ {n:'Kiss Bálint',no:15,pos:'Jobbátlövő',st:'warn',att:85,sq:120,rel:1.58,last:'okt 7'},
+ {n:'Farkas Olivér',no:18,pos:'Irányító',st:'ok',att:94,sq:105,rel:1.55,last:'szept 30'},
+ {n:'Nagy Levente',no:12,pos:'Kapus',st:'warn',att:90,sq:112,rel:1.43,last:'szept 30'},
+ {n:'Balogh Noel',no:1,pos:'Kapus',st:'ok',att:97,sq:108,rel:1.41,last:'szept 2'},
+ {n:'Kovács Bence',no:7,pos:'Balátlövő',st:'bad',att:72,sq:118,rel:1.62,last:'szept 2'},
+ {n:'Molnár Gergő',no:3,pos:'Beálló',st:'bad',att:68,sq:122,rel:1.52,last:'aug 26'}
+];
+const ST={ok:['ok','Bevethető'],warn:['warn','Korlátozott'],bad:['bad','Sérült']};
+const ini=n=>n.split(' ').map(x=>x[0]).join('');
+const EX=[
+ ['Guggolás rúddal','Comb','Erő','squat','t-strength'],['Román felhúzás','Hátsó lánc','Erő','dumbbell','t-strength'],['Bolgár guggolás','Comb','Egylábas','footprints','t-ball'],
+ ['Nordic hamstring','Combhajlító','Prevenció','shield','t-tactic'],['Box jump','Láb','Plyometria','arrow-up','t-match'],['Csípőemelés','Farizom','Erő','dumbbell','t-strength'],
+ ['Copenhagen plank','Adduktor','Prevenció','shield','t-tactic'],['Húzódzkodás','Hát','Erő','dumbbell','t-strength'],['Kettlebell lendítés','Hátsó lánc','Erőkifejtés','zap','t-match'],
+ ['Farmer séta','Teljes test','Erő','weight','t-ball'],['Pallof press','Törzs','Stabilitás','shield','t-tactic'],['Oldalirányú szökdelés','Láb','Plyometria','arrow-up','t-match']
+];
+let cur='ma', profile=null, perfTab='rang', profTab='att', libLoaded=false, libFilter='Mind';
+
+function navHTML(){return NAV.map(g=>`<div class="grp">${g.g}</div>`+g.items.map(i=>`<button data-go="${i.id}" ${isCur(i.id)?'aria-current="page"':''}><i data-lucide="${i.icon}"></i>${i.name}${i.badge?`<span class="badge">${i.badge}</span>`:''}</button>`).join('')).join('')}
+function isCur(id){return cur===id||(cur==='profil'&&id==='jatekos')}
+function tabbarHTML(){return TABBAR.map(i=>`<button data-go="${i.id}" ${isCur(i.id)?'aria-current="page"':''}><i data-lucide="${i.icon}"></i>${i.name}</button>`).join('')}
+
+const SCREENS={
+ ma:{crumb:'Áttekintés',title:'Ma',actions:`<button class="btn"><i data-lucide="sliders-horizontal"></i>Testreszabás</button><button class="btn primary" data-toast="Új edzés: időpont kiválasztva"><i data-lucide="plus"></i>Új edzés</button>`,render:()=>`
+  <div class="hello"><h3>Szia Dávid!</h3><p>Kedd, október 20. · 7. hét · Alapozó időszak</p></div>
+  <div class="grid g-2">
+   <div class="grid">
+    <div class="panel"><div class="panel-h"><i data-lucide="timer"></i><h4>MAI EDZÉS</h4><button class="more" data-go="naptar">Naptár</button></div>
+     <div class="today"><div class="timechip">17:30<small>90 PERC</small></div>
+      <div><h5>Erő · alsótest + gyorsaság</h5><div class="meta"><span><i data-lucide="map-pin"></i>Sportcsarnok, B pálya</span><span><i data-lucide="gauge"></i>Tervezett terhelés: közepes</span></div>
+       <div class="blocks"><span class="blk">Bemelegítés 15'</span><span class="blk">Guggolás 5×5</span><span class="blk">Nordic 3×6</span><span class="blk">Sprint 6×20 m</span></div></div>
+      <button class="btn primary" data-toast="Jelenlét mentve: 18 / 22"><i data-lucide="check-square"></i>Jelenlét</button></div></div>
+    <div class="panel"><div class="panel-h"><i data-lucide="bar-chart-3"></i><h4>HETI TERHELÉS · TERV VS. TÉNY</h4></div>${loadChart()}
+     <div class="legend" style="margin-top:8px"><span><i style="background:var(--accent)"></i>tény (sRPE)</span><span><i style="background:var(--line)"></i>terv</span></div></div>
+   </div>
+   <div class="grid">
+    <div class="panel"><div class="panel-h"><i data-lucide="users"></i><h4>KI BEVETHETŐ?</h4><button class="more" data-go="jatekos">Mind</button></div>
+     <div class="avail"><div class="ok"><strong>18</strong><span>bevethető</span></div><div class="warn"><strong>2</strong><span>korlátozott</span></div><div class="bad"><strong>2</strong><span>sérült</span></div></div>
+     <ul class="plist">${P.filter(p=>p.st!=='ok').map(p=>`<li data-player="${p.n}" style="cursor:pointer"><span class="avatar">${ini(p.n)}</span><div>${p.n}<div class="sub">${p.st==='bad'?'Visszatérés: okt 27.':'Csak könnyített edzés'}</div></div><span class="pill ${ST[p.st][0]}">${ST[p.st][1]}</span></li>`).join('')}</ul></div>
+    <div class="panel match"><div class="panel-h"><i data-lucide="trophy"></i><h4>KÖVETKEZŐ MECCS</h4></div>
+     <div class="vs">Kék SE <i>vs</i> Vasas SC</div><div class="meta"><span><i data-lucide="calendar"></i>Szombat, okt 24. · 14:00</span><span><i data-lucide="plane"></i>Idegenben</span></div>
+     <div class="count"><div><b>3</b><span>NAP</span></div><div><b>21</b><span>ÓRA</span></div></div></div>
+    <div class="panel"><div class="panel-h"><i data-lucide="bell"></i><h4>TEENDŐK</h4></div>
+     <ul class="alerts"><li class="w"><i data-lucide="alert-triangle"></i><div>3 játékosnak 6 hete nincs 1RM mérése<small>Balogh Noel, Kovács Bence, Molnár Gergő</small></div></li>
+     <li class="b"><i data-lucide="heart-pulse"></i><div>Kovács Bence: kontrollvizsgálat csütörtökön<small>Egészség · anamnézis frissítése</small></div></li>
+     <li class="i"><i data-lucide="calendar-range"></i><div>Jövő héttől: 3. mezociklus (intenzív)<small>Szezonterv · 3/8</small></div></li></ul>
+     <div class="phase"><div class="done"></div><div class="done"></div><div class="now"></div><div></div><div></div><div></div><div></div><div></div></div></div>
+   </div>
+  </div>`},
+ naptar:{crumb:'Tervezés',title:'Naptár',actions:`<div class="seg"><button>Hónap</button><button aria-pressed="true">Hét</button><button>Nap</button></div><button class="btn primary" data-toast="Új edzés hozzáadva"><i data-lucide="plus"></i>Új edzés</button>`,render:()=>{
+  const days=[['H',19,[['17:30','Taktika · 6-0 védekezés','t-tactic','75']]],['K',20,[['17:30','Erő · alsótest','t-strength','90']]],['Sze',21,[['17:00','Labdás · indítások, lerohanás','t-ball','80']]],['Cs',22,[['17:30','Erő · felsőtest + törzs','t-strength','70'],['18:45','Videóelemzés','t-tactic','30']]],['P',23,[['16:30','Aktiválás','t-ball','45']]],['Szo',24,[['14:00','Vasas SC – Kék SE','t-match','90']]],['V',25,[['','Pihenőnap','t-rest','']]]];
+  return `<div class="cal-head"><b>Október 19–25.</b><button class="icon-btn"><i data-lucide="chevron-left"></i></button><button class="icon-btn"><i data-lucide="chevron-right"></i></button><button class="btn ghost">Ma</button>
+   <div class="legend" style="margin-left:auto"><span><i style="background:var(--t-strength)"></i>Erő</span><span><i style="background:var(--t-ball)"></i>Labdás</span><span><i style="background:var(--t-tactic)"></i>Taktika</span><span><i style="background:var(--t-match)"></i>Meccs</span></div></div>
+   <div class="week">${days.map(d=>`<div class="day ${d[1]===20?'today-col':''} ${d[1]>=20&&d[1]<=21?'has':''}"><div class="day-h">${d[0]}<b>${d[1]}</b></div>${d[2].map(s=>`<div class="sess" style="--c:var(--${s[2]})"><b>${s[1]}</b><span>${s[0]}${s[3]?' · '+s[3]+"'":''}</span></div>`).join('')}<button class="add-slot" data-toast="Új edzés: ${d[0]} ${d[1]}.">+ edzés</button></div>`).join('')}</div>
+   <div class="panel" style="margin-top:14px"><div class="panel-h"><i data-lucide="gauge"></i><h4>HETI TERHELÉS (TERV)</h4><span style="margin-left:auto;font-size:12px;color:var(--muted)">a szezontervből számolva, itt csak megjelenik</span></div>
+    <div class="load">${[55,78,62,70,30,95,0].map((v,i)=>`<div><i class="${v>90?'hi':''}" style="height:${Math.max(v,3)}%"></i><span>${['H','K','Sze','Cs','P','Szo','V'][i]}</span></div>`).join('')}</div></div>`}},
+ gyak:{crumb:'Edzéstartalom',title:'Gyakorlattár',actions:`<button class="btn"><i data-lucide="star"></i>Kedvencek</button><button class="btn primary"><i data-lucide="plus"></i>Új gyakorlat</button>`,render:()=>{
+  const chips=['Mind','Comb','Hátsó lánc','Törzs','Láb','Prevenció'];
+  const list=EX.filter(e=>libFilter==='Mind'||e[1]===libFilter||e[2]===libFilter);
+  return `<div class="filters"><label class="input"><i data-lucide="search"></i><input placeholder="Keresés név vagy izom szerint"></label>${chips.map(c=>`<button class="chip" data-chip="${c}" aria-pressed="${c===libFilter}">${c}</button>`).join('')}<button class="chip"><i data-lucide="sliders-horizontal"></i>Szűrők</button></div>
+  <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px">${libLoaded?list.length+' gyakorlat · példák a 1300+ közül':'Betöltés…'}</p>
+  <div class="lib">${libLoaded?list.map((e,i)=>`<button class="ex" data-ex="${EX.indexOf(e)}" style="--c:var(--${e[4]})"><div class="thumb"><i data-lucide="${e[3]==='squat'?'person-standing':e[3]}"></i><i data-lucide="star" class="fav"></i></div><div class="b"><b>${e[0]}</b><div class="tags"><span class="tag">${e[1]}</span><span class="tag">${e[2]}</span></div></div></button>`).join(''):Array.from({length:8}).map(()=>`<div class="ex skel"><div class="thumb"></div><div class="b"><div class="ln" style="width:80%"></div><div class="ln" style="width:50%"></div></div></div>`).join('')}</div>`}},
+ jatekos:{crumb:'Csapat',title:'Játékosok',actions:`<button class="btn"><i data-lucide="user-plus"></i>Meghívás</button><button class="btn primary"><i data-lucide="plus"></i>Új játékos</button>`,render:()=>`
+  <div class="filters"><label class="input"><i data-lucide="search"></i><input placeholder="Játékos keresése"></label><button class="chip" aria-pressed="true">Mind · 22</button><button class="chip">Bevethető</button><button class="chip">Korlátozott</button><button class="chip">Sérült</button></div>
+  <div class="panel" style="padding:4px 6px"><div class="tbl-wrap"><table><thead><tr><th>Játékos</th><th class="hide-m">Poszt</th><th>Állapot</th><th class="num hide-m">Jelenlét</th><th class="num hide-m">Guggolás 1RM</th><th class="hide-m">Utolsó mérés</th></tr></thead><tbody>
+  ${P.map(p=>`<tr data-player="${p.n}"><td><div class="who"><span class="avatar">${p.no}</span><b>${p.n}</b></div></td><td class="hide-m">${p.pos}</td><td><span class="pill ${ST[p.st][0]}">${ST[p.st][1]}</span></td><td class="num hide-m">${p.att}%</td><td class="num hide-m">${p.sq} kg</td><td class="hide-m" style="color:var(--muted)">${p.last}</td></tr>`).join('')}
+  </tbody></table></div></div>`},
+ profil:{crumb:'Csapat › Játékosok',title:'Játékos',actions:`<button class="btn"><i data-lucide="download"></i>PDF</button><button class="btn primary"><i data-lucide="plus"></i>Új mérés</button>`,render:()=>{
+  const p=P.find(x=>x.n===profile)||P[0];
+  const tabs=[['att','Áttekintés','layout-dashboard'],['perf','Teljesítmény','activity'],['health','Egészség','heart-pulse'],['pres','Jelenlét','check-square'],['docs','Dokumentumok','file-text']];
+  let body='';
+  if(profTab==='health'){
+    const cur=p.st==='bad';
+    const per=cur?[['ok',40],['warn',6],['ok',17],['bad',19],['warn',7],['ok',9],['bad',13]]:[['ok',40],['warn',6],['ok',17],['bad',19],['warn',7],['ok',22]];
+    const el=per.reduce((a,x)=>a+x[1],0),okd=per.filter(x=>x[0]==='ok').reduce((a,x)=>a+x[1],0),badd=per.filter(x=>x[0]==='bad').reduce((a,x)=>a+x[1],0);
+    const inj=[...(cur?[['okt 8.','Térdzúzódás','jobb térd','13+','5 / 2','—','bad','Folyamatban']]:[]),['szept 2.','Szalaghúzódás','bal boka','19','8 / 3','Közepes','ok','Lezárt'],['aug 10.','Húzódás','jobb combhajlító','6','3 / 0','Enyhe','ok','Lezárt'],['2026. márc 3.','Ágyéki húzódás','bal adduktor','9','4 / 1','Közepes','ok','Lezárt']];
+    body=`<div class="kpis"><div class="kpi"><span>Teljes edzésben</span><strong>${Math.round(okd/el*100)}<small> %</small></strong><em>szezon eddig</em></div><div class="kpi"><span>Sérülések</span><strong>${cur?3:2}</strong><em>szezon · 1 előző</em></div><div class="kpi"><span>Kihagyott napok</span><strong>${badd}</strong><em>szezon eddig</em></div><div class="kpi"><span>Kihagyott meccsek</span><strong>${cur?5:3}</strong><em>edzés: ${cur?13:8}</em></div></div>
+    <div class="panel" style="margin-bottom:14px"><div class="panel-h"><i data-lucide="activity"></i><h4>ELÉRHETŐSÉG · 2026/27</h4><div class="legend" style="margin-left:auto"><span><i style="background:var(--ok)"></i>bevethető</span><span><i style="background:var(--warn)"></i>korlátozott</span><span><i style="background:var(--bad)"></i>sérült</span></div></div>
+     <div class="strip-wrap"><div class="strip">${per.map(x=>`<i class="${x[0]}" style="width:${(x[1]/365*100).toFixed(2)}%"></i>`).join('')}</div><span class="today-mark" style="left:${(el/365*100).toFixed(2)}%">ma</span></div>
+     <div class="months">${['júl','aug','szept','okt','nov','dec','jan','febr','márc','ápr','máj','jún'].map(m=>`<span>${m}</span>`).join('')}</div></div>
+    <div class="panel" style="padding:4px 6px;margin-bottom:14px"><div class="panel-h" style="padding:10px 10px 0"><i data-lucide="clipboard-plus"></i><h4>SÉRÜLÉSEK</h4><button class="more">+ Új sérülés</button></div><div class="tbl-wrap"><table><thead><tr><th>Kezdet</th><th>Sérülés</th><th class="hide-m">Testrész</th><th class="num">Napok</th><th class="num hide-m">Edzés / meccs</th><th class="hide-m">Súlyosság</th><th>Állapot</th></tr></thead><tbody>
+     ${inj.map(r=>`<tr><td class="mono" style="font-size:12px">${r[0]}</td><td><b>${r[1]}</b></td><td class="hide-m">${r[2]}</td><td class="num">${r[3]}</td><td class="num hide-m">${r[4]}</td><td class="hide-m">${r[5]}</td><td><span class="pill ${r[6]}">${r[7]}</span></td></tr>`).join('')}
+     </tbody></table></div></div>
+    <div class="grid g-2"><div class="panel"><div class="panel-h"><i data-lucide="milestone"></i><h4>VISSZATÉRÉS</h4></div>${cur?`<div class="phase"><div class="done"></div><div class="now"></div><div></div><div></div><div></div></div><p style="font-size:13px">2/5 · Konditerem, terhelés nélküli térdmunka</p><p class="sub" style="color:var(--muted);font-size:12px">Következő feltétel: fájdalommentes guggolás testsúllyal</p>`:`<p style="font-size:13px;color:var(--muted)">Nincs aktív rehabilitáció.</p>`}</div>
+    <div class="panel"><div class="panel-h"><i data-lucide="file-text"></i><h4>ANAMNÉZIS ÉS DOKUMENTUMOK</h4></div><ul class="plist"><li>Anamnézis · frissítve szept 3.<span class="sub" style="margin-left:auto">csak gyógytornász</span></li><li>MRI lelet · szept 12.<span class="sub" style="margin-left:auto">PDF</span></li></ul></div></div>`}
+  else {body=`<div class="kpis"><div class="kpi"><span>Guggolás 1RM</span><strong>${p.sq}<small> kg</small></strong><em class="up">▲ 7,5 kg / 8 hét</em></div><div class="kpi"><span>Relatív erő</span><strong>${p.rel.toFixed(2).replace('.',',')}<small> × ts.</small></strong><em class="up">▲ 0,09</em></div><div class="kpi"><span>Jelenlét</span><strong>${p.att}<small> %</small></strong><em>szezon</em></div><div class="kpi"><span>CMJ ugrás</span><strong>41<small> cm</small></strong><em class="down">▼ 1 cm</em></div></div>
+  <div class="grid g-2"><div class="panel"><div class="panel-h"><i data-lucide="trending-up"></i><h4>GUGGOLÁS 1RM · SZEZON</h4><button class="more">Gyakorlat ▾</button></div>${lineChart(p.sq)}</div>
+  <div class="panel"><div class="panel-h"><i data-lucide="list"></i><h4>UTOLSÓ MÉRÉSEK</h4></div><ul class="plist"><li>Guggolás 1RM<span class="sub" style="margin-left:auto">${p.sq} kg · okt 14</span></li><li>Fekvenyomás 1RM<span class="sub" style="margin-left:auto">82,5 kg · okt 14</span></li><li>CMJ<span class="sub" style="margin-left:auto">41 cm · okt 7</span></li><li>30 m sprint<span class="sub" style="margin-left:auto">4,21 s · okt 7</span></li><li>Testsúly<span class="sub" style="margin-left:auto">72 kg · okt 14</span></li></ul></div></div>`}
+  return `<div class="prof-h"><div class="jersey">${p.no}</div><div><h3>${p.n}</h3><div class="meta"><span>${p.pos}</span><span>2001-es születésű</span><span>Balkezes</span><span class="pill ${ST[p.st][0]}">${ST[p.st][1]}</span></div></div></div>
+  <div class="tabs" role="tablist">${tabs.map(t=>`<button role="tab" data-ptab="${t[0]}" aria-selected="${profTab===t[0]}"><i data-lucide="${t[2]}"></i>${t[1]}</button>`).join('')}</div>${body}`}},
+ meres:{crumb:'Teljesítmény',title:'Mérések',actions:`<button class="btn"><i data-lucide="download"></i>Export</button><button class="btn primary" data-toast="Csapatfelmérés indítva"><i data-lucide="plus"></i>Csapatfelmérés</button>`,render:()=>{
+  const tabs=[['rog','Rögzítés','pencil'],['rang','Ranglista','medal'],['prog','Progresszió','trending-up'],['rm','1RM táblázat','calculator']];
+  let body='';
+  if(perfTab==='rm'){const pct=[100,95,90,85,80,75,70,65];body=`<div class="filters"><button class="chip" aria-pressed="true">Guggolás</button><button class="chip">Fekvenyomás</button><button class="chip">Felhúzás</button></div><div class="panel" style="padding:4px 6px"><div class="tbl-wrap"><table><thead><tr><th>Játékos</th>${pct.map(x=>`<th class="num">${x}%</th>`).join('')}</tr></thead><tbody>${P.slice(0,7).map(p=>`<tr><td><b>${p.n}</b></td>${pct.map(x=>`<td class="num">${(Math.round(p.sq*x/100/2.5)*2.5).toString().replace('.',',')}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`}
+  else if(perfTab==='rog'){body=`<div class="panel"><div class="panel-h"><i data-lucide="pencil"></i><h4>CSAPATFELMÉRÉS · GUGGOLÁS 1RM · OKT 20.</h4></div><div class="tbl-wrap"><table><thead><tr><th>Játékos</th><th class="num">Előző</th><th class="num">Mai érték (kg)</th></tr></thead><tbody>${P.slice(0,6).map(p=>`<tr><td><b>${p.n}</b></td><td class="num">${p.sq-5}</td><td class="num"><span style="display:inline-block;border:1px solid var(--line);border-radius:7px;padding:3px 10px;min-width:70px;background:var(--surface-2)">${p.st==='bad'?'—':p.sq}</span></td></tr>`).join('')}</tbody></table></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn ghost">Mégse</button><button class="btn primary" data-toast="6 mérés mentve"><i data-lucide="check"></i>Mentés</button></div></div>`}
+  else if(perfTab==='prog'){body=`<div class="panel"><div class="panel-h"><i data-lucide="trending-up"></i><h4>CSAPATÁTLAG · GUGGOLÁS 1RM</h4></div>${lineChart(118)}</div>`}
+  else {const s=[...P].sort((a,b)=>b.rel-a.rel);body=`<div class="filters"><button class="chip" aria-pressed="true">Relatív erő · guggolás</button><button class="chip">Abszolút 1RM</button><button class="chip">CMJ</button></div><div class="panel" style="padding:4px 6px"><div class="tbl-wrap"><table><thead><tr><th class="num">#</th><th>Játékos</th><th style="width:40%" class="hide-m"></th><th class="num">× testsúly</th></tr></thead><tbody>${s.map((p,i)=>`<tr data-player="${p.n}"><td class="num" style="font-family:var(--display);font-size:18px;font-weight:700;${i<3?'color:var(--accent)':''}">${i+1}</td><td><div class="who"><span class="avatar">${p.no}</span><b>${p.n}</b></div></td><td class="hide-m"><div class="bar"><i style="width:${(p.rel/1.8*100).toFixed(0)}%"></i></div></td><td class="num">${p.rel.toFixed(2).replace('.',',')}</td></tr>`).join('')}</tbody></table></div></div>`}
+  return `<div class="tabs" role="tablist">${tabs.map(t=>`<button role="tab" data-mtab="${t[0]}" aria-selected="${perfTab===t[0]}"><i data-lucide="${t[2]}"></i>${t[1]}</button>`).join('')}</div>${body}`}}
+};
+['meccs','szezon','sablon','jelenlet','egeszseg'].forEach(id=>{
+  const names={meccs:['Áttekintés','Mérkőzések','trophy'],szezon:['Tervezés','Szezonterv','calendar-range'],sablon:['Tervezés','Edzéssablonok','clipboard-list'],jelenlet:['Csapat','Jelenlét','check-square'],egeszseg:['Csapat','Egészség','heart-pulse']}[id];
+  SCREENS[id]={crumb:names[0],title:names[1],actions:'',render:()=>`<div class="panel" style="display:grid;place-items:center;text-align:center;gap:10px;padding:48px 20px"><i data-lucide="${names[2]}" style="width:36px;height:36px;color:var(--muted)"></i><h3 style="font-size:24px">${names[1]}</h3><p style="color:var(--muted);max-width:44ch;font-size:13.5px">Ez a képernyő a mockupban nincs kidolgozva. Ugyanazt a fejlécet, füleket és táblázatot kapja, mint a többi oldal.</p><button class="btn primary" data-go="ma">Vissza a Ma oldalra</button></div>`};
+});
+
+function loadChart(){const plan=[60,75,60,70,35,100,0],act=[58,82,0,0,0,0,0];const d=['H','K','Sze','Cs','P','Szo','V'];const W=420,H=130,bw=34,gap=(W-40-7*bw)/6;
+ return `<svg class="chart" viewBox="0 0 ${W} ${H+18}" width="100%" role="img" aria-label="Heti terhelés, terv és tény">${[0,50,100].map(v=>`<line x1="30" x2="${W}" y1="${H-v*1.1}" y2="${H-v*1.1}" stroke="var(--line)" stroke-dasharray="${v?'3 3':''}"/><text x="0" y="${H-v*1.1+3}">${v}</text>`).join('')}
+ ${plan.map((v,i)=>{const x=30+i*(bw+gap);return `<rect x="${x}" y="${H-v*1.1}" width="${bw}" height="${v*1.1}" rx="4" fill="var(--line)"/>${act[i]?`<rect x="${x+7}" y="${H-act[i]*1.1}" width="${bw-14}" height="${act[i]*1.1}" rx="3" fill="${i===1?'var(--accent)':'var(--accent)'}"/>`:''}<text x="${x+bw/2}" y="${H+14}" text-anchor="middle">${d[i]}</text>`}).join('')}</svg>`}
+function lineChart(end){const pts=[end-12.5,end-10,end-10,end-7.5,end-5,end-5,end-2.5,end];const W=440,H=150,min=end-20,max=end+5;const x=i=>36+i*((W-50)/7),y=v=>10+(max-v)/(max-min)*(H-30);
+ const path=pts.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');const area=path+` L${x(7)},${H-20} L${x(0)},${H-20} Z`;const lab=['aug','','szept','','','okt','',''];
+ return `<svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Guggolás 1RM alakulása">${[min,min+10,min+20].map(v=>`<line x1="36" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="0" y="${y(v)+3}">${v}</text>`).join('')}
+ <path d="${area}" fill="var(--accent)" opacity=".12"/><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+ ${pts.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="${i===7?5:2.5}" fill="${i===7?'var(--accent)':'var(--surface)'}" stroke="var(--accent)" stroke-width="2"/>`).join('')}
+ <text x="${x(7)-4}" y="${y(end)-10}" text-anchor="end" style="fill:var(--fg);font-weight:500">${end} kg</text>
+ ${lab.map((l,i)=>l?`<text x="${x(i)}" y="${H-4}" text-anchor="middle">${l}</text>`:'').join('')}</svg>`}
+
+function render(){
+ const s=SCREENS[cur];
+ $('#nav').innerHTML=navHTML();$('#tabbar').innerHTML=tabbarHTML();
+ $('#crumbs').textContent=s.crumb;$('#title').textContent=cur==='profil'?(profile||'Játékos'):s.title;$('#mob-title').textContent=cur==='profil'?(profile||'Játékos'):s.title;
+ $('#actions').innerHTML=s.actions;$('#content').innerHTML=s.render();$('#content').scrollTop=0;
+ icons();
+ if(cur==='gyak'&&!libLoaded){setTimeout(()=>{libLoaded=true;if(cur==='gyak')render()},700)}
+}
+function icons(){try{lucide.createIcons({attrs:{'stroke-width':1.9}})}catch(e){}}
+function go(id){cur=id;closeDrawer();if(id!=='gyak')libLoaded=libLoaded;render()}
+function openPlayer(n){profile=n;profTab='att';cur='profil';closeDrawer();render()}
+function toast(msg){const t=$('#toast');t.querySelector('span').textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
+function openEx(i){const e=EX[i];const d=$('#drawer');d.innerHTML=`<div class="drawer-h"><h4>${e[0]}</h4><button class="icon-btn" style="margin-left:auto" data-close title="Bezárás"><i data-lucide="x"></i></button></div>
+ <div class="drawer-b"><div class="thumb" style="--c:var(--${e[4]})"><i data-lucide="${e[3]==='squat'?'person-standing':e[3]}"></i></div>
+ <p style="font-size:12px;color:var(--muted);margin-top:-6px">Itt azonnal a bélyegkép látszik, a mozgó GIF a háttérben töltődik.</p>
+ <div><p class="eyebrow" style="margin-bottom:6px">Izmok</p><div class="muscles"><span class="pill ok" style="background:var(--accent-soft);color:var(--accent)">${e[1]} · fő</span><span class="tag">Farizom · segítő</span><span class="tag">Törzs · stabilizáló</span></div></div>
+ <div><p class="eyebrow" style="margin-bottom:6px">Végrehajtás</p><ol class="steps"><li>Vállszéles terpesz, a súly a teljes talpon.</li><li>Csípő hátra, térd a lábujjak irányába, gerinc semleges.</li><li>Comb legalább párhuzamosig, majd sarokból tolj fel.</li></ol></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-toast="Hozzáadva: Erő · alsótest sablon"><i data-lucide="plus"></i>Sablonhoz adás</button><button class="btn"><i data-lucide="star"></i>Kedvenc</button></div></div>`;
+ d.classList.add('open');d.setAttribute('aria-hidden','false');icons()}
+function closeDrawer(){const d=$('#drawer');d.classList.remove('open');d.setAttribute('aria-hidden','true')}
+
+const CMD=[['Oldalak',NAV.flatMap(g=>g.items.map(i=>({t:i.name,ic:i.icon,a:()=>go(i.id)})))],['Műveletek',[{t:'Új edzés',ic:'plus',k:'N',a:()=>{go('naptar');toast('Új edzés: időpont kiválasztva')}},{t:'Jelenlét felvétele a mai edzésre',ic:'check-square',a:()=>toast('Jelenlét mentve: 18 / 22')},{t:'Csapatfelmérés indítása',ic:'activity',a:()=>{perfTab='rog';go('meres')}}]],['Játékosok',P.slice(0,5).map(p=>({t:p.n,ic:'user',a:()=>openPlayer(p.n)}))]];
+let cmdItems=[],sel=0;
+function renderCmd(q){q=(q||'').toLowerCase();cmdItems=[];let h='';CMD.forEach(([g,items])=>{const f=items.filter(i=>i.t.toLowerCase().includes(q));if(!f.length)return;h+=`<div class="grp">${g}</div>`;f.forEach(i=>{h+=`<button data-cmd="${cmdItems.length}" class="${cmdItems.length===sel?'sel':''}"><i data-lucide="${i.ic}"></i>${i.t}${i.k?`<kbd>${i.k}</kbd>`:''}</button>`;cmdItems.push(i)})});$('#cmdk-list').innerHTML=h||'<p style="padding:14px;color:var(--muted);font-size:13px">Nincs találat.</p>';icons()}
+function openCmd(){sel=0;$('#cmdk').classList.add('open');$('#cmdk-in').value='';renderCmd('');setTimeout(()=>$('#cmdk-in').focus(),10)}
+function closeCmd(){$('#cmdk').classList.remove('open')}
+
+$('#app').addEventListener('click',e=>{
+ const t=e.target.closest('[data-go],[data-player],[data-ex],[data-chip],[data-ptab],[data-mtab],[data-toast],[data-close],[data-cmdk],[data-cmd]');
+ if(e.target.id==='cmdk'){closeCmd();return}
+ if(!t)return;
+ if(t.dataset.cmdk!==undefined){openCmd();return}
+ if(t.dataset.cmd!==undefined){const it=cmdItems[+t.dataset.cmd];closeCmd();it.a();return}
+ if(t.dataset.go){go(t.dataset.go);return}
+ if(t.dataset.player){openPlayer(t.dataset.player);return}
+ if(t.dataset.ex){openEx(+t.dataset.ex);return}
+ if(t.dataset.chip){libFilter=t.dataset.chip;render();return}
+ if(t.dataset.ptab){profTab=t.dataset.ptab;render();return}
+ if(t.dataset.mtab){perfTab=t.dataset.mtab;render();return}
+ if(t.dataset.close!==undefined){closeDrawer();return}
+ if(t.dataset.toast){toast(t.dataset.toast)}
+});
+$('#cmdk-in').addEventListener('input',e=>{sel=0;renderCmd(e.target.value)});
+document.addEventListener('keydown',e=>{
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#cmdk').classList.contains('open')?closeCmd():openCmd();return}
+ if(!$('#cmdk').classList.contains('open')){if(e.key==='Escape')closeDrawer();return}
+ if(e.key==='Escape')closeCmd();
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();sel=(sel+(e.key==='ArrowDown'?1:-1)+cmdItems.length)%Math.max(cmdItems.length,1);renderCmd($('#cmdk-in').value)}
+ if(e.key==='Enter'&&cmdItems[sel]){const it=cmdItems[sel];closeCmd();it.a()}
+});
+
+function setPressed(ids,on){ids.forEach(id=>$(id).setAttribute('aria-pressed',id===on))}
+$('#v-desk').onclick=()=>{$('#device').classList.remove('mobile');setPressed(['#v-desk','#v-mob'],'#v-desk')};
+$('#v-mob').onclick=()=>{$('#device').classList.add('mobile');setPressed(['#v-desk','#v-mob'],'#v-mob')};
+const root=document.documentElement;
+$('#th-sys').onclick=()=>{root.removeAttribute('data-theme');setPressed(['#th-sys','#th-light','#th-dark'],'#th-sys')};
+$('#th-light').onclick=()=>{root.setAttribute('data-theme','light');setPressed(['#th-sys','#th-light','#th-dark'],'#th-light')};
+$('#th-dark').onclick=()=>{root.setAttribute('data-theme','dark');setPressed(['#th-sys','#th-light','#th-dark'],'#th-dark')};
+
+
+// player phone mockups
+document.querySelectorAll('#phones .scale, #phones .rpe').forEach(el=>{
+  const n=el.textContent.trim().split(/\s+/);el.innerHTML=n.map(v=>`<button type="button">${v}</button>`).join('');
+});
+const okMsg=(id,txt)=>{const el=document.getElementById(id);el.innerHTML='<i data-lucide="check-circle-2"></i>'+txt;icons()};
+document.getElementById('phones').addEventListener('click',e=>{
+  const b=e.target.closest('button');
+  if(b&&b.parentElement.matches('.scale,.rpe,.slots,.daychips')){b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));if(b.parentElement.matches('.rpe'))okMsg('t-ok','Elküldve: sRPE '+b.textContent+' · Kiss Anna látja');return}
+  if(b&&b.dataset.wsend!==undefined){const done=document.querySelectorAll('#phones .scale button[aria-pressed="true"]').length;okMsg('w-ok',done===5?'Köszi! Holnap reggel újra.':'Elküldve ('+done+'/5 válasz). Edződ látja.');return}
+  if(b&&b.dataset.upload!==undefined){b.classList.add('ok');b.innerHTML='<i data-lucide="check-circle-2"></i><b>futas_okt20.jpg</b>5,2 km · 27:40 · átl. 146';icons();return}
+  if(b&&b.dataset.book!==undefined){const day=document.querySelector('#phones .daychips [aria-pressed="true"]'),sl=document.querySelector('#phones .slots [aria-pressed="true"]');okMsg('b-ok',sl?'Lefoglalva: '+day.textContent.replace(/(\D+)(\d+)/,'$1 $2.')+' '+sl.textContent:'Válassz egy időpontot.');return}
+});
+document.querySelectorAll('#phones .task input').forEach(c=>c.addEventListener('change',()=>c.closest('.task').classList.toggle('done',c.checked)));
+
+// physio hours editor
+const HD=[['H',true,14,18],['K',false,14,18],['Sze',true,14,17],['Cs',true,15,19],['P',true,9,12],['Szo',false,10,12],['V',false,10,12]];
+let slotLen=30;
+const hOpts=sel=>Array.from({length:15},(_,i)=>i+7).map(h=>`<option value="${h}" ${h===sel?'selected':''}>${String(h).padStart(2,'0')}:00</option>`).join('');
+function renderHours(){
+  document.getElementById('hours-rows').innerHTML=HD.map((d,i)=>`<div class="hrow ${d[1]?'':'off'}"><b>${d[0]}</b><input type="checkbox" data-hi="${i}" ${d[1]?'checked':''} aria-label="${d[0]} rendel"><div class="times"><select data-hf="${i}">${hOpts(d[2])}</select>–<select data-ht="${i}">${hOpts(d[3])}</select></div><span class="cnt">${d[1]?Math.max(0,Math.floor((d[3]-d[2])*60/slotLen))+' foglalható':'nem rendel'}</span></div>`).join('');
+  const tot=HD.reduce((a,d)=>a+(d[1]?Math.max(0,Math.floor((d[3]-d[2])*60/slotLen)):0),0);
+  document.getElementById('h-total').textContent=tot;document.getElementById('h-free').textContent=Math.max(0,tot-3);
+}
+document.getElementById('hours').addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.hi){HD[+t.dataset.hi][1]=t.checked}
+  if(t.dataset.hf){const d=HD[+t.dataset.hf];d[2]=+t.value;if(d[3]<=d[2])d[3]=Math.min(d[2]+1,21)}
+  if(t.dataset.ht){const d=HD[+t.dataset.ht];d[3]=+t.value;if(d[3]<=d[2])d[2]=Math.max(d[3]-1,7)}
+  renderHours()});
+document.getElementById('slotlen').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;slotLen=parseInt(b.textContent);b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderHours()});
+renderHours();
+
+render();icons();
+})();
+</script>

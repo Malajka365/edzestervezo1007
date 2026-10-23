@@ -51,30 +51,30 @@ export default function TeamOverviewWidget() {
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : isError ? (
-        <p className="text-sm text-red-400">Nem sikerült betölteni</p>
+        <p className="text-sm text-bad">Nem sikerült betölteni</p>
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-700/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold text-white">{players.length}</p>
-              <p className="text-xs text-slate-400">Játékos</p>
+            <div className="bg-surface-2/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-fg">{players.length}</p>
+              <p className="text-xs text-muted">Játékos</p>
             </div>
-            <div className="bg-slate-700/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold text-white">
+            <div className="bg-surface-2/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-fg">
                 {roleCounts.reduce((sum, r) => sum + r.count, 0)}
               </p>
-              <p className="text-xs text-slate-400">Csapattag</p>
+              <p className="text-xs text-muted">Csapattag</p>
             </div>
           </div>
 
           {roleCounts.length === 0 ? (
-            <p className="text-sm text-slate-400">Nincs csapattag.</p>
+            <p className="text-sm text-muted">Nincs csapattag.</p>
           ) : (
             <ul className="space-y-1 text-sm">
               {roleCounts.map((r) => (
-                <li key={r.key} className="flex items-center justify-between text-slate-300">
+                <li key={r.key} className="flex items-center justify-between text-fg">
                   <span>{r.name}</span>
-                  <span className="text-white font-medium">{r.count}</span>
+                  <span className="text-fg font-medium">{r.count}</span>
                 </li>
               ))}
             </ul>

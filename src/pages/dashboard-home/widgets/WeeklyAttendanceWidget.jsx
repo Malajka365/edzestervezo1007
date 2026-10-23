@@ -7,7 +7,17 @@ import WidgetCard from '../WidgetCard'
 import { useTeams } from '../../../context/TeamContext'
 import { supabase } from '../../../lib/supabase'
 import LoadingSpinner from '../../../components/LoadingSpinner'
-import { ATTENDANCE_STATUSES, getStatusLabel, getStatusColor } from '../../../lib/attendance'
+import StatusPill from '../../../components/ui/StatusPill'
+import { ATTENDANCE_STATUSES, getStatusLabel } from '../../../lib/attendance'
+
+// Jelenléti státusz -> StatusPill állapot.
+const STATUS_PILL = {
+  jelen: 'ok',
+  hiányzik: 'bad',
+  beteg: 'warn',
+  sérült: 'warn',
+  egyéb: 'neutral',
+}
 
 // Monday..Sunday range containing today, as YYYY-MM-DD keys (local time).
 const getCurrentWeekRange = () => {
@@ -72,18 +82,19 @@ export default function WeeklyAttendanceWidget() {
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : error ? (
-        <p className="text-sm text-red-400">Nem sikerült betölteni</p>
+        <p className="text-sm text-bad">Nem sikerült betölteni</p>
       ) : !data || data.total === 0 ? (
-        <p className="text-sm text-slate-400">Nincs jelenléti adat ezen a héten.</p>
+        <p className="text-sm text-muted">Nincs jelenléti adat ezen a héten.</p>
       ) : (
         <div className="space-y-3">
-          <p className="text-3xl font-bold text-white">{data.ratio}%</p>
+          <p className="text-3xl font-bold text-fg">{data.ratio}%</p>
           <ul className="space-y-1">
             {ATTENDANCE_STATUSES.filter((s) => data.counts[s.value]).map((s) => (
               <li key={s.value} className="flex items-center gap-2 text-sm">
-                <span className={`w-2 h-2 rounded-full ${getStatusColor(s.value)}`} />
-                <span className="text-slate-300">{getStatusLabel(s.value)}</span>
-                <span className="text-slate-400 ml-auto">{data.counts[s.value]}</span>
+                <StatusPill status={STATUS_PILL[s.value] ?? 'neutral'}>
+                  {getStatusLabel(s.value)}
+                </StatusPill>
+                <span className="text-muted ml-auto">{data.counts[s.value]}</span>
               </li>
             ))}
           </ul>

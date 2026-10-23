@@ -49,28 +49,28 @@ export default function NextMatchWidget() {
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : error ? (
-        <p className="text-sm text-red-400">Nem sikerült betölteni</p>
+        <p className="text-sm text-bad">Nem sikerült betölteni</p>
       ) : !match ? (
-        <p className="text-sm text-slate-400">Nincs közelgő mérkőzés.</p>
+        <p className="text-sm text-muted">Nincs közelgő mérkőzés.</p>
       ) : (
         <div className="space-y-2">
-          <p className="text-base font-semibold text-white truncate">
+          <p className="text-base font-semibold text-fg truncate">
             vs {match.opponent || '(Ellenfél nincs megadva)'}
           </p>
-          <div className="flex items-center gap-2 text-sm text-slate-400">
+          <div className="flex items-center gap-2 text-sm text-muted">
             {match.home_away === 'home' ? (
-              <HomeIcon className="w-4 h-4 text-green-500" />
+              <HomeIcon className="w-4 h-4 text-ok" aria-hidden="true" />
             ) : (
-              <Plane className="w-4 h-4 text-blue-500" />
+              <Plane className="w-4 h-4 text-muted" aria-hidden="true" />
             )}
             <span>{match.home_away === 'home' ? 'Hazai' : 'Idegen'}</span>
-            <span className="text-slate-600">•</span>
+            <span className="text-subtle">•</span>
             <span>
               {new Date(match.date).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })}
               {match.time ? ` ${match.time}` : ''}
             </span>
           </div>
-          <p className="text-sm text-primary-400 font-medium">
+          <p className="text-sm text-accent font-medium">
             {daysUntil(match.date) === 0 ? 'Ma!' : `${daysUntil(match.date)} nap múlva`}
           </p>
         </div>

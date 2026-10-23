@@ -1,0 +1,69 @@
+/*
+ * TeamFlow téma tokenek. Az értékek szóközzel elválasztott RGB csatornák, hogy a
+ * Tailwind `rgb(var(--x) / <alpha-value>)` formája (pl. bg-accent/20) működjön.
+ * Forrás: docs/redesign/teamflow-redesign.html (a surface-3, line-strong, subtle,
+ * accent-hover és on-status tokenek a mockupban nincsenek, itt vannak definiálva).
+ * Nincs prefers-color-scheme media query: a "system" módot az index.html boot
+ * scriptje oldja fel és állítja be a data-theme attribútumot.
+ * Az elem-szintű [data-theme="light"] lehetővé teszi, hogy egy sötét oldalon belül
+ * egy részfa (pl. PDF-rögzítés) világos értékeket kapjon.
+ */
+:root,
+[data-theme="light"] {
+  --bg: 243 245 249; /* #F3F5F9 */
+  --surface: 255 255 255; /* #FFFFFF */
+  --surface-2: 236 239 245; /* #ECEFF5 */
+  --surface-3: 226 231 240; /* #E2E7F0 */
+  --line: 220 225 234; /* #DCE1EA */
+  --line-strong: 195 203 216; /* #C3CBD8 */
+  --fg: 17 23 37; /* #111725 */
+  --muted: 90 101 120; /* #5A6578 */
+  --subtle: 107 117 136; /* #6B7588 */
+  --accent: 39 71 224; /* #2747E0 */
+  --accent-hover: 31 59 196; /* #1F3BC4 */
+  --accent-fg: 255 255 255; /* #FFFFFF */
+  --accent-soft: 229 234 255; /* #E5EAFF */
+  --ok: 21 128 90; /* #15805A */
+  --ok-soft: 221 243 234; /* #DDF3EA */
+  --warn: 168 107 18; /* #A86B12 */
+  --warn-soft: 251 239 214; /* #FBEFD6 */
+  --bad: 194 53 43; /* #C2352B */
+  --bad-soft: 251 227 224; /* #FBE3E0 */
+  --on-status: 255 255 255; /* #FFFFFF */
+  --t-strength: 39 71 224; /* #2747E0 */
+  --t-ball: 11 133 133; /* #0B8585 */
+  --t-tactic: 116 72 208; /* #7448D0 */
+  --t-match: 210 72 14; /* #D2480E */
+  --t-rest: 136 146 166; /* #8892A6 */
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: 10 14 22; /* #0A0E16 */
+  --surface: 18 24 38; /* #121826 */
+  --surface-2: 26 34 50; /* #1A2232 */
+  --surface-3: 35 44 64; /* #232C40 */
+  --line: 39 49 73; /* #273149 */
+  --line-strong: 52 64 92; /* #34405C */
+  --fg: 231 235 243; /* #E7EBF3 */
+  --muted: 141 152 174; /* #8D98AE */
+  --subtle: 95 106 128; /* #5F6A80 */
+  --accent: 123 147 255; /* #7B93FF */
+  --accent-hover: 150 169 255; /* #96A9FF */
+  --accent-fg: 10 14 22; /* #0A0E16 */
+  --accent-soft: 28 38 82; /* #1C2652 */
+  --ok: 63 203 140; /* #3FCB8C */
+  --ok-soft: 18 51 38; /* #123326 */
+  --warn: 232 178 76; /* #E8B24C */
+  --warn-soft: 58 44 16; /* #3A2C10 */
+  --bad: 255 115 102; /* #FF7366 */
+  --bad-soft: 61 23 21; /* #3D1715 */
+  --on-status: 10 14 22; /* #0A0E16 */
+  --t-strength: 123 147 255; /* #7B93FF */
+  --t-ball: 43 196 196; /* #2BC4C4 */
+  --t-tactic: 168 139 240; /* #A88BF0 */
+  --t-match: 255 138 77; /* #FF8A4D */
+  --t-rest: 111 122 144; /* #6F7A90 */
+  color-scheme: dark;
+}
+

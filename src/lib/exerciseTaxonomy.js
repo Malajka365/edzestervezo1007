@@ -2,18 +2,18 @@
 // A DB muscle_group kódjai; a régi 6-kódú rendszert (chest/back/...) váltja a 12-es.
 
 export const MUSCLE_GROUPS = [
-  { id: 'mell',        name: 'Mell',           color: 'bg-red-600' },
-  { id: 'hat',         name: 'Hát',            color: 'bg-blue-600' },
-  { id: 'vall',        name: 'Váll',           color: 'bg-yellow-600' },
-  { id: 'bicepsz',     name: 'Bicepsz',        color: 'bg-purple-600' },
-  { id: 'tricepsz',    name: 'Tricepsz',       color: 'bg-fuchsia-600' },
-  { id: 'alkar',       name: 'Alkar',          color: 'bg-pink-600' },
-  { id: 'quad',        name: 'Négyfejű comb',  color: 'bg-green-600' },
-  { id: 'combhajlito', name: 'Combhajlító',    color: 'bg-emerald-600' },
-  { id: 'farizom',     name: 'Farizom',        color: 'bg-teal-600' },
-  { id: 'vadli',       name: 'Vádli',          color: 'bg-cyan-600' },
-  { id: 'core',        name: 'Has / core',     color: 'bg-orange-600' },
-  { id: 'csipo',       name: 'Csípő',          color: 'bg-lime-600' },
+  { id: 'mell',        name: 'Mell' },
+  { id: 'hat',         name: 'Hát' },
+  { id: 'vall',        name: 'Váll' },
+  { id: 'bicepsz',     name: 'Bicepsz' },
+  { id: 'tricepsz',    name: 'Tricepsz' },
+  { id: 'alkar',       name: 'Alkar' },
+  { id: 'quad',        name: 'Négyfejű comb' },
+  { id: 'combhajlito', name: 'Combhajlító' },
+  { id: 'farizom',     name: 'Farizom' },
+  { id: 'vadli',       name: 'Vádli' },
+  { id: 'core',        name: 'Has / core' },
+  { id: 'csipo',       name: 'Csípő' },
 ]
 
 export const MUSCLE_GROUP_LABELS = Object.fromEntries(MUSCLE_GROUPS.map(g => [g.id, g.name]))

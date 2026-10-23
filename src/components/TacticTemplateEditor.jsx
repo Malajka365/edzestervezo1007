@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { ClipboardList, Target, Video, Swords, Shield, Hand } from 'lucide-react'
+import { Input, Textarea } from './ui/Field'
 
 export default function TacticTemplateEditor({ templateData, onChange }) {
   const [data, setData] = useState({
@@ -47,12 +49,15 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
   return (
     <div className="space-y-6">
       {/* Tactical Goal */}
-      <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-        <h3 className="text-lg font-semibold text-white mb-4">📋 Taktikai Cél</h3>
+      <div className="bg-surface-2/50 rounded-lg p-4 border border-line">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-fg mb-4">
+          <ClipboardList className="w-5 h-5 text-muted" aria-hidden="true" />
+          Taktikai Cél
+        </h3>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-fg mb-2">
               Fókusz
             </label>
             <div className="flex gap-3">
@@ -70,9 +75,9 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
                     }
                     handleUpdate('tactical_goal.focus', newFocus)
                   }}
-                  className="w-5 h-5 rounded border-slate-500"
+                  className="w-5 h-5 rounded border-line-strong"
                 />
-                <span className="text-slate-300">Támadás</span>
+                <span className="text-fg">Támadás</span>
               </label>
               <label className="flex items-center gap-2 flex-1">
                 <input
@@ -88,22 +93,21 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
                     }
                     handleUpdate('tactical_goal.focus', newFocus)
                   }}
-                  className="w-5 h-5 rounded border-slate-500"
+                  className="w-5 h-5 rounded border-line-strong"
                 />
-                <span className="text-slate-300">Védekezés</span>
+                <span className="text-fg">Védekezés</span>
               </label>
             </div>
           </div>
 
           {(data.tactical_goal.focus === 'attack' || data.tactical_goal.focus === 'both') && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Támadás részletei
               </label>
-              <textarea
+              <Textarea
                 value={data.tactical_goal.attack_details}
                 onChange={(e) => handleUpdate('tactical_goal.attack_details', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="pl. Gyors ellentámadás, Pozíciós játék, stb."
               />
@@ -112,13 +116,12 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
 
           {(data.tactical_goal.focus === 'defense' || data.tactical_goal.focus === 'both') && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Védekezés részletei
               </label>
-              <textarea
+              <Textarea
                 value={data.tactical_goal.defense_details}
                 onChange={(e) => handleUpdate('tactical_goal.defense_details', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="pl. 6-0 védekezés, Pressz védekezés, stb."
               />
@@ -128,12 +131,15 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
       </div>
 
       {/* Technical Goal */}
-      <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-        <h3 className="text-lg font-semibold text-white mb-4">🎯 Technikai Cél</h3>
+      <div className="bg-surface-2/50 rounded-lg p-4 border border-line">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-fg mb-4">
+          <Target className="w-5 h-5 text-muted" aria-hidden="true" />
+          Technikai Cél
+        </h3>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-fg mb-2">
               Fókusz
             </label>
             <div className="flex gap-3">
@@ -151,9 +157,9 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
                     }
                     handleUpdate('technical_goal.focus', newFocus)
                   }}
-                  className="w-5 h-5 rounded border-slate-500"
+                  className="w-5 h-5 rounded border-line-strong"
                 />
-                <span className="text-slate-300">Támadás</span>
+                <span className="text-fg">Támadás</span>
               </label>
               <label className="flex items-center gap-2 flex-1">
                 <input
@@ -169,22 +175,21 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
                     }
                     handleUpdate('technical_goal.focus', newFocus)
                   }}
-                  className="w-5 h-5 rounded border-slate-500"
+                  className="w-5 h-5 rounded border-line-strong"
                 />
-                <span className="text-slate-300">Védekezés</span>
+                <span className="text-fg">Védekezés</span>
               </label>
             </div>
           </div>
 
           {(data.technical_goal.focus === 'attack' || data.technical_goal.focus === 'both') && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Támadás részletei
               </label>
-              <textarea
+              <Textarea
                 value={data.technical_goal.attack_details}
                 onChange={(e) => handleUpdate('technical_goal.attack_details', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="pl. Kapura lövés pontosság, Cselezés, stb."
               />
@@ -193,13 +198,12 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
 
           {(data.technical_goal.focus === 'defense' || data.technical_goal.focus === 'both') && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Védekezés részletei
               </label>
-              <textarea
+              <Textarea
                 value={data.technical_goal.defense_details}
                 onChange={(e) => handleUpdate('technical_goal.defense_details', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="pl. Blokkolás technika, Helyezkedés, stb."
               />
@@ -210,31 +214,33 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
 
       {/* Video Analysis */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          📹 Videó elemzés URL
+        <label className="flex items-center gap-2 text-sm font-medium text-fg mb-2">
+          <Video className="w-4 h-4 text-muted" aria-hidden="true" />
+          Videó elemzés URL
         </label>
-        <input
+        <Input
           type="url"
           value={data.video_url}
           onChange={(e) => handleUpdate('video_url', e.target.value)}
-          className="input-field w-full"
           placeholder="https://youtube.com/..."
         />
       </div>
 
       {/* Attack Drills */}
-      <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-        <h3 className="text-lg font-semibold text-white mb-4">⚔️ Támadás Gyakorlatok</h3>
+      <div className="bg-surface-2/50 rounded-lg p-4 border border-line">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-fg mb-4">
+          <Swords className="w-5 h-5 text-muted" aria-hidden="true" />
+          Támadás Gyakorlatok
+        </h3>
         
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-fg mb-2">
               Közös
             </label>
-            <textarea
+            <Textarea
               value={data.exercises.attack.common}
               onChange={(e) => handleUpdate('exercises.attack.common', e.target.value)}
-              className="input-field w-full"
               rows="2"
               placeholder="Összes játékosra vonatkozó gyakorlat..."
             />
@@ -242,39 +248,36 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Szélső
               </label>
-              <textarea
+              <Textarea
                 value={data.exercises.attack.wing}
                 onChange={(e) => handleUpdate('exercises.attack.wing', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="Szélső specifikus..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Beálló
               </label>
-              <textarea
+              <Textarea
                 value={data.exercises.attack.pivot}
                 onChange={(e) => handleUpdate('exercises.attack.pivot', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="Beálló specifikus..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Átlövő-Irányító
               </label>
-              <textarea
+              <Textarea
                 value={data.exercises.attack.backcourt}
                 onChange={(e) => handleUpdate('exercises.attack.backcourt', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="Hátvéd specifikus..."
               />
@@ -284,18 +287,20 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
       </div>
 
       {/* Defense Drills */}
-      <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-        <h3 className="text-lg font-semibold text-white mb-4">🛡️ Védekezés Gyakorlatok</h3>
+      <div className="bg-surface-2/50 rounded-lg p-4 border border-line">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-fg mb-4">
+          <Shield className="w-5 h-5 text-muted" aria-hidden="true" />
+          Védekezés Gyakorlatok
+        </h3>
         
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-fg mb-2">
               Közös
             </label>
-            <textarea
+            <Textarea
               value={data.exercises.defense.common}
               onChange={(e) => handleUpdate('exercises.defense.common', e.target.value)}
-              className="input-field w-full"
               rows="2"
               placeholder="Összes játékosra vonatkozó gyakorlat..."
             />
@@ -303,39 +308,36 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Szélső védő
               </label>
-              <textarea
+              <Textarea
                 value={data.exercises.defense.wing}
                 onChange={(e) => handleUpdate('exercises.defense.wing', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="Szélső védő feladatai..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Középső védő
               </label>
-              <textarea
+              <Textarea
                 value={data.exercises.defense.pivot}
                 onChange={(e) => handleUpdate('exercises.defense.pivot', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="Középső védő feladatai..."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-fg mb-2">
                 Hátvédő
               </label>
-              <textarea
+              <Textarea
                 value={data.exercises.defense.backcourt}
                 onChange={(e) => handleUpdate('exercises.defense.backcourt', e.target.value)}
-                className="input-field w-full"
                 rows="2"
                 placeholder="Hátvédő feladatai..."
               />
@@ -346,13 +348,13 @@ export default function TacticTemplateEditor({ templateData, onChange }) {
 
       {/* Goalkeeper */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-2">
-          🧤 Kapus edzés
+        <label className="flex items-center gap-2 text-sm font-medium text-fg mb-2">
+          <Hand className="w-4 h-4 text-muted" aria-hidden="true" />
+          Kapus edzés
         </label>
-        <textarea
+        <Textarea
           value={data.exercises.goalkeeper}
           onChange={(e) => handleUpdate('exercises.goalkeeper', e.target.value)}
-          className="input-field w-full"
           rows="3"
           placeholder="Kapus specifikus gyakorlatok..."
         />

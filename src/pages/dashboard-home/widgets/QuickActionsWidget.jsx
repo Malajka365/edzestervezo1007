@@ -4,6 +4,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Zap, CalendarPlus, LineChart, UserPlus } from 'lucide-react'
 import WidgetCard from '../WidgetCard'
+import Button from '../../../components/ui/Button'
 import { useTeams } from '../../../context/TeamContext'
 import { canEditModule } from '../../../lib/permissions'
 
@@ -24,19 +25,18 @@ export default function QuickActionsWidget() {
   return (
     <WidgetCard icon={Zap} title="Gyors műveletek">
       {availableActions.length === 0 ? (
-        <p className="text-sm text-slate-400">Nincs elérhető gyorsművelet.</p>
+        <p className="text-sm text-muted">Nincs elérhető gyorsművelet.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {availableActions.map((action) => (
-            <button
+            <Button
               key={action.key}
-              type="button"
+              icon={action.icon}
               onClick={() => navigate(action.path)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 bg-slate-700/40 hover:bg-slate-700/70 rounded-lg transition-colors"
+              className="w-full justify-start"
             >
-              <action.icon className="w-4 h-4 text-primary-400" />
-              <span>{action.label}</span>
-            </button>
+              {action.label}
+            </Button>
           ))}
         </div>
       )}

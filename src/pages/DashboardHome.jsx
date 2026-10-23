@@ -10,9 +10,11 @@ import {
 } from '../lib/dashboardWidgets'
 import LoadingSpinner from '../components/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
+import Button from '../components/ui/Button'
+import PageHeader from '../components/ui/PageHeader'
 import CustomizeEditor from './dashboard-home/CustomizeEditor'
 
-// Index route content for /dashboard: slim welcome line + a customizable grid
+// Index route content for /dashboard: page header (date + Testreszabás) + a customizable grid
 // of live-data widgets. The old module quick-access grid and next-steps card
 // were removed (navigation lives in the sidebar) — ld. a widget-dashboard spec.
 //
@@ -47,43 +49,41 @@ export default function DashboardHome() {
     (item) => item.visible && allowedKeys.has(item.key) && WIDGETS_BY_KEY[item.key]
   )
 
-  return (
-    <main className="p-6">
-      <div className="space-y-6">
-        {/* Slim welcome + Testreszabás gomb */}
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-slate-300">
-            Üdvözöllek a TeamFlow-ban!{' '}
-            <span className="text-primary-400 font-medium">{session.user.email}</span>
-          </p>
-          <button
-            type="button"
-            onClick={() => setEditorOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-200 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 hover:text-white transition-colors flex-shrink-0"
-          >
-            <Settings className="w-4 h-4" />
-            <span className="hidden sm:inline">Testreszabás</span>
-          </button>
-        </div>
+  const today = new Intl.DateTimeFormat('hu-HU', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date())
 
-        {/* Widget grid / loading / empty */}
-        {loading ? (
-          <LoadingSpinner size="inline" />
-        ) : widgetsToRender.length === 0 ? (
-          <EmptyState
-            icon={Settings}
-            title="Nincs megjeleníthető widget"
-            description="A csapat-szerepköröd jogosultságai alapján jelenleg nincs megjeleníthető widget."
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {widgetsToRender.map((item) => {
-              const Widget = WIDGETS_BY_KEY[item.key].component
-              return <Widget key={item.key} />
-            })}
-          </div>
-        )}
-      </div>
+  return (
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Kezdőlap"
+        description={today}
+        actions={
+          <Button icon={Settings} onClick={() => setEditorOpen(true)}>
+            Testreszabás
+          </Button>
+        }
+      />
+
+      {/* Widget grid / loading / empty */}
+      {loading ? (
+        <LoadingSpinner size="inline" />
+      ) : widgetsToRender.length === 0 ? (
+        <EmptyState
+          icon={Settings}
+          title="Nincs megjeleníthető widget"
+          description="A csapat-szerepköröd jogosultságai alapján jelenleg nincs megjeleníthető widget."
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {widgetsToRender.map((item) => {
+            const Widget = WIDGETS_BY_KEY[item.key].component
+            return <Widget key={item.key} />
+          })}
+        </div>
+      )}
 
       {editorOpen && (
         <CustomizeEditor
@@ -95,6 +95,6 @@ export default function DashboardHome() {
           onClose={() => setEditorOpen(false)}
         />
       )}
-    </main>
+    </div>
   )
 }

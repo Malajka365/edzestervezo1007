@@ -9,9 +9,14 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "redesign:migrate": "node scripts/redesign/migrate-classes.mjs",
+    "redesign:check": "node scripts/redesign/check-legacy.mjs"
   },
   "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/figtree": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@supabase/supabase-js": "^2.47.10",
     "@tanstack/react-query": "^5.101.4",
     "html2canvas": "^1.4.1",

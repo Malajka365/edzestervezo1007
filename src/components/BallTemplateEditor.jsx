@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import { Input, Textarea } from './ui/Field'
 
 export default function BallTemplateEditor({ templateData, onChange }) {
   const [data, setData] = useState({
@@ -56,7 +59,7 @@ export default function BallTemplateEditor({ templateData, onChange }) {
     <div className="space-y-6">
       {/* Circulatory-Mechanical Load */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-3">
+        <label className="block text-sm font-medium text-fg mb-3">
           Keringési-mechanikai terhelés
         </label>
         <div className="flex gap-3">
@@ -67,10 +70,10 @@ export default function BallTemplateEditor({ templateData, onChange }) {
               onClick={() => handleUpdate('circulatory_load', level)}
               className={`flex-1 py-3 rounded-lg transition-colors ${
                 data.circulatory_load === level
-                  ? level === 'low' ? 'bg-green-600 text-white' :
-                    level === 'medium' ? 'bg-yellow-600 text-white' :
-                    'bg-red-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? level === 'low' ? 'bg-ok text-on-status' :
+                    level === 'medium' ? 'bg-warn text-on-status' :
+                    'bg-bad text-on-status'
+                  : 'bg-surface-2 text-fg hover:bg-surface-3'
               }`}
             >
               {level === 'low' ? 'Alacsony' : level === 'medium' ? 'Közepes' : 'Magas'}
@@ -81,10 +84,10 @@ export default function BallTemplateEditor({ templateData, onChange }) {
 
       {/* Energy Systems */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-3">
+        <label className="block text-sm font-medium text-fg mb-3">
           Energiarendszer
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
             { value: 'aerobic', label: 'Aerob' },
             { value: 'anaerobic_lactic', label: 'Anaerob laktát' },
@@ -95,15 +98,15 @@ export default function BallTemplateEditor({ templateData, onChange }) {
               key={system.value}
               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                 data.energy_systems.includes(system.value)
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-accent text-accent-fg'
+                  : 'bg-surface-2 text-fg hover:bg-surface-3'
               }`}
             >
               <input
                 type="checkbox"
                 checked={data.energy_systems.includes(system.value)}
                 onChange={() => toggleEnergySystem(system.value)}
-                className="w-5 h-5 rounded border-slate-500"
+                className="w-5 h-5 rounded border-line-strong"
               />
               <span>{system.label}</span>
             </label>
@@ -113,32 +116,32 @@ export default function BallTemplateEditor({ templateData, onChange }) {
 
       {/* Load:Rest Ratio */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-3">
+        <label className="block text-sm font-medium text-fg mb-3">
           Terhelés : Pihenés arány
         </label>
-        <div className="flex items-center gap-3">
-          <input
+        <div className="flex flex-wrap items-center gap-3">
+          <Input
             type="number"
             value={data.load_rest_ratio.load}
             onChange={(e) => handleUpdate('load_rest_ratio', {
               ...data.load_rest_ratio,
               load: parseInt(e.target.value) || 1
             })}
-            className="input-field w-20 text-center"
+            className="!w-20 text-center"
             min="1"
           />
-          <span className="text-2xl font-bold text-slate-400">:</span>
-          <input
+          <span className="text-2xl font-bold text-muted">:</span>
+          <Input
             type="number"
             value={data.load_rest_ratio.rest}
             onChange={(e) => handleUpdate('load_rest_ratio', {
               ...data.load_rest_ratio,
               rest: parseInt(e.target.value) || 1
             })}
-            className="input-field w-20 text-center"
+            className="!w-20 text-center"
             min="1"
           />
-          <span className="text-sm text-slate-400 ml-2">
+          <span className="text-sm text-muted ml-2">
             ({data.load_rest_ratio.load} perc terhelés, {data.load_rest_ratio.rest} perc pihenés)
           </span>
         </div>
@@ -146,10 +149,10 @@ export default function BallTemplateEditor({ templateData, onChange }) {
 
       {/* Training Types */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-3">
+        <label className="block text-sm font-medium text-fg mb-3">
           Típus
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { value: 'technical', label: 'Technikai' },
             { value: 'tactical', label: 'Taktikai' },
@@ -159,15 +162,15 @@ export default function BallTemplateEditor({ templateData, onChange }) {
               key={type.value}
               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                 data.training_types.includes(type.value)
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-accent text-accent-fg'
+                  : 'bg-surface-2 text-fg hover:bg-surface-3'
               }`}
             >
               <input
                 type="checkbox"
                 checked={data.training_types.includes(type.value)}
                 onChange={() => toggleTrainingType(type.value)}
-                className="w-5 h-5 rounded border-slate-500"
+                className="w-5 h-5 rounded border-line-strong"
               />
               <span>{type.label}</span>
             </label>
@@ -178,73 +181,63 @@ export default function BallTemplateEditor({ templateData, onChange }) {
       {/* Drills */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <label className="text-sm font-medium text-slate-300">
+          <label className="text-sm font-medium text-fg">
             Gyakorlatok
           </label>
-          <button
-            type="button"
-            onClick={handleAddDrill}
-            className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Gyakorlat hozzáadása</span>
-          </button>
+          <Button icon={Plus} onClick={handleAddDrill}>
+            Gyakorlat hozzáadása
+          </Button>
         </div>
 
         {data.drills.length === 0 ? (
-          <div className="text-center py-8 bg-slate-700/50 rounded-lg border-2 border-dashed border-slate-600">
-            <p className="text-slate-400">Még nincs gyakorlat hozzáadva</p>
+          <div className="text-center py-8 bg-surface-2/50 rounded-lg border-2 border-dashed border-line">
+            <p className="text-muted">Még nincs gyakorlat hozzáadva</p>
           </div>
         ) : (
           <div className="space-y-3">
             {data.drills.map((drill, index) => (
               <div
                 key={drill.id}
-                className="bg-slate-700/50 rounded-lg p-4 border border-slate-600"
+                className="bg-surface-2/50 rounded-lg p-4 border border-line"
               >
                 <div className="flex items-start gap-3 mb-3">
-                  <span className="text-slate-400 font-semibold mt-2">{index + 1}.</span>
+                  <span className="text-muted font-semibold mt-2">{index + 1}.</span>
                   <div className="flex-1 grid grid-cols-2 gap-3">
-                    <input
+                    <Input
                       type="text"
                       value={drill.name}
                       onChange={(e) => handleUpdateDrill(drill.id, 'name', e.target.value)}
-                      className="input-field"
                       placeholder="Gyakorlat neve"
                     />
                     <div className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="number"
                         value={drill.duration}
                         onChange={(e) => handleUpdateDrill(drill.id, 'duration', parseInt(e.target.value) || 0)}
-                        className="input-field w-20"
+                        className="!w-20"
                         min="1"
                       />
-                      <span className="text-slate-400 text-sm">perc</span>
+                      <span className="text-muted text-sm">perc</span>
                     </div>
                   </div>
-                  <button
-                    type="button"
+                  <IconButton
+                    icon={Trash2}
+                    label="Törlés"
                     onClick={() => handleDeleteDrill(drill.id)}
-                    className="p-2 hover:bg-red-600 rounded-lg transition-colors"
-                    title="Törlés"
-                  >
-                    <Trash2 className="w-4 h-4 text-slate-400" />
-                  </button>
+                    className="hover:!bg-bad-soft hover:!text-bad"
+                  />
                 </div>
 
                 <div className="ml-8 space-y-2">
-                  <input
+                  <Input
                     type="text"
                     value={drill.focus}
                     onChange={(e) => handleUpdateDrill(drill.id, 'focus', e.target.value)}
-                    className="input-field w-full"
                     placeholder="Fókusz (pl. Kapura lövés, Védekezés, stb.)"
                   />
-                  <textarea
+                  <Textarea
                     value={drill.description}
                     onChange={(e) => handleUpdateDrill(drill.id, 'description', e.target.value)}
-                    className="input-field w-full"
                     rows="2"
                     placeholder="Részletek és végrehajtás..."
                   />
@@ -257,10 +250,10 @@ export default function BallTemplateEditor({ templateData, onChange }) {
 
       {/* Summary */}
       {data.drills.length > 0 && (
-        <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-4">
+        <div className="bg-accent-soft border border-accent/30 rounded-lg p-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-300">Gyakorlatok időtartama:</span>
-            <span className="font-semibold text-primary-400">
+            <span className="text-fg">Gyakorlatok időtartama:</span>
+            <span className="font-semibold text-accent">
               {data.drills.reduce((total, d) => total + (d.duration || 0), 0)} perc
             </span>
           </div>

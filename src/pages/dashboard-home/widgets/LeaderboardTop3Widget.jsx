@@ -68,9 +68,9 @@ export default function LeaderboardTop3Widget() {
   })
 
   const medalColor = (rank) => {
-    if (rank === 1) return 'text-yellow-400'
-    if (rank === 2) return 'text-slate-400'
-    return 'text-amber-600'
+    if (rank === 1) return 'text-accent'
+    if (rank === 2) return 'text-fg'
+    return 'text-muted'
   }
 
   return (
@@ -78,21 +78,21 @@ export default function LeaderboardTop3Widget() {
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : isError ? (
-        <p className="text-sm text-red-400">Nem sikerült betölteni</p>
+        <p className="text-sm text-bad">Nem sikerült betölteni</p>
       ) : top3.length === 0 ? (
-        <p className="text-sm text-slate-400">Nincs elég mérési adat.</p>
+        <p className="text-sm text-muted">Nincs elég mérési adat.</p>
       ) : (
         <div>
-          <p className="text-xs text-slate-500 mb-2">Top 3 (1RM)</p>
+          <p className="text-xs text-muted mb-2">Top 3 (1RM)</p>
           <ul className="space-y-2 text-sm">
             {top3.map((entry, i) => (
-              <li key={entry.playerId} className="flex items-center justify-between gap-2 text-slate-300">
+              <li key={entry.playerId} className="flex items-center justify-between gap-2 text-fg">
                 <span className="min-w-0 truncate flex items-center gap-2">
                   <span className={`font-bold ${medalColor(i + 1)}`}>#{i + 1}</span>
-                  <span className="text-white font-medium truncate">{entry.playerName}</span>
-                  <span className="text-slate-500 text-xs truncate">{entry.exerciseName}</span>
+                  <span className="text-fg font-medium truncate">{entry.playerName}</span>
+                  <span className="text-muted text-xs truncate">{entry.exerciseName}</span>
                 </span>
-                <span className="flex-shrink-0 text-white font-semibold">
+                <span className="flex-shrink-0 text-fg font-semibold">
                   {entry.oneRM.toFixed(1)} kg
                 </span>
               </li>

@@ -12,15 +12,23 @@ import {
   Target,
   Activity,
   Users,
-  X,
   ChevronDown,
   ChevronRight,
   Info,
-  Edit,
+  Pencil,
   Trash2,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
+import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import Chip from '../components/ui/Chip'
+import Modal from '../components/ui/Modal'
+import EmptyState from '../components/ui/EmptyState'
+import Skeleton from '../components/ui/Skeleton'
+import StatusPill from '../components/ui/StatusPill'
+import { Input } from '../components/ui/Field'
 import CreateExerciseModal from './exercise-library/CreateExerciseModal'
 import EditExerciseModal from './exercise-library/EditExerciseModal'
 import useExerciseLibraryData from './exercise-library/useExerciseLibraryData'
@@ -43,8 +51,32 @@ const GROUP_ICONS = {
   core: Activity, csipo: Users,
 }
 
+// Kitöltött csillag a kedvenc jelöléshez (az IconButton/Button ikon-komponenst vár).
+function FilledStar({ className = '', ...props }) {
+  return <Star className={`${className} fill-current`} {...props} />
+}
+
+// A nehézségi szint állapot-színe (kezdő / haladó / profi).
+const DIFFICULTY_STATUS = { beginner: 'ok', intermediate: 'warn', advanced: 'bad' }
+const DIFFICULTY_NAMES = { beginner: 'Kezdő', intermediate: 'Haladó', advanced: 'Profi' }
+
+function DifficultyPill({ difficulty }) {
+  return (
+    <StatusPill status={DIFFICULTY_STATUS[difficulty] || 'neutral'}>
+      {DIFFICULTY_NAMES[difficulty] || 'N/A'}
+    </StatusPill>
+  )
+}
+
+// A részletes izmok szerepének színe.
+const ROLE_STYLES = {
+  primary: { bar: 'bg-bad', label: 'text-bad' },
+  secondary: { bar: 'bg-warn', label: 'text-warn' },
+  stabilizer: { bar: 'bg-accent', label: 'text-accent' },
+}
+
 export default function ExerciseLibrary() {
-  const { selectedTeam, currentUserPermissions } = useTeams()
+  const { currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'exercises')
   const {
     exercises,
@@ -95,10 +127,10 @@ export default function ExerciseLibrary() {
   const muscleGroups = MUSCLE_GROUPS.map((g) => ({ ...g, icon: GROUP_ICONS[g.id] || Activity }))
 
   const difficultyLevels = [
-    { id: 'all', name: 'Összes', color: 'text-slate-400' },
-    { id: 'beginner', name: 'Kezdő', color: 'text-green-400' },
-    { id: 'intermediate', name: 'Haladó', color: 'text-yellow-400' },
-    { id: 'advanced', name: 'Profi', color: 'text-red-400' },
+    { id: 'all', name: 'Összes' },
+    { id: 'beginner', name: 'Kezdő' },
+    { id: 'intermediate', name: 'Haladó' },
+    { id: 'advanced', name: 'Profi' },
   ]
 
   const filtered = useMemo(() => filterExercises(exercises, {
@@ -210,14 +242,9 @@ export default function ExerciseLibrary() {
     return grouped
   }
 
-  const getDifficultyColor = (difficulty) => {
-    const level = difficultyLevels.find(d => d.id === difficulty)
-    return level?.color || 'text-slate-400'
-  }
-
   const getMuscleGroupInfo = (groupId) => {
     return muscleGroups.find(g => g.id === groupId)
-      || { id: groupId, name: 'Egyéb', icon: Activity, color: 'bg-slate-600' }
+      || { id: groupId, name: 'Egyéb', icon: Activity }
   }
 
   // A részletes izmok szerep szerint csoportosítva (fő mozgató / segéd / stabilizáló).
@@ -226,492 +253,455 @@ export default function ExerciseLibrary() {
     .filter(g => g.items.length > 0)
 
   const groupedExercises = groupExercisesByMuscleGroup()
+  const detailIsFavorite = !!selectedExercise && favorites.includes(selectedExercise.id)
   const detailGifUrl = selectedExercise ? exerciseGifUrl(selectedExercise.gif_path) : null
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Gyakorlat Könyvtár</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                {filtered.length} gyakorlat
-                {filtered.length > visible.length && ` (látszik: ${visible.length})`}
-              </p>
-            </div>
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Gyakorlattár"
+        description={`${filtered.length} gyakorlat${filtered.length > visible.length ? ` (látszik: ${visible.length})` : ''}`}
+        actions={
+          canEdit && (
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={() => { setDetailMuscles([]); setShowCreateModal(true) }}
+            >
+              Új gyakorlat
+            </Button>
+          )
+        }
+      />
+
+      <div className="space-y-6">
+        {/* Filters */}
+        <Panel className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" aria-hidden="true" />
+            <Input
+              type="text"
+              aria-label="Keresés gyakorlatok között"
+              placeholder="Keresés gyakorlatok között (magyar vagy angol név)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
 
-          {canEdit && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => { setDetailMuscles([]); setShowCreateModal(true) }}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="Új gyakorlat"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Új gyakorlat</span>
-              </button>
-            </div>
-          )}
-
-          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-            <TeamSelector />
-          </div>
-        </div>
-      </header>
-
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-      {/* Filters */}
-      <div className="card space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Keresés gyakorlatok között (magyar vagy angol név)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-3">
           {/* Muscle Groups (12) */}
           <div className="flex flex-wrap gap-2">
-            {muscleGroups.map(group => {
-              const Icon = group.icon
-              return (
-                <button
-                  key={group.id}
-                  onClick={() => setSelectedMuscleGroup(group.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm ${
-                    selectedMuscleGroup === group.id
-                      ? `${group.color} text-white`
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
+            {muscleGroups.map(group => (
+              <Chip
+                key={group.id}
+                icon={group.icon}
+                selected={selectedMuscleGroup === group.id}
+                onClick={() => setSelectedMuscleGroup(group.id)}
+              >
+                {group.name}
+              </Chip>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-x-6 gap-y-3">
+            {/* Difficulty */}
+            <div className="flex flex-wrap gap-2">
+              {difficultyLevels.map(level => (
+                <Chip
+                  key={level.id}
+                  selected={selectedDifficulty === level.id}
+                  onClick={() => setSelectedDifficulty(level.id)}
                 >
-                  <Icon className="w-4 h-4" />
-                  {group.name}
-                </button>
+                  {level.name}
+                </Chip>
+              ))}
+            </div>
+
+            {/* Modality — erősítés / kalisztenika / funkcionális-HIIT / nyújtás */}
+            <div className="flex flex-wrap gap-2">
+              <Chip
+                selected={selectedModality === 'all'}
+                onClick={() => setSelectedModality('all')}
+              >
+                Összes
+              </Chip>
+              {MODALITIES.map(m => (
+                <Chip
+                  key={m.id}
+                  selected={selectedModality === m.id}
+                  onClick={() => setSelectedModality(m.id)}
+                >
+                  {m.name}
+                </Chip>
+              ))}
+            </div>
+
+            {/* Favorites */}
+            <Chip
+              icon={Star}
+              selected={showFavoritesOnly}
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            >
+              Kedvencek
+            </Chip>
+          </div>
+        </Panel>
+
+        {/* Exercise List - Grouped by Muscle Group */}
+        {loading && exercises.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} className="h-72" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {Object.entries(groupedExercises).map(([groupId, groupExercises]) => {
+              const groupInfo = getMuscleGroupInfo(groupId)
+              const Icon = groupInfo.icon
+              const isExpanded = expandedGroups[groupId] !== false
+
+              return (
+                <Panel key={groupId} padded={false}>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroupExpand(groupId)}
+                    aria-expanded={isExpanded}
+                    className="w-full flex items-center justify-between p-4 rounded-[14px] text-left transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-surface-2 text-fg">
+                        <Icon className="w-6 h-6" aria-hidden="true" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-lg font-semibold text-fg">{groupInfo.name}</h3>
+                        <p className="text-sm text-muted">{groupExercises.length} gyakorlat</p>
+                      </div>
+                    </div>
+                    {isExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-muted" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-muted" aria-hidden="true" />
+                    )}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0">
+                      {groupExercises.map(exercise => {
+                        const gifUrl = exerciseGifUrl(exercise.gif_path)
+                        const thumbUrl = exerciseThumbUrl(exercise.gif_path)
+                        const isFavorite = favorites.includes(exercise.id)
+                        return (
+                          <div
+                            key={exercise.id}
+                            className="bg-surface-2 rounded-[10px] overflow-hidden transition-colors cursor-pointer border border-line hover:border-accent"
+                            onClick={() => openDetail(exercise)}
+                          >
+                            {/* Kártya-kép: kis statikus thumbnail (gyors); ha nincs thumb,
+                                a nagy GIF-re esik vissza. */}
+                            {gifUrl && (
+                              <div className="w-full aspect-video bg-bg overflow-hidden">
+                                <img
+                                  src={thumbUrl || gifUrl}
+                                  alt={exercise.name}
+                                  loading="lazy"
+                                  onError={(e) => { if (gifUrl && e.currentTarget.src !== gifUrl) e.currentTarget.src = gifUrl }}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            )}
+
+                            <div className="p-4">
+                              <div className="flex items-start justify-between gap-2 mb-3">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-semibold text-fg mb-1">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openDetail(exercise)
+                                      }}
+                                      className="text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
+                                    >
+                                      {exercise.name}
+                                    </button>
+                                  </h4>
+                                  {exercise.name_en && (
+                                    <p className="text-xs text-muted mb-1.5">{exercise.name_en}</p>
+                                  )}
+                                  <DifficultyPill difficulty={exercise.difficulty} />
+                                </div>
+                                <IconButton
+                                  icon={isFavorite ? FilledStar : Star}
+                                  label={isFavorite ? 'Eltávolítás a kedvencek közül' : 'Hozzáadás a kedvencekhez'}
+                                  aria-pressed={isFavorite}
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleFavorite(exercise.id)
+                                  }}
+                                  className={isFavorite ? '!text-warn' : ''}
+                                />
+                              </div>
+
+                              {exercise.description && (
+                                <p className="text-sm text-fg mb-3 line-clamp-2">
+                                  {exercise.description}
+                                </p>
+                              )}
+
+                              {exercise.equipment && exercise.equipment.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {exercise.equipment.map((eq, idx) => (
+                                    <span key={idx} className="px-2 py-1 bg-surface-3 text-xs text-fg rounded">
+                                      {eq}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {canEdit && (
+                                <div className="flex gap-2 mt-3">
+                                  <Button
+                                    size="sm"
+                                    icon={Pencil}
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      startEditExercise(exercise)
+                                    }}
+                                  >
+                                    Szerkesztés
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="danger"
+                                    icon={Trash2}
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      deleteExercise(exercise.id)
+                                    }}
+                                  >
+                                    Törlés
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </Panel>
               )
             })}
           </div>
-        </div>
+        )}
 
-        <div className="flex flex-wrap gap-3">
-          {/* Difficulty */}
-          <div className="flex gap-2">
-            {difficultyLevels.map(level => (
-              <button
-                key={level.id}
-                onClick={() => setSelectedDifficulty(level.id)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedDifficulty === level.id
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                {level.name}
-              </button>
-            ))}
+        {filtered.length > visible.length && (
+          <div className="flex justify-center">
+            <Button onClick={() => setVisibleCount((c) => c + 60)}>
+              Továbbiak ({filtered.length - visible.length})
+            </Button>
           </div>
+        )}
 
-          {/* Modality — erősítés / kalisztenika / funkcionális-HIIT / nyújtás */}
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedModality('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                selectedModality === 'all' ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
-              Összes
-            </button>
-            {MODALITIES.map(m => (
-              <button
-                key={m.id}
-                onClick={() => setSelectedModality(m.id)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedModality === m.id ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                {m.name}
-              </button>
-            ))}
-          </div>
-
-          {/* Favorites */}
-          <button
-            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-              showFavoritesOnly ? 'bg-yellow-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
-          >
-            <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
-            Kedvencek
-          </button>
-        </div>
-      </div>
-
-      {/* Exercise List - Grouped by Muscle Group */}
-      <div className="space-y-4">
-        {Object.entries(groupedExercises).map(([groupId, groupExercises]) => {
-          const groupInfo = getMuscleGroupInfo(groupId)
-          const Icon = groupInfo.icon
-          const isExpanded = expandedGroups[groupId] !== false
-
-          return (
-            <div key={groupId} className="card">
-              <button
-                onClick={() => toggleGroupExpand(groupId)}
-                className="w-full flex items-center justify-between p-4 hover:bg-slate-700/50 rounded-lg transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${groupInfo.color}`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-lg font-semibold text-white">{groupInfo.name}</h3>
-                    <p className="text-sm text-slate-400">{groupExercises.length} gyakorlat</p>
-                  </div>
-                </div>
-                {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-slate-400" />
-                ) : (
-                  <ChevronRight className="w-5 h-5 text-slate-400" />
-                )}
-              </button>
-
-              {isExpanded && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0">
-                  {groupExercises.map(exercise => {
-                    const gifUrl = exerciseGifUrl(exercise.gif_path)
-                    const thumbUrl = exerciseThumbUrl(exercise.gif_path)
-                    return (
-                    <div
-                      key={exercise.id}
-                      className="bg-slate-700/50 rounded-lg overflow-hidden hover:bg-slate-700 transition-all cursor-pointer border border-slate-600 hover:border-primary-500"
-                      onClick={() => openDetail(exercise)}
-                    >
-                      {/* Kártya-kép: kis statikus thumbnail (gyors); ha nincs thumb,
-                          a nagy GIF-re esik vissza. */}
-                      {gifUrl && (
-                        <div className="w-full aspect-video bg-slate-900 overflow-hidden">
-                          <img
-                            src={thumbUrl || gifUrl}
-                            alt={exercise.name}
-                            loading="lazy"
-                            onError={(e) => { if (gifUrl && e.currentTarget.src !== gifUrl) e.currentTarget.src = gifUrl }}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      )}
-
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-white mb-1">{exercise.name}</h4>
-                            {exercise.name_en && (
-                              <p className="text-xs text-slate-400 mb-1">{exercise.name_en}</p>
-                            )}
-                            <p className={`text-xs font-medium ${getDifficultyColor(exercise.difficulty)}`}>
-                              {difficultyLevels.find(d => d.id === exercise.difficulty)?.name || 'N/A'}
-                            </p>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleFavorite(exercise.id)
-                            }}
-                            className="p-1 hover:bg-slate-600 rounded transition-colors"
-                          >
-                            <Star
-                              className={`w-5 h-5 ${
-                                favorites.includes(exercise.id)
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-slate-400'
-                              }`}
-                            />
-                          </button>
-                        </div>
-
-                        {exercise.description && (
-                          <p className="text-sm text-slate-300 mb-3 line-clamp-2">
-                            {exercise.description}
-                          </p>
-                        )}
-
-                        {exercise.equipment && exercise.equipment.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {exercise.equipment.map((eq, idx) => (
-                              <span key={idx} className="px-2 py-1 bg-slate-600 text-xs text-slate-300 rounded">
-                                {eq}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {canEdit && (
-                          <div className="flex gap-2 mt-3">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                startEditExercise(exercise)
-                              }}
-                              className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                              <Edit className="w-4 h-4" />
-                              Szerkesztés
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteExercise(exercise.id)
-                              }}
-                              className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Törlés
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {filtered.length > visible.length && (
-        <div className="flex justify-center pt-4">
-          <button
-            onClick={() => setVisibleCount((c) => c + 60)}
-            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
-          >
-            Továbbiak ({filtered.length - visible.length})
-          </button>
-        </div>
-      )}
-
-      {/* Exercise Detail Modal */}
-      {selectedExercise && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between p-6 border-b border-slate-700">
-              <div className="flex-1">
-                <h2 className="text-2xl font-bold text-white mb-2">{selectedExercise.name}</h2>
-                <div className="flex items-center gap-3 flex-wrap">
-                  {selectedExercise.name_en && (
-                    <span className="text-sm text-slate-400">{selectedExercise.name_en}</span>
-                  )}
-                  <span className={`text-sm font-medium ${getDifficultyColor(selectedExercise.difficulty)}`}>
-                    {difficultyLevels.find(d => d.id === selectedExercise.difficulty)?.name}
-                  </span>
-                  {selectedExercise.muscle_group && (
-                    <>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-sm text-slate-400">
-                        {getMuscleGroupInfo(normalizeMuscleGroup(selectedExercise.muscle_group)).name}
-                      </span>
-                    </>
-                  )}
-                  {selectedExercise.modality && MODALITY_LABELS[selectedExercise.modality] && (
-                    <>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-sm text-slate-400">
-                        {MODALITY_LABELS[selectedExercise.modality]}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedExercise(null)}
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* GIF */}
-              {detailGifUrl && (
-                <div className="w-full rounded-lg overflow-hidden bg-slate-900">
-                  <img src={detailGifUrl} alt={selectedExercise.name} className="w-full max-h-[420px] object-contain" />
-                </div>
-              )}
-
-              {selectedExercise.description && (
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Leírás</h3>
-                  <p className="text-slate-300">{selectedExercise.description}</p>
-                </div>
-              )}
-
-              {/* Konkrét izmok (latin, szerep szerint) — szerepenként külön,
-                  színkódolt kártyában, hogy jól elváljanak egymástól. */}
-              {musclesByRole.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Résztvevő izmok</h3>
-                  <div className="space-y-2.5">
-                    {musclesByRole.map(({ role, items }) => {
-                      const roleStyle = {
-                        primary: { bar: 'bg-red-500', label: 'text-red-400' },
-                        secondary: { bar: 'bg-amber-500', label: 'text-amber-400' },
-                        stabilizer: { bar: 'bg-sky-500', label: 'text-sky-400' },
-                      }[role] || { bar: 'bg-slate-500', label: 'text-slate-400' }
-                      return (
-                        <div key={role} className="flex gap-3 rounded-lg bg-slate-700/40 p-3">
-                          <span className={`w-1 rounded-full flex-shrink-0 ${roleStyle.bar}`} />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${roleStyle.label}`}>
-                              {ROLE_LABELS[role]}
-                            </p>
-                            <ul className="space-y-1.5">
-                              {items.map((it, idx) => (
-                                <li key={idx} className="flex flex-wrap items-baseline gap-x-2">
-                                  <span className="text-slate-100">{it.name_hu}</span>
-                                  <span className="text-slate-500 text-sm italic">{it.name_latin}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {selectedExercise.equipment && selectedExercise.equipment.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Szükséges eszközök</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedExercise.equipment.map((eq, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-slate-700 text-slate-300 rounded-lg">
-                        {eq}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedExercise.instructions && selectedExercise.instructions.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3">Végrehajtás</h3>
-                  <ol className="space-y-2">
-                    {selectedExercise.instructions.map((instruction, idx) => (
-                      <li key={idx} className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-                          {idx + 1}
-                        </span>
-                        <span className="text-slate-300">{instruction}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              {selectedExercise.tips && selectedExercise.tips.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                    <Info className="w-5 h-5 text-yellow-400" />
-                    Tippek
-                  </h3>
-                  <ul className="space-y-2">
-                    {selectedExercise.tips.map((tip, idx) => (
-                      <li key={idx} className="flex gap-2 text-slate-300">
-                        <span className="text-yellow-400">•</span>
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {selectedExercise.secondary_muscles && selectedExercise.secondary_muscles.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Másodlagos izomcsoportok</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedExercise.secondary_muscles.map((muscle, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-slate-700 text-slate-300 rounded-lg capitalize">
-                        {muscle}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-4 border-t border-slate-700">
-                {canEdit && (
-                  <button
-                    onClick={() => {
-                      const ex = selectedExercise
-                      setSelectedExercise(null)
-                      startEditExercise(ex)
-                    }}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                  >
-                    <Edit className="w-5 h-5" />
-                    Szerkesztés
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    onClick={() => {
-                      const id = selectedExercise.id
-                      setSelectedExercise(null)
-                      deleteExercise(id)
-                    }}
-                    className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Törlés
-                  </button>
-                )}
-                <button
-                  onClick={() => toggleFavorite(selectedExercise.id)}
-                  className={`px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    favorites.includes(selectedExercise.id)
-                      ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                      : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                  }`}
-                >
-                  <Star className={`w-5 h-5 ${favorites.includes(selectedExercise.id) ? 'fill-current' : ''}`} />
-                  {favorites.includes(selectedExercise.id) ? 'Kedvenc' : 'Kedvencekhez'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && filtered.length === 0 && (
-        <div className="card text-center py-12">
-          <Dumbbell className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">Nincs találat</h3>
-          <p className="text-slate-400 mb-6">Próbálj meg más szűrőket használni</p>
-          <button
-            onClick={() => {
+        {/* Empty State */}
+        {!loading && filtered.length === 0 && (
+          <EmptyState
+            icon={Dumbbell}
+            title="Nincs találat"
+            description="Próbálj meg más szűrőket használni"
+            actionLabel="Szűrők törlése"
+            onAction={() => {
               setSearchTerm('')
               setSelectedMuscleGroup('mell')
               setSelectedDifficulty('all')
               setSelectedModality('all')
               setShowFavoritesOnly(false)
             }}
-            className="btn btn-secondary"
-          >
-            Szűrők törlése
-          </button>
-        </div>
-      )}
+          />
+        )}
+      </div>
+
+      {/* Exercise Detail Modal — csak olvasható, nincs benne űrlapadat, ezért a háttérre kattintás zárja */}
+      <Modal
+        open={!!selectedExercise}
+        onClose={() => setSelectedExercise(null)}
+        title={selectedExercise?.name}
+        size="lg"
+        closeOnBackdrop
+        footer={
+          selectedExercise && (
+            <>
+              {canEdit && (
+                <Button
+                  icon={Pencil}
+                  onClick={() => {
+                    const ex = selectedExercise
+                    setSelectedExercise(null)
+                    startEditExercise(ex)
+                  }}
+                >
+                  Szerkesztés
+                </Button>
+              )}
+              {canEdit && (
+                <Button
+                  variant="danger"
+                  icon={Trash2}
+                  onClick={() => {
+                    const id = selectedExercise.id
+                    setSelectedExercise(null)
+                    deleteExercise(id)
+                  }}
+                >
+                  Törlés
+                </Button>
+              )}
+              <Button
+                icon={detailIsFavorite ? FilledStar : Star}
+                aria-pressed={detailIsFavorite}
+                onClick={() => toggleFavorite(selectedExercise.id)}
+              >
+                {detailIsFavorite ? 'Kedvenc' : 'Kedvencekhez'}
+              </Button>
+            </>
+          )
+        }
+      >
+        {selectedExercise && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 flex-wrap">
+              {selectedExercise.name_en && (
+                <span className="text-sm text-muted">{selectedExercise.name_en}</span>
+              )}
+              <DifficultyPill difficulty={selectedExercise.difficulty} />
+              {selectedExercise.muscle_group && (
+                <>
+                  <span className="text-subtle" aria-hidden="true">•</span>
+                  <span className="text-sm text-muted">
+                    {getMuscleGroupInfo(normalizeMuscleGroup(selectedExercise.muscle_group)).name}
+                  </span>
+                </>
+              )}
+              {selectedExercise.modality && MODALITY_LABELS[selectedExercise.modality] && (
+                <>
+                  <span className="text-subtle" aria-hidden="true">•</span>
+                  <span className="text-sm text-muted">
+                    {MODALITY_LABELS[selectedExercise.modality]}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* GIF */}
+            {detailGifUrl && (
+              <div className="w-full rounded-lg overflow-hidden bg-bg">
+                <img src={detailGifUrl} alt={selectedExercise.name} className="w-full max-h-[420px] object-contain" />
+              </div>
+            )}
+
+            {selectedExercise.description && (
+              <div>
+                <h3 className="text-base font-semibold text-fg mb-2">Leírás</h3>
+                <p className="text-fg">{selectedExercise.description}</p>
+              </div>
+            )}
+
+            {/* Konkrét izmok (latin, szerep szerint) — szerepenként külön
+                kártyában, hogy jól elváljanak egymástól. */}
+            {musclesByRole.length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-fg mb-3">Résztvevő izmok</h3>
+                <div className="space-y-2.5">
+                  {musclesByRole.map(({ role, items }) => {
+                    const roleStyle = ROLE_STYLES[role] || { bar: 'bg-subtle', label: 'text-muted' }
+                    return (
+                      <div key={role} className="flex gap-3 rounded-lg bg-surface-2 p-3">
+                        <span className={`w-1 rounded-full flex-shrink-0 ${roleStyle.bar}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${roleStyle.label}`}>
+                            {ROLE_LABELS[role]}
+                          </p>
+                          <ul className="space-y-1.5">
+                            {items.map((it, idx) => (
+                              <li key={idx} className="flex flex-wrap items-baseline gap-x-2">
+                                <span className="text-fg">{it.name_hu}</span>
+                                <span className="text-muted text-sm italic">{it.name_latin}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {selectedExercise.equipment && selectedExercise.equipment.length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-fg mb-2">Szükséges eszközök</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedExercise.equipment.map((eq, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-surface-2 text-fg rounded-full text-sm">
+                      {eq}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedExercise.instructions && selectedExercise.instructions.length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-fg mb-3">Végrehajtás</h3>
+                <ol className="space-y-2">
+                  {selectedExercise.instructions.map((instruction, idx) => (
+                    <li key={idx} className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-accent text-accent-fg rounded-full flex items-center justify-center text-sm font-medium">
+                        {idx + 1}
+                      </span>
+                      <span className="text-fg">{instruction}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {selectedExercise.tips && selectedExercise.tips.length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-fg mb-3 flex items-center gap-2">
+                  <Info className="w-5 h-5 text-warn" aria-hidden="true" />
+                  Tippek
+                </h3>
+                <ul className="space-y-2">
+                  {selectedExercise.tips.map((tip, idx) => (
+                    <li key={idx} className="flex gap-2 text-fg">
+                      <span className="text-warn" aria-hidden="true">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {selectedExercise.secondary_muscles && selectedExercise.secondary_muscles.length > 0 && (
+              <div>
+                <h3 className="text-base font-semibold text-fg mb-2">Másodlagos izomcsoportok</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedExercise.secondary_muscles.map((muscle, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-surface-2 text-fg rounded-full text-sm capitalize">
+                      {muscle}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
 
       {/* Create Exercise Modal */}
       {showCreateModal && (
@@ -753,8 +743,6 @@ export default function ExerciseLibrary() {
         }}
         onCancel={() => setConfirmState(null)}
       />
-
-      </div>
     </div>
   )
 }

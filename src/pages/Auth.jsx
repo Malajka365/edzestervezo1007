@@ -1,13 +1,25 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Mail, Lock, UserPlus, LogIn, Loader2, Database } from 'lucide-react'
-import SupabaseConnectionTest from '../components/SupabaseConnectionTest'
+import { UserPlus, LogIn, CalendarDays, Activity, Users } from 'lucide-react'
+import Button from '../components/ui/Button'
+import { Field, Input } from '../components/ui/Field'
+import SegmentedControl from '../components/ui/SegmentedControl'
+
+const AUTH_TABS = [
+  { id: 'login', label: 'Bejelentkezés', icon: LogIn },
+  { id: 'register', label: 'Regisztráció', icon: UserPlus },
+]
+
+const BRAND_POINTS = [
+  { icon: CalendarDays, text: 'Edzéstervezés és naptár' },
+  { icon: Activity, text: 'Mérések és terhelés követése' },
+  { icon: Users, text: 'Csapat és játékosok egy helyen' },
+]
 
 export default function Auth() {
   const navigate = useNavigate()
   const [isLogin, setIsLogin] = useState(true)
-  const [showConnectionTest, setShowConnectionTest] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,10 +40,10 @@ export default function Auth() {
 
   const passwordStrength = getPasswordStrength(password)
   const strengthConfig = {
-    0: { label: '', color: 'bg-slate-600' },
-    1: { label: 'Gyenge', color: 'bg-red-500' },
-    2: { label: 'Közepes', color: 'bg-yellow-500' },
-    3: { label: 'Erős', color: 'bg-green-500' },
+    0: { label: '', color: 'bg-surface-3', text: '' },
+    1: { label: 'Gyenge', color: 'bg-bad', text: 'text-bad' },
+    2: { label: 'Közepes', color: 'bg-warn', text: 'text-warn' },
+    3: { label: 'Erős', color: 'bg-ok', text: 'text-ok' },
   }[passwordStrength]
 
   // Ha a felhasználó egy meghívó linken keresztül (`/join/:token`) érkezett
@@ -107,184 +119,142 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        {/* Connection Test Toggle */}
-        <div className="text-center mb-4 px-2">
-          <button
-            onClick={() => setShowConnectionTest(!showConnectionTest)}
-            className="text-sm text-slate-400 hover:text-primary-400 transition-colors inline-flex items-center mx-auto"
-          >
-            <Database className="w-4 h-4 mr-2 flex-shrink-0" />
-            {showConnectionTest ? 'Kapcsolat teszt elrejtése' : 'Adatbázis kapcsolat tesztelése'}
-          </button>
+    <div className="min-h-screen bg-bg text-fg lg:grid lg:grid-cols-2">
+      {/* Márkapanel: csak lg-től */}
+      <aside className="hidden flex-col justify-between border-r border-line bg-surface p-12 lg:flex">
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-accent font-display text-xl font-bold text-accent-fg">
+          TF
+        </span>
+
+        <div>
+          <p className="font-display text-7xl font-bold uppercase leading-none tracking-wide text-fg">
+            TeamFlow
+          </p>
+          <p className="mt-4 max-w-sm text-lg text-muted">Csapatsport Edzés Menedzsment</p>
+          <ul className="mt-10 space-y-4">
+            {BRAND_POINTS.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3 text-sm text-muted">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-[9px] bg-accent-soft text-accent">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Connection Test Component */}
-        {showConnectionTest && (
-          <div className="mb-6">
-            <SupabaseConnectionTest />
-          </div>
-        )}
+        <span aria-hidden="true" />
+      </aside>
 
-      <div className="w-full max-w-md mx-auto">
-        {/* Logo & Title */}
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-primary-600 rounded-2xl mb-4">
-            <span className="text-2xl sm:text-3xl font-bold text-white">TF</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">TeamFlow</h1>
-          <p className="text-sm sm:text-base text-slate-400">Csapatsport Edzés Menedzsment</p>
-        </div>
-
-        {/* Auth Card */}
-        <div className="card">
-          <div className="flex mb-6 bg-slate-700 rounded-lg p-1">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-2 sm:px-4 rounded-md text-sm sm:text-base font-semibold transition-all duration-200 ${
-                isLogin
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <LogIn className="w-4 h-4 inline mr-1 sm:mr-2" />
-              Bejelentkezés
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-2 sm:px-4 rounded-md text-sm sm:text-base font-semibold transition-all duration-200 ${
-                !isLogin
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <UserPlus className="w-4 h-4 inline mr-1 sm:mr-2" />
-              Regisztráció
-            </button>
+      <main className="flex min-h-screen items-center justify-center p-4 sm:p-8 lg:min-h-0">
+        <div className="w-full max-w-md">
+          {/* Márka fejléc a márkapanel helyett (lg alatt) */}
+          <div className="mb-6 text-center sm:mb-8 lg:hidden">
+            <span className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-accent font-display text-2xl font-bold text-accent-fg">
+              TF
+            </span>
+            <h1 className="mb-2 font-display text-4xl font-bold uppercase tracking-wide text-fg">
+              TeamFlow
+            </h1>
+            <p className="text-sm text-muted sm:text-base">Csapatsport Edzés Menedzsment</p>
           </div>
 
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                <Mail className="w-4 h-4 inline mr-2" />
-                Email cím
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="pelda@email.com"
-                required
-                className="input-field"
-              />
-            </div>
+          <div className="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
+            <SegmentedControl
+              label="Bejelentkezés vagy regisztráció"
+              className="mb-6 flex w-full [&>button]:flex-1 [&>button]:justify-center"
+              items={AUTH_TABS}
+              value={isLogin ? 'login' : 'register'}
+              onChange={(id) => setIsLogin(id === 'login')}
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-                <Lock className="w-4 h-4 inline mr-2" />
-                Jelszó
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={isLogin ? undefined : MIN_REGISTER_PASSWORD_LENGTH}
-                className="input-field"
-              />
-              {!isLogin && (
-                <>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Minimum 10 karakter hosszú jelszó szükséges
-                  </p>
-                  {password && (
-                    <div className="mt-2">
-                      <div className="flex gap-1">
-                        {[1, 2, 3].map((segment) => (
-                          <div
-                            key={segment}
-                            className={`h-1.5 flex-1 rounded-full transition-colors ${
-                              segment <= passwordStrength ? strengthConfig.color : 'bg-slate-600'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      {strengthConfig.label && (
-                        <p
-                          className={`text-xs mt-1 ${
-                            passwordStrength === 1
-                              ? 'text-red-400'
-                              : passwordStrength === 2
-                              ? 'text-yellow-400'
-                              : 'text-green-400'
+            <form onSubmit={handleAuth} className="space-y-4">
+              <Field label="Email cím" htmlFor="email">
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="pelda@email.com"
+                  required
+                />
+              </Field>
+
+              <div>
+                <Field
+                  label="Jelszó"
+                  htmlFor="password"
+                  hint={isLogin ? undefined : 'Minimum 10 karakter hosszú jelszó szükséges'}
+                >
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={isLogin ? undefined : MIN_REGISTER_PASSWORD_LENGTH}
+                  />
+                </Field>
+                {!isLogin && password && (
+                  <div className="mt-2">
+                    <div className="flex gap-1">
+                      {[1, 2, 3].map((segment) => (
+                        <div
+                          key={segment}
+                          className={`h-1.5 flex-1 rounded-full transition-colors ${
+                            segment <= passwordStrength ? strengthConfig.color : 'bg-surface-3'
                           }`}
-                        >
-                          {strengthConfig.label}
-                        </p>
-                      )}
+                        />
+                      ))}
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {message.text && (
-              <div
-                className={`p-3 rounded-lg text-sm ${
-                  message.type === 'success'
-                    ? 'bg-green-900/50 text-green-300 border border-green-700'
-                    : 'bg-red-900/50 text-red-300 border border-red-700'
-                }`}
-              >
-                {message.text}
+                    {strengthConfig.label && (
+                      <p className={`mt-1 text-xs ${strengthConfig.text}`}>{strengthConfig.label}</p>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full btn-primary flex items-center justify-center"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Feldolgozás...
-                </>
-              ) : isLogin ? (
-                <>
-                  <LogIn className="w-5 h-5 mr-2" />
-                  Bejelentkezés
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Regisztráció
-                </>
+              {message.text && (
+                <div
+                  role={message.type === 'success' ? 'status' : 'alert'}
+                  className={`rounded-[9px] border p-3 text-sm ${
+                    message.type === 'success'
+                      ? 'border-ok/40 bg-ok-soft text-ok'
+                      : 'border-bad/40 bg-bad-soft text-bad'
+                  }`}
+                >
+                  {message.text}
+                </div>
               )}
-            </button>
-          </form>
-        </div>
 
-        <div className="text-center mt-6 text-sm text-slate-400">
-          <p>
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full"
+                loading={loading}
+                icon={isLogin ? LogIn : UserPlus}
+              >
+                {loading ? 'Feldolgozás...' : isLogin ? 'Bejelentkezés' : 'Regisztráció'}
+              </Button>
+            </form>
+          </div>
+
+          <p className="mt-6 text-center text-sm text-muted">
             {isLogin ? 'Még nincs fiókod?' : 'Már van fiókod?'}{' '}
             <button
+              type="button"
               onClick={() => {
                 setIsLogin(!isLogin)
                 setMessage({ type: '', text: '' })
               }}
-              className="text-primary-400 hover:text-primary-300 font-semibold transition-colors"
+              className="rounded font-semibold text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               {isLogin ? 'Regisztrálj most' : 'Jelentkezz be'}
             </button>
           </p>
         </div>
-      </div>
-      </div>
+      </main>
     </div>
   )
 }

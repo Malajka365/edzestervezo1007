@@ -1,4 +1,7 @@
+import { X } from 'lucide-react'
 import { MUSCLE_GROUP_LABELS, ROLE_LABELS, ROLE_ORDER } from '../../lib/exerciseTaxonomy'
+import { Field, Select } from '../../components/ui/Field'
+import IconButton from '../../components/ui/IconButton'
 
 export default function MusclePicker({ muscles, value, onChange }) {
   const rows = value || []
@@ -13,41 +16,37 @@ export default function MusclePicker({ muscles, value, onChange }) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-white mb-2">Részletes izmok (opcionális)</label>
-      <select
-        value=""
-        onChange={(e) => add(e.target.value)}
-        className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-      >
-        <option value="">Izom hozzáadása...</option>
-        {muscles.filter((m) => !chosen.has(m.code)).map((m) => (
-          <option key={m.code} value={m.code}>
-            {MUSCLE_GROUP_LABELS[m.muscle_group] || m.muscle_group} – {m.name_hu} ({m.name_latin})
-          </option>
-        ))}
-      </select>
+      <Field label="Részletes izmok (opcionális)" htmlFor="ex-detail-muscles">
+        <Select id="ex-detail-muscles" value="" onChange={(e) => add(e.target.value)}>
+          <option value="">Izom hozzáadása...</option>
+          {muscles.filter((m) => !chosen.has(m.code)).map((m) => (
+            <option key={m.code} value={m.code}>
+              {MUSCLE_GROUP_LABELS[m.muscle_group] || m.muscle_group} – {m.name_hu} ({m.name_latin})
+            </option>
+          ))}
+        </Select>
+      </Field>
       {rows.length > 0 && (
         <div className="space-y-2 mt-2">
           {rows.map((r) => (
             <div key={r.muscle_code} className="flex items-center gap-2">
-              <span className="flex-1 text-sm text-slate-200 truncate">{nameOf(r.muscle_code)}</span>
-              <select
+              <span className="flex-1 text-sm text-fg truncate">{nameOf(r.muscle_code)}</span>
+              <Select
                 value={r.role}
                 onChange={(e) => setRole(r.muscle_code, e.target.value)}
-                className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-white"
+                aria-label={`${nameOf(r.muscle_code)} szerepe`}
+                className="!w-auto !px-2 !py-1"
               >
                 {ROLE_ORDER.map((role) => (
                   <option key={role} value={role}>{ROLE_LABELS[role]}</option>
                 ))}
-              </select>
-              <button
-                type="button"
+              </Select>
+              <IconButton
+                icon={X}
+                size="sm"
+                label={`${nameOf(r.muscle_code)} eltávolítása`}
                 onClick={() => remove(r.muscle_code)}
-                aria-label={`${nameOf(r.muscle_code)} eltávolítása`}
-                className="text-slate-400 hover:text-red-400"
-              >
-                ×
-              </button>
+              />
             </div>
           ))}
         </div>

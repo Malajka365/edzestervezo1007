@@ -28,7 +28,7 @@ Ez a funkció automatikusan összekapcsolja a Makrociklus Tervező napi bontás�
   macrocycle_day_index: 1,         // Nap index (0-6)
   opponent: "",                    // Később kitölthető
   time: "18:00",                   // Alapértelmezett
-  match_type: "league"             // Alapértelmezett
+  type: "league"                   // Alapértelmezett (oszlop: `type`)
 }
 ```
 

@@ -17,7 +17,11 @@ import {
   ChevronDown,
   Settings,
 } from 'lucide-react'
-import TeamSelector from '../components/TeamSelector'
+import Button from '../components/ui/Button'
+import { Field, Input, Select } from '../components/ui/Field'
+import PageHeader from '../components/ui/PageHeader'
+import Panel from '../components/ui/Panel'
+import Spinner from '../components/ui/Spinner'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import ExerciseModal from './measurements/ExerciseModal'
@@ -235,151 +239,133 @@ export default function Measurements({ session }) {
 
   if (!selectedTeam) {
     return (
-      <div className="h-screen flex flex-col">
-        <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-          <div className="flex items-center justify-between px-4 py-4">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Mérési Modul (1RM & Tesztek)</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">Erőnléti mérések és tesztek</p>
-            </div>
-            <div className="flex-shrink-0">
-              <TeamSelector />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-slate-400">Válassz ki egy csapatot a folytatáshoz</p>
-        </div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6">
+        <PageHeader title="Mérések" description="Erőnléti mérések és tesztek" />
+        <EmptyState
+          icon={BarChart3}
+          title="Nincs kiválasztott csapat"
+          description="Válassz ki egy csapatot a folytatáshoz."
+        />
       </div>
     )
   }
 
-  return (
-    <div className="h-screen flex flex-col">
-      {/* Sticky Header - Dashboard stílusban */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 flex-shrink-0">
-        <div className="flex items-center justify-between px-4 py-4 gap-4 flex-wrap lg:flex-nowrap">
-          {/* Bal oldal: Cím */}
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-xl font-bold text-white">Mérési Modul (1RM & Tesztek)</h1>
-              <p className="text-sm text-slate-400 hidden sm:block">
-                {measurements.length} mérés • {players.length} játékos • {exercises.length} gyakorlat
-              </p>
-            </div>
-          </div>
+  const SORT_ICON = sortDirection === 'asc' ? ChevronUp : ChevronDown
+  const sortIndicator = (field) =>
+    sortField === field ? <SORT_ICON className="w-4 h-4" aria-hidden="true" /> : null
+  const ariaSort = (field) =>
+    sortField === field ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined
+  const TH_SORTABLE =
+    'px-4 py-3 text-left text-sm font-semibold text-fg cursor-pointer hover:text-accent'
 
-          {/* Középső gombok */}
-          {canEdit && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setShowExerciseModal(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-                title="Új Gyakorlat"
-              >
-                <Dumbbell className="w-4 h-4" />
-                <span className="hidden sm:inline">Új Gyakorlat</span>
-              </button>
-              <button
-                onClick={() => setShowExerciseManagementModal(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-                title="Gyakorlatok kezelése"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Gyakorlatok kezelése</span>
-              </button>
-              <button
+  return (
+    <div className="px-4 py-4 sm:px-6 sm:py-6">
+      <PageHeader
+        title="Mérések"
+        description={`${selectedTeam.name} · ${measurements.length} mérés · ${players.length} játékos · ${exercises.length} gyakorlat`}
+        actions={
+          canEdit && (
+            <>
+              <Button icon={Dumbbell} onClick={() => setShowExerciseModal(true)}>
+                Új gyakorlat
+              </Button>
+              <Button icon={Settings} onClick={() => setShowExerciseManagementModal(true)}>
+                Gyakorlatok kezelése
+              </Button>
+              <Button
+                icon={Users}
+                disabled={players.length === 0}
                 onClick={() => {
-                  setSelectedPlayers(players.map(p => p.id))
+                  setSelectedPlayers(players.map((p) => p.id))
                   setShowPlayerSelectionModal(true)
                 }}
-                className="flex items-center space-x-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
-                disabled={players.length === 0}
-                title="Csapat Felmérés"
               >
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Csapat Felmérés</span>
-              </button>
-              <button
-                onClick={() => setShowMeasurementModal(true)}
-                className="flex items-center space-x-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm"
-                title="Új Mérés"
+                Csapat felmérés
+              </Button>
+              <Button variant="primary" icon={Plus} onClick={() => setShowMeasurementModal(true)}>
+                Új mérés
+              </Button>
+            </>
+          )
+        }
+      />
+
+      <div className="space-y-6">
+        {/* Filters */}
+        <Panel
+          title="Szűrők"
+          icon={Filter}
+          actions={
+            hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Szűrők törlése
+              </Button>
+            )
+          }
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Field label="Játékos" htmlFor="filter-player">
+              <Select
+                id="filter-player"
+                value={filters.playerId}
+                onChange={(e) => setFilters({ ...filters, playerId: e.target.value })}
               >
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Új Mérés</span>
-              </button>
-            </div>
-          )}
-
-          {/* Jobb oldal: TeamSelector */}
-          <div className="flex-shrink-0 w-full sm:w-auto order-3 lg:order-none">
-            <TeamSelector />
+                <option value="">Összes játékos</option>
+                {players.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.jersey_number ? `#${player.jersey_number} ` : ''}
+                    {player.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Gyakorlat" htmlFor="filter-exercise">
+              <Select
+                id="filter-exercise"
+                value={filters.exerciseId}
+                onChange={(e) => setFilters({ ...filters, exerciseId: e.target.value })}
+              >
+                <option value="">Összes gyakorlat</option>
+                {exercises.map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>
+                    {exercise.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Dátum-tól" htmlFor="filter-date-from">
+              <Input
+                id="filter-date-from"
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+              />
+            </Field>
+            <Field label="Dátum-ig" htmlFor="filter-date-to">
+              <Input
+                id="filter-date-to"
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+              />
+            </Field>
           </div>
+        </Panel>
+
+        {/* Export Button */}
+        <div className="flex justify-end">
+          <Button icon={Download} onClick={exportToCSV} disabled={measurements.length === 0}>
+            CSV export
+          </Button>
         </div>
-      </header>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-      {/* Filters */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <Filter className="w-5 h-5 text-primary-400" />
-            <h3 className="text-lg font-bold text-white">Szűrők</h3>
-          </div>
-          {hasActiveFilters && (
-            <button onClick={clearFilters} className="text-sm text-primary-400 hover:text-primary-300">
-              Szűrők törlése
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Játékos</label>
-            <select value={filters.playerId} onChange={(e) => setFilters({ ...filters, playerId: e.target.value })} className="input-field">
-              <option value="">Összes játékos</option>
-              {players.map((player) => (
-                <option key={player.id} value={player.id}>
-                  {player.jersey_number ? `#${player.jersey_number} ` : ''}{player.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Gyakorlat</label>
-            <select value={filters.exerciseId} onChange={(e) => setFilters({ ...filters, exerciseId: e.target.value })} className="input-field">
-              <option value="">Összes gyakorlat</option>
-              {exercises.map((exercise) => (
-                <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Dátum-tól</label>
-            <input type="date" value={filters.dateFrom} onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })} className="input-field" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Dátum-ig</label>
-            <input type="date" value={filters.dateTo} onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })} className="input-field" />
-          </div>
-        </div>
-      </div>
-
-      {/* Export Button */}
-      <div className="flex justify-end">
-        <button onClick={exportToCSV} disabled={measurements.length === 0} className="btn-secondary flex items-center space-x-2 disabled:opacity-50">
-          <Download className="w-5 h-5" />
-          <span>CSV Export</span>
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="card overflow-x-auto">
+        {/* Table */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <BarChart3 className="w-8 h-8 text-primary-500 animate-pulse" />
-          </div>
+          <Panel>
+            <div className="flex items-center justify-center py-12">
+              <Spinner />
+            </div>
+          </Panel>
         ) : measurements.length === 0 ? (
           <EmptyState
             icon={BarChart3}
@@ -393,71 +379,97 @@ export default function Measurements({ session }) {
             onAction={hasActiveFilters || !canEdit ? undefined : () => setShowMeasurementModal(true)}
           />
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-700">
-                <th onClick={() => handleSort('player.name')} className="px-4 py-3 text-left text-sm font-semibold text-slate-300 cursor-pointer hover:text-white">
-                  <div className="flex items-center space-x-1">
-                    <Users className="w-4 h-4" />
-                    <span>Játékos</span>
-                    {sortField === 'player.name' && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
-                  </div>
-                </th>
-                <th onClick={() => handleSort('exercise.name')} className="px-4 py-3 text-left text-sm font-semibold text-slate-300 cursor-pointer hover:text-white">
-                  <div className="flex items-center space-x-1">
-                    <Dumbbell className="w-4 h-4" />
-                    <span>Gyakorlat</span>
-                    {sortField === 'exercise.name' && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
-                  </div>
-                </th>
-                <th onClick={() => handleSort('value')} className="px-4 py-3 text-left text-sm font-semibold text-slate-300 cursor-pointer hover:text-white">
-                  <div className="flex items-center space-x-1">
-                    <span>Érték</span>
-                    {sortField === 'value' && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
-                  </div>
-                </th>
-                <th onClick={() => handleSort('one_rm')} className="px-4 py-3 text-left text-sm font-semibold text-slate-300 cursor-pointer hover:text-white">
-                  <div className="flex items-center space-x-1">
-                    <TrendingUp className="w-4 h-4" />
-                    <span>1RM</span>
-                    {sortField === 'one_rm' && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Ismétlések</th>
-                <th onClick={() => handleSort('measured_at')} className="px-4 py-3 text-left text-sm font-semibold text-slate-300 cursor-pointer hover:text-white">
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>Dátum</span>
-                    {sortField === 'measured_at' && (sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />)}
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Jegyzetek</th>
-              </tr>
-            </thead>
-            <tbody>
-              {measurements.map((m) => (
-                <tr key={m.id} className="border-b border-slate-700 hover:bg-slate-700/50 transition-colors">
-                  <td className="px-4 py-3 text-white">
-                    {m.player?.jersey_number && <span className="text-primary-400 font-semibold mr-2">#{m.player.jersey_number}</span>}
-                    {m.player?.name}
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">{m.exercise?.name}</td>
-                  <td className="px-4 py-3 text-white font-semibold">
-                    {m.value} {m.exercise?.unit !== 'reps' ? m.exercise?.unit : ''}
-                  </td>
-                  <td className="px-4 py-3 text-primary-400 font-semibold">
-                    {m.one_rm && m.exercise?.unit !== 'reps' && m.exercise?.unit !== 'cm' ? `${m.one_rm} ${m.exercise?.unit}` : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">{m.reps || '-'}</td>
-                  <td className="px-4 py-3 text-slate-300">{new Date(m.measured_at).toLocaleDateString('hu-HU')}</td>
-                  <td className="px-4 py-3 text-slate-400 text-sm max-w-xs truncate">{m.notes || '-'}</td>
+          <Panel padded={false} className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-line">
+                  <th
+                    onClick={() => handleSort('player.name')}
+                    aria-sort={ariaSort('player.name')}
+                    className={TH_SORTABLE}
+                  >
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" aria-hidden="true" />
+                      <span>Játékos</span>
+                      {sortIndicator('player.name')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('exercise.name')}
+                    aria-sort={ariaSort('exercise.name')}
+                    className={TH_SORTABLE}
+                  >
+                    <div className="flex items-center gap-1">
+                      <Dumbbell className="w-4 h-4" aria-hidden="true" />
+                      <span>Gyakorlat</span>
+                      {sortIndicator('exercise.name')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('value')}
+                    aria-sort={ariaSort('value')}
+                    className={TH_SORTABLE}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Érték</span>
+                      {sortIndicator('value')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('one_rm')}
+                    aria-sort={ariaSort('one_rm')}
+                    className={TH_SORTABLE}
+                  >
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="w-4 h-4" aria-hidden="true" />
+                      <span>1RM</span>
+                      {sortIndicator('one_rm')}
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-fg">Ismétlések</th>
+                  <th
+                    onClick={() => handleSort('measured_at')}
+                    aria-sort={ariaSort('measured_at')}
+                    className={TH_SORTABLE}
+                  >
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" aria-hidden="true" />
+                      <span>Dátum</span>
+                      {sortIndicator('measured_at')}
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-fg">Jegyzetek</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {measurements.map((m) => (
+                  <tr key={m.id} className="border-b border-line hover:bg-surface-2/50 transition-colors">
+                    <td className="px-4 py-3 text-fg">
+                      {m.player?.jersey_number && (
+                        <span className="text-accent font-semibold mr-2">#{m.player.jersey_number}</span>
+                      )}
+                      {m.player?.name}
+                    </td>
+                    <td className="px-4 py-3 text-fg">{m.exercise?.name}</td>
+                    <td className="px-4 py-3 text-fg font-semibold">
+                      {m.value} {m.exercise?.unit !== 'reps' ? m.exercise?.unit : ''}
+                    </td>
+                    <td className="px-4 py-3 text-accent font-semibold">
+                      {m.one_rm && m.exercise?.unit !== 'reps' && m.exercise?.unit !== 'cm'
+                        ? `${m.one_rm} ${m.exercise?.unit}`
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-fg">{m.reps || '-'}</td>
+                    <td className="px-4 py-3 text-fg">
+                      {new Date(m.measured_at).toLocaleDateString('hu-HU')}
+                    </td>
+                    <td className="px-4 py-3 text-muted text-sm max-w-xs truncate">{m.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
         )}
-      </div>
-
       </div>
 
       {/* Exercise Modal */}

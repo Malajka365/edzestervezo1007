@@ -7,17 +7,21 @@ import DocumentUpload from '../components/DocumentUpload'
 import AttendanceCalendar from '../components/AttendanceCalendar'
 import BodyDiagram from '../components/BodyDiagram'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
+import Panel from '../components/ui/Panel'
+import StatusPill from '../components/ui/StatusPill'
+import EmptyState from '../components/ui/EmptyState'
 import toast from 'react-hot-toast'
 import {
   FileText,
-  Calendar as CalendarIcon,
-  ClipboardList,
-  Plus,
-  Edit,
+  Pencil,
   Eye,
   Trash2,
-  Download,
   Image as ImageIcon,
+  Pill,
+  Camera,
+  Scissors,
 } from 'lucide-react'
 
 export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) {
@@ -177,182 +181,183 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div>
       {activeTab === 'overview' && (
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="space-y-6">
           {/* Player Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="card">
-              <h3 className="text-sm text-slate-400 mb-2">Születési dátum</h3>
-              <p className="text-xl font-bold text-white">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Panel>
+              <h3 className="mb-2 text-sm text-muted">Születési dátum</h3>
+              <p className="text-xl font-bold text-fg">
                 {player.birth_date ? new Date(player.birth_date).toLocaleDateString('hu-HU') : 'N/A'}
               </p>
-            </div>
-            <div className="card">
-              <h3 className="text-sm text-slate-400 mb-2">Anamnézis felvételek</h3>
-              <p className="text-xl font-bold text-white">{anamnesisData.length}</p>
-            </div>
-            <div className="card">
-              <h3 className="text-sm text-slate-400 mb-2">Dokumentumok</h3>
-              <p className="text-xl font-bold text-white">{documents.length}</p>
-            </div>
+            </Panel>
+            <Panel>
+              <h3 className="mb-2 text-sm text-muted">Anamnézis felvételek</h3>
+              <p className="text-xl font-bold text-fg">{anamnesisData.length}</p>
+            </Panel>
+            <Panel>
+              <h3 className="mb-2 text-sm text-muted">Dokumentumok</h3>
+              <p className="text-xl font-bold text-fg">{documents.length}</p>
+            </Panel>
           </div>
 
           {/* Recent Documents */}
           {documents.length > 0 && (
-            <div className="card">
-              <h3 className="text-xl font-bold text-white mb-4">Legutóbbi dokumentumok</h3>
-              <div className="space-y-3">
+            <Panel title="Legutóbbi dokumentumok">
+              <div className="space-y-2">
                 {documents.slice(0, 5).map((doc) => (
-                  <div 
-                    key={doc.id} 
-                    className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+                  <button
+                    type="button"
+                    key={doc.id}
+                    className="flex w-full items-center gap-3 rounded-[10px] bg-surface-2 p-3 text-left transition-colors hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     onClick={() => openDocument(doc.file_url)}
                   >
                     {doc.file_type === 'PDF' ? (
-                      <FileText className="w-8 h-8 text-red-400" />
+                      <FileText className="h-8 w-8 flex-shrink-0 text-bad" aria-hidden="true" />
                     ) : (
-                      <ImageIcon className="w-8 h-8 text-blue-400" />
+                      <ImageIcon className="h-8 w-8 flex-shrink-0 text-accent" aria-hidden="true" />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">{doc.title}</p>
-                      <p className="text-sm text-slate-400">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-fg">{doc.title}</p>
+                      <p className="text-sm text-muted">
                         {new Date(doc.document_date).toLocaleDateString('hu-HU')}
                       </p>
                     </div>
-                    <Eye className="w-5 h-5 text-slate-400" />
-                  </div>
+                    <Eye className="h-5 w-5 flex-shrink-0 text-muted" aria-hidden="true" />
+                  </button>
                 ))}
               </div>
-            </div>
+            </Panel>
           )}
 
           {/* Korábbi Anamnézisek és Body Diagram */}
           {anamnesisData.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Korábbi Anamnézisek Lista */}
-              <div className="card">
-                <h3 className="text-xl font-bold text-white mb-4">
-                  Korábbi anamnézisek
-                  {selectedAnamnesisIds.length > 0 && (
-                    <span className="ml-2 text-sm text-slate-400">
-                      ({selectedAnamnesisIds.length} kiválasztva)
-                    </span>
-                  )}
-                </h3>
+              <Panel
+                title={
+                  selectedAnamnesisIds.length > 0
+                    ? `Korábbi anamnézisek (${selectedAnamnesisIds.length} kiválasztva)`
+                    : 'Korábbi anamnézisek'
+                }
+              >
                 <div className="space-y-3">
                   {anamnesisData.map((anamnesis) => (
-                    <div key={anamnesis.id} className="bg-slate-700/50 rounded-lg p-4 hover:bg-slate-700/70 transition-colors">
-                      <div className="flex items-start gap-3 mb-3">
+                    <div
+                      key={anamnesis.id}
+                      className="rounded-[10px] bg-surface-2 p-4 transition-colors hover:bg-surface-3"
+                    >
+                      <div className="mb-3 flex items-start gap-3">
                         {/* Checkbox */}
                         <input
                           type="checkbox"
+                          aria-label={`Anamnézis kiválasztása: ${new Date(anamnesis.admission_date).toLocaleDateString('hu-HU')}`}
                           checked={selectedAnamnesisIds.includes(anamnesis.id)}
                           onChange={() => toggleAnamnesisSelection(anamnesis.id)}
-                          className="mt-1 w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
+                          className="mt-1 h-5 w-5 rounded accent-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                         />
                         <div className="flex-1">
-                          <h4 className="text-base font-semibold text-white">
+                          <h4 className="text-base font-semibold text-fg">
                             {new Date(anamnesis.admission_date).toLocaleDateString('hu-HU')}
                           </h4>
-                          <p className="text-sm text-slate-400 capitalize">{anamnesis.current_status}</p>
+                          <p className="text-sm capitalize text-muted">{anamnesis.current_status}</p>
                         </div>
                         {canEdit && (
-                          <div className="flex gap-2">
-                            <button
+                          <div className="flex gap-1">
+                            <IconButton
+                              icon={Pencil}
+                              label="Szerkesztés"
+                              size="sm"
                               onClick={() => {
                                 setEditingAnamnesis(anamnesis)
                                 setActiveTab('anamnesis')
                               }}
-                              className="p-2 hover:bg-slate-600 rounded transition-colors"
-                              title="Szerkesztés"
-                            >
-                              <Edit className="w-4 h-4 text-slate-400" />
-                            </button>
-                            <button
+                            />
+                            <IconButton
+                              icon={Trash2}
+                              label="Törlés"
+                              size="sm"
+                              className="!text-bad"
                               onClick={() => deleteAnamnesis(anamnesis.id)}
-                              className="p-2 hover:bg-red-700 rounded transition-colors"
-                              title="Törlés"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-400" />
-                            </button>
+                            />
                           </div>
                         )}
+                      </div>
+                      {anamnesis.problem_description && (
+                        <p className="mb-3 text-sm text-fg">{anamnesis.problem_description}</p>
+                      )}
+                      <div className="flex flex-wrap gap-2">
+                        {anamnesis.medication !== 'nincs' && (
+                          <StatusPill status="neutral">
+                            <Pill className="h-3 w-3" aria-hidden="true" />
+                            {anamnesis.medication}
+                          </StatusPill>
+                        )}
+                        {anamnesis.imaging !== 'nincs' && (
+                          <StatusPill status="neutral">
+                            <Camera className="h-3 w-3" aria-hidden="true" />
+                            {anamnesis.imaging}
+                          </StatusPill>
+                        )}
+                        {anamnesis.surgery && (
+                          <StatusPill status="bad">
+                            <Scissors className="h-3 w-3" aria-hidden="true" />
+                            Műtét
+                          </StatusPill>
+                        )}
+                      </div>
                     </div>
-                    {anamnesis.problem_description && (
-                      <p className="text-sm text-slate-300 mb-3">{anamnesis.problem_description}</p>
-                    )}
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      {anamnesis.medication !== 'nincs' && (
-                        <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">
-                          💊 {anamnesis.medication}
-                        </span>
-                      )}
-                      {anamnesis.imaging !== 'nincs' && (
-                        <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">
-                          📷 {anamnesis.imaging}
-                        </span>
-                      )}
-                      {anamnesis.surgery && (
-                        <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded">
-                          ⚕️ Műtét
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  ))}
+                </div>
+              </Panel>
 
-            {/* Body Diagram - jobb oldal */}
-            <div className="card">
-              <h3 className="text-xl font-bold text-white mb-4">Fájdalom lokalizáció</h3>
-              {selectedAnamnesisIds.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-slate-400">Jelölj be legalább egy anamnézist a megjelenítéshez</p>
-                </div>
-              ) : (
-                <div className="relative">
-                  <BodyDiagram
-                    painPoints={getMergedPainPoints()}
-                    onPainPointsChange={() => {}}
-                    readOnly={true}
-                  />
-                  <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
-                    <p className="text-xs text-slate-400 text-center">
-                      A kiválasztott {selectedAnamnesisIds.length} anamnézis összes fájdalompontja látható
-                    </p>
+              {/* Body Diagram - jobb oldal */}
+              <Panel title="Fájdalom lokalizáció">
+                {selectedAnamnesisIds.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <p className="text-muted">Jelölj be legalább egy anamnézist a megjelenítéshez</p>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="relative">
+                    <BodyDiagram
+                      painPoints={getMergedPainPoints()}
+                      onPainPointsChange={() => {}}
+                      readOnly={true}
+                    />
+                    <div className="mt-4 rounded-[10px] bg-surface-2 p-3">
+                      <p className="text-center text-xs text-muted">
+                        A kiválasztott {selectedAnamnesisIds.length} anamnézis összes fájdalompontja látható
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </Panel>
             </div>
-          </div>
           )}
         </div>
       )}
 
       {activeTab === 'anamnesis' && (
-        <div className="flex-1 flex p-6">
-          <AnamnesisForm
-            player={player}
-            teamId={selectedTeam.id}
-            existingAnamnesis={editingAnamnesis}
-            onClose={() => {
-              setEditingAnamnesis(null)
-              fetchAnamnesisData()
-            }}
-            onSaved={() => {
-              setEditingAnamnesis(null)
-              fetchAnamnesisData()
-            }}
-            embedded={true}
-            canEdit={canEdit}
-          />
-        </div>
+        <AnamnesisForm
+          player={player}
+          teamId={selectedTeam.id}
+          existingAnamnesis={editingAnamnesis}
+          onClose={() => {
+            setEditingAnamnesis(null)
+            fetchAnamnesisData()
+          }}
+          onSaved={() => {
+            setEditingAnamnesis(null)
+            fetchAnamnesisData()
+          }}
+          embedded={true}
+          canEdit={canEdit}
+        />
       )}
 
       {activeTab === 'documents' && (
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="space-y-6">
           <DocumentUpload
             player={player}
             teamId={selectedTeam.id}
@@ -361,34 +366,31 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
           />
 
           {documents.length === 0 ? (
-            <div className="card text-center py-12">
-              <FileText className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400">Még nincs feltöltött dokumentum</p>
-            </div>
+            <EmptyState icon={FileText} title="Még nincs feltöltött dokumentum" />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {documents.map((doc) => (
-                <div key={doc.id} className="card">
+                <Panel key={doc.id}>
                   <div className="flex items-start gap-3">
                     {doc.file_type === 'PDF' ? (
-                      <FileText className="w-12 h-12 text-red-400 flex-shrink-0" />
+                      <FileText className="h-12 w-12 flex-shrink-0 text-bad" aria-hidden="true" />
                     ) : (
-                      <ImageIcon className="w-12 h-12 text-blue-400 flex-shrink-0" />
+                      <ImageIcon className="h-12 w-12 flex-shrink-0 text-accent" aria-hidden="true" />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white mb-1 truncate">{doc.title}</h4>
-                      <p className="text-sm text-slate-400 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="mb-1 truncate font-semibold text-fg">{doc.title}</h4>
+                      <p className="mb-2 text-sm text-muted">
                         {new Date(doc.document_date).toLocaleDateString('hu-HU')}
                       </p>
                       {doc.description && (
-                        <p className="text-sm text-slate-300 mb-2 line-clamp-2">{doc.description}</p>
+                        <p className="mb-2 line-clamp-2 text-sm text-fg">{doc.description}</p>
                       )}
                       {doc.tags && doc.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
+                        <div className="mb-3 flex flex-wrap gap-1">
                           {doc.tags.map((tag, idx) => (
                             <span
                               key={idx}
-                              className="px-2 py-0.5 bg-slate-700 text-xs text-slate-300 rounded"
+                              className="rounded bg-surface-2 px-2 py-0.5 text-xs text-fg"
                             >
                               {tag}
                             </span>
@@ -396,25 +398,27 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
                         </div>
                       )}
                       <div className="flex gap-2">
-                        <button
+                        <Button
+                          variant="primary"
+                          icon={Eye}
+                          className="flex-1"
                           onClick={() => openDocument(doc.file_url)}
-                          className="flex-1 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
-                          <Eye className="w-4 h-4" />
                           Megnyitás
-                        </button>
+                        </Button>
                         {canEdit && (
-                          <button
+                          <Button
+                            variant="danger"
+                            icon={Trash2}
+                            aria-label="Dokumentum törlése"
+                            title="Dokumentum törlése"
                             onClick={() => deleteDocument(doc.id, doc.file_url)}
-                            className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          />
                         )}
                       </div>
                     </div>
                   </div>
-                </div>
+                </Panel>
               ))}
             </div>
           )}
@@ -422,9 +426,7 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
       )}
 
       {activeTab === 'attendance' && (
-        <div className="flex-1 overflow-hidden p-6 flex flex-col">
-          <AttendanceCalendar player={player} teamId={selectedTeam.id} canEdit={canEdit} />
-        </div>
+        <AttendanceCalendar player={player} teamId={selectedTeam.id} canEdit={canEdit} />
       )}
 
       <ConfirmDialog
