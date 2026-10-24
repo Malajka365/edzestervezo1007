@@ -4,7 +4,10 @@ import { useTeams } from '../context/TeamContext'
 import { usePlayers } from '../hooks/usePlayers'
 import { canEditModule } from '../lib/permissions'
 import PlayerProfileRehab from './PlayerProfileRehab'
-import TeamAttendanceCalendar from '../components/TeamAttendanceCalendar'
+import AvailabilityPill from '../components/availability/AvailabilityPill'
+import AvailabilityEditor from '../components/availability/AvailabilityEditor'
+import { useAvailability } from '../hooks/useAvailability'
+import { availabilityOf } from '../lib/availability'
 import {
   Users,
   Search,
@@ -12,7 +15,6 @@ import {
   Calendar as CalendarIcon,
   Plus,
   ClipboardList,
-  LayoutGrid,
   ArrowLeft,
   User,
 } from 'lucide-react'
@@ -31,7 +33,8 @@ export default function Rehabilitation() {
   const { data: players = [], isLoading: loading } = usePlayers(selectedTeam?.id)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPlayer, setSelectedPlayer] = useState(null)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [statusPlayer, setStatusPlayer] = useState(null)
+  const { byPlayer } = useAvailability(selectedTeam?.id)
   const [playerActiveTab, setPlayerActiveTab] = useState('overview')
   const [stats, setStats] = useState({
     totalPlayers: 0,
@@ -86,11 +89,6 @@ export default function Rehabilitation() {
     setPlayerActiveTab('overview')
   }
 
-  const mainTabs = [
-    { id: 'overview', label: 'Áttekintés', icon: LayoutGrid },
-    { id: 'attendance', label: 'Csapat jelenlét', icon: CalendarIcon },
-  ]
-
   const playerTabs = [
     { id: 'overview', label: 'Áttekintés', icon: User },
     { id: 'anamnesis', label: 'Anamnézis', icon: ClipboardList },
@@ -111,7 +109,7 @@ export default function Rehabilitation() {
       ]
         .filter(Boolean)
         .join(' · ')
-    : 'Sérülések, anamnézis és jelenlét'
+    : 'Sérülések, anamnézis, dokumentumok és elérhetőség'
 
   return (
     <div className="px-4 py-4 sm:px-6 sm:py-6">
@@ -129,9 +127,7 @@ export default function Rehabilitation() {
         tabs={
           selectedPlayer ? (
             <Tabs items={playerTabs} value={playerActiveTab} onChange={setPlayerActiveTab} />
-          ) : (
-            <Tabs items={mainTabs} value={activeTab} onChange={setActiveTab} />
-          )
+          ) : null
         }
       />
 
@@ -141,7 +137,7 @@ export default function Rehabilitation() {
           activeTab={playerActiveTab}
           setActiveTab={setPlayerActiveTab}
         />
-      ) : activeTab === 'overview' ? (
+      ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {statCards.map(({ label, value, icon: Icon, tile }) => (
@@ -193,13 +189,15 @@ export default function Rehabilitation() {
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredPlayers.map((player) => (
-                  <button
+                  <div
                     key={player.id}
-                    type="button"
-                    onClick={() => setSelectedPlayer(player)}
-                    className="rounded-[12px] border border-line bg-surface-2 p-4 text-left transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="rounded-[12px] border border-line bg-surface-2 p-4 transition-colors hover:border-accent"
                   >
-                    <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlayer(player)}
+                      className="flex w-full items-center gap-4 rounded-[10px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
                       <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-accent-soft text-xl font-bold text-accent">
                         {player.name.charAt(0)}
                       </div>
@@ -210,16 +208,35 @@ export default function Rehabilitation() {
                           {player.position && <span>{player.position}</span>}
                         </div>
                       </div>
+                    </button>
+                    <div className="mt-3 flex items-center gap-2">
+                      <AvailabilityPill status={availabilityOf(byPlayer, player.id).status} />
+                      {canEdit && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="ml-auto"
+                          aria-label={`${player.name} státusza`}
+                          onClick={() => setStatusPlayer(player)}
+                        >
+                          Státusz
+                        </Button>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
           </Panel>
         </div>
-      ) : activeTab === 'attendance' ? (
-        <TeamAttendanceCalendar teamId={selectedTeam.id} canEdit={canEdit} />
-      ) : null}
+      )}
+
+      <AvailabilityEditor
+        open={!!statusPlayer}
+        onClose={() => setStatusPlayer(null)}
+        player={statusPlayer}
+        teamId={selectedTeam?.id}
+      />
     </div>
   )
 }

@@ -111,8 +111,8 @@ describe('DASHBOARD_MODULE_TO_PERMISSION_KEY', () => {
 })
 
 describe('MODULES', () => {
-  it('has exactly 9 entries', () => {
-    expect(MODULES).toHaveLength(9)
+  it('has exactly 10 entries', () => {
+    expect(MODULES).toHaveLength(10)
   })
 
   it('has exactly the expected keys, in order', () => {
@@ -126,6 +126,7 @@ describe('MODULES', () => {
       'measurement',
       'stats',
       'rehab',
+      'attendance',
     ])
   })
 })
@@ -147,5 +148,14 @@ describe('ACCESS_LEVELS', () => {
 
   it('has exactly 3 entries', () => {
     expect(ACCESS_LEVELS).toHaveLength(3)
+  })
+})
+
+describe('MODULES', () => {
+  it('includes the attendance module after rehab', () => {
+    const keys = MODULES.map((m) => m.key)
+    expect(keys).toContain('attendance')
+    expect(keys.indexOf('attendance')).toBe(keys.indexOf('rehab') + 1)
+    expect(MODULES.find((m) => m.key === 'attendance').name).toBe('Jelenlét')
   })
 })

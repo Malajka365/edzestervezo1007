@@ -26,6 +26,8 @@ const TrainingLoad = lazy(() => import('./pages/TrainingLoad'))
 const Leaderboard = lazy(() => import('./pages/Leaderboard'))
 const PlayerProgress = lazy(() => import('./pages/PlayerProgress'))
 const Rehabilitation = lazy(() => import('./pages/Rehabilitation'))
+const TodaySession = lazy(() => import('./pages/TodaySession'))
+const Attendance = lazy(() => import('./pages/Attendance'))
 const Profile = lazy(() => import('./pages/Profile'))
 
 // Module-scoped QueryClient — created once for the app's lifetime so the cache
@@ -134,7 +136,9 @@ function App() {
             element={session ? <Dashboard session={session} /> : <Navigate to="/auth" replace />}
           >
             <Route index element={<DashboardHome />} />
+            <Route path="mai-edzes" element={<TodaySession />} />
             <Route path="csapatok" element={<Teams />} />
+            <Route path="jelenlet" element={<Attendance />} />
             <Route path="makrociklus" element={<MacrocyclePlanner />} />
             <Route path="naptar" element={<Calendar />} />
             <Route path="gyakorlatok" element={<ExerciseLibrary />} />

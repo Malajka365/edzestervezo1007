@@ -1,103 +1,70 @@
 // src/pages/dashboard-home/widgets/LeaderboardTop3Widget.jsx
 //
-// Widget: "Ranglista top 3" — legjobb testsúlyarányos 1RM.
-//
-// `src/pages/Leaderboard.jsx` teljes logikája (testsúly-lookup a 'Testsúly'
-// gyakorlathoz, majd 1RM / testsúly reláció egy KIVÁLASZTOTT gyakorlatra) egy
-// exercise-selectort és 2 külön lekérdezést igényel — ez egy kompakt widgetbe
-// túl sok állapot/UI. Ezért az EGYSZERŰSÍTETT fallback utat választottuk (ld.
-// spec/megbízás): "Top 3 (1RM)" — a csapat 3 legjobb 1RM-értéke súly alapú
-// (kg-os) gyakorlatokból, játékosonként a legjobbal (nem testsúly-arányosítva).
-// A `one_rm` oszlopot NEM használjuk közvetlenül (bizalmatlan/stale lehet régi
-// adatnál) — a value+reps alapján a calculate1RM segítségével újraszámoljuk,
-// ugyanazzal a képlettel, mint a mérési modul.
+// Widget: "Ranglista" — a csapat legjobbjai egy választott mutatóban.
+// Beállítás: metric ('rel' testsúlyarányos 1RM | 'orm' legjobb 1RM | 'att' jelenlét %),
+// n ('3' | '5' | 'all'). A számítás: src/lib/widgetData.js rankPlayers.
 import { useQuery } from '@tanstack/react-query'
 import { Trophy } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useTeams } from '../../../context/TeamContext'
-import { calculate1RM } from '../../measurements/useMeasurementsData'
+import { todayIso } from '../../../lib/availability'
+import { periodStart, rankPlayers } from '../../../lib/widgetData'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 import WidgetCard from '../WidgetCard'
 
-export default function LeaderboardTop3Widget() {
-  const { selectedTeam } = useTeams()
+const METRIC_LABEL = { rel: 'Relatív erő', orm: 'Legjobb 1RM', att: 'Jelenlét (szezon)' }
+const format = (metric, v) => (metric === 'att' ? `${v}%` : metric === 'rel' ? `${v.toFixed(2).replace('.', ',')} ×` : `${v.toFixed(1)} kg`)
+const RANK_TONE = ['text-accent', 'text-fg', 'text-muted']
 
-  const { data: top3 = [], isLoading, isError } = useQuery({
-    queryKey: ['widget', 'leaderboard_top3', selectedTeam?.id],
+export default function LeaderboardTop3Widget({ settings = {} }) {
+  const { selectedTeam } = useTeams()
+  const metric = settings.metric || 'rel'
+  const n = settings.n || '3'
+
+  const { data: ranking = [], isLoading, isError } = useQuery({
+    queryKey: ['widget', 'leaderboard', selectedTeam?.id, metric, n],
     queryFn: async () => {
-      // Egy ésszerű, friss ablakot nézünk (utolsó 200 mérés a csapatnál) —
-      // ebből számoljuk a legjobb 1RM-et játékosonként, kg-os gyakorlatokra
-      // szűkítve (a súly alapú, 1RM-mel értelmezhető mérések).
+      if (metric === 'att') {
+        const { data, error } = await supabase
+          .from('player_attendance')
+          .select('player_id, status, players(name)')
+          .eq('team_id', selectedTeam.id)
+          .gte('date', periodStart('season', todayIso()))
+        if (error) throw error
+        return rankPlayers({ attendance: data || [], metric, n })
+      }
       const { data, error } = await supabase
         .from('measurements')
-        .select(`
-          value,
-          reps,
-          measured_at,
-          player:players(id, name),
-          exercise:exercises(id, name, unit)
-        `)
+        .select('value, reps, measured_at, player:players(id, name), exercise:exercises(id, name, unit)')
         .eq('team_id', selectedTeam.id)
         .order('measured_at', { ascending: false })
-        .limit(200)
-
+        .limit(300)
       if (error) throw error
-
-      const bestByPlayer = new Map()
-      for (const m of data || []) {
-        if (m.exercise?.unit !== 'kg' || !m.player) continue
-        const oneRM = calculate1RM(parseFloat(m.value), parseInt(m.reps || 1))
-        if (!oneRM) continue
-        const oneRMNum = parseFloat(oneRM)
-        const existing = bestByPlayer.get(m.player.id)
-        if (!existing || oneRMNum > existing.oneRM) {
-          bestByPlayer.set(m.player.id, {
-            playerId: m.player.id,
-            playerName: m.player.name,
-            exerciseName: m.exercise.name,
-            oneRM: oneRMNum,
-          })
-        }
-      }
-
-      return Array.from(bestByPlayer.values())
-        .sort((a, b) => b.oneRM - a.oneRM)
-        .slice(0, 3)
+      return rankPlayers({ measurements: data || [], metric, n })
     },
     enabled: !!selectedTeam?.id,
   })
 
-  const medalColor = (rank) => {
-    if (rank === 1) return 'text-accent'
-    if (rank === 2) return 'text-fg'
-    return 'text-muted'
-  }
-
   return (
-    <WidgetCard icon={Trophy} title="Ranglista top 3">
+    <WidgetCard icon={Trophy} title="Ranglista">
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : isError ? (
         <p className="text-sm text-bad">Nem sikerült betölteni</p>
-      ) : top3.length === 0 ? (
-        <p className="text-sm text-muted">Nincs elég mérési adat.</p>
+      ) : ranking.length === 0 ? (
+        <p className="text-sm text-muted">Nincs elég adat.</p>
       ) : (
         <div>
-          <p className="text-xs text-muted mb-2">Top 3 (1RM)</p>
-          <ul className="space-y-2 text-sm">
-            {top3.map((entry, i) => (
-              <li key={entry.playerId} className="flex items-center justify-between gap-2 text-fg">
-                <span className="min-w-0 truncate flex items-center gap-2">
-                  <span className={`font-bold ${medalColor(i + 1)}`}>#{i + 1}</span>
-                  <span className="text-fg font-medium truncate">{entry.playerName}</span>
-                  <span className="text-muted text-xs truncate">{entry.exerciseName}</span>
-                </span>
-                <span className="flex-shrink-0 text-fg font-semibold">
-                  {entry.oneRM.toFixed(1)} kg
-                </span>
+          <p className="mb-2 text-xs text-muted">{METRIC_LABEL[metric]}</p>
+          <ol className="space-y-1.5 text-sm">
+            {ranking.map((entry, i) => (
+              <li key={entry.playerId} className="flex items-center gap-2 text-fg">
+                <span className={`w-6 font-display text-lg font-bold ${RANK_TONE[i] ?? 'text-subtle'}`}>{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate font-medium">{entry.playerName}</span>
+                <span className="flex-shrink-0 font-semibold">{format(metric, entry.value)}</span>
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
       )}
     </WidgetCard>

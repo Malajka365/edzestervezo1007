@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
+import { useAvailability } from '../hooks/useAvailability'
+import { availabilityOf } from '../lib/availability'
+import AvailabilityPill from '../components/availability/AvailabilityPill'
+import AvailabilityEditor from '../components/availability/AvailabilityEditor'
+import AvailabilityHistory from '../components/availability/AvailabilityHistory'
 import AnamnesisForm from '../components/AnamnesisForm'
 import DocumentUpload from '../components/DocumentUpload'
 import AttendanceCalendar from '../components/AttendanceCalendar'
@@ -27,6 +32,8 @@ import {
 export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) {
   const { selectedTeam, currentUserPermissions } = useTeams()
   const canEdit = canEditModule(currentUserPermissions, 'rehab')
+  const { byPlayer } = useAvailability(selectedTeam?.id)
+  const [showAvailabilityEditor, setShowAvailabilityEditor] = useState(false)
   const [anamnesisData, setAnamnesisData] = useState([])
   const [documents, setDocuments] = useState([])
   const [editingAnamnesis, setEditingAnamnesis] = useState(null)
@@ -184,6 +191,28 @@ export default function PlayerProfileRehab({ player, activeTab, setActiveTab }) 
     <div>
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          <AvailabilityHistory
+            playerId={player.id}
+            player={player}
+            teamId={selectedTeam.id}
+            canEdit={canEdit}
+            actions={
+              <>
+                <AvailabilityPill status={availabilityOf(byPlayer, player.id).status} />
+                {canEdit && (
+                  <Button size="sm" variant="secondary" onClick={() => setShowAvailabilityEditor(true)}>
+                    Státusz módosítása
+                  </Button>
+                )}
+              </>
+            }
+          />
+          <AvailabilityEditor
+            open={showAvailabilityEditor}
+            onClose={() => setShowAvailabilityEditor(false)}
+            player={player}
+            teamId={selectedTeam.id}
+          />
           {/* Player Info Cards */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Panel>

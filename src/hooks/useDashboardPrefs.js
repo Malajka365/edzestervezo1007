@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { toStored } from '../lib/dashboardLayout'
 
 /**
  * A bejelentkezett felhasználó dashboard widget-beállításai az adott csapatra.
@@ -7,14 +8,14 @@ import { supabase } from '../lib/supabase'
  * A `user_dashboard_prefs` táblából (PK: user_id, team_id) tölti be a sort
  * `maybeSingle`-lel (nincs sor => null). A `prefs` a `widgets` tömb
  * (`[{key, visible}, ...]`) vagy null, ha még nincs mentett beállítás — ilyenkor
- * a hívó szerepkör-alapú defaultra esik vissza (getDefaultWidgets).
+ * a Kezdőlap a szerepkör alap-elrendezésére esik vissza (dashboardLayout.normalizeLayout).
  *
  * A `savePrefs(widgets)` upsert-el ment (onConflict 'user_id,team_id'), majd
  * invalidálja a lekérdezést, hogy a friss sor újratöltődjön.
  *
  * @param {string|undefined} userId - a bejelentkezett felhasználó id-ja.
  * @param {string|undefined} teamId - a kiválasztott csapat id-ja.
- * @returns {{ prefs: Array|null, loading: boolean, savePrefs: (widgets:Array)=>Promise }}
+ * @returns {{ prefs: Array|null, loading: boolean, savePrefs: (widgets:Array, teamId?:string)=>Promise }}
  */
 export function useDashboardPrefs(userId, teamId) {
   const queryClient = useQueryClient()
@@ -37,24 +38,26 @@ export function useDashboardPrefs(userId, teamId) {
   })
 
   const mutation = useMutation({
-    mutationFn: async (widgets) => {
+    mutationFn: async ({ widgets, teamId: targetTeamId }) => {
       const { error } = await supabase
         .from('user_dashboard_prefs')
         .upsert(
-          { user_id: userId, team_id: teamId, widgets, updated_at: new Date().toISOString() },
+          { user_id: userId, team_id: targetTeamId, widgets: toStored(widgets), updated_at: new Date().toISOString() },
           { onConflict: 'user_id,team_id' }
         )
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard_prefs', userId, teamId] })
+    onSuccess: (_data, { teamId: targetTeamId }) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard_prefs', userId, targetTeamId] })
     },
   })
 
   return {
     prefs: data ?? null,
     loading: isLoading,
-    savePrefs: mutation.mutateAsync,
+    // A csapat a mentés ütemezésekor rögzül: egy késleltetett mentés csapatváltás
+    // után is a régi csapathoz kerül.
+    savePrefs: (widgets, targetTeamId = teamId) => mutation.mutateAsync({ widgets, teamId: targetTeamId }),
   }
 }

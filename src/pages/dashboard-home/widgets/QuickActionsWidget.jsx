@@ -1,40 +1,27 @@
 // src/pages/dashboard-home/widgets/QuickActionsWidget.jsx
 //
-// Widget: "Gyors műveletek" — navigációs gombok (Új edzés, Új mérés, Új játékos).
+// Widget: "Gyors műveletek" — választható gombkészlet (edző / erőnléti /
+// egészség), csak az engedélyezett műveletekkel.
 import { useNavigate } from 'react-router-dom'
-import { Zap, CalendarPlus, LineChart, UserPlus } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import WidgetCard from '../WidgetCard'
 import Button from '../../../components/ui/Button'
 import { useTeams } from '../../../context/TeamContext'
-import { canEditModule } from '../../../lib/permissions'
+import { quickActionsFor } from '../../../lib/widgetData'
 
-const ACTIONS = [
-  { key: 'calendar', label: 'Új edzés', path: '/dashboard/naptar', icon: CalendarPlus },
-  { key: 'measurement', label: 'Új mérés', path: '/dashboard/meresek', icon: LineChart },
-  { key: 'players', label: 'Új játékos', path: '/dashboard/csapatok', icon: UserPlus },
-]
-
-export default function QuickActionsWidget() {
+export default function QuickActionsWidget({ settings = {} }) {
   const navigate = useNavigate()
   const { currentUserPermissions } = useTeams()
-
-  const availableActions = ACTIONS.filter((action) =>
-    canEditModule(currentUserPermissions, action.key)
-  )
+  const actions = quickActionsFor(settings.set || 'coach', currentUserPermissions)
 
   return (
     <WidgetCard icon={Zap} title="Gyors műveletek">
-      {availableActions.length === 0 ? (
+      {actions.length === 0 ? (
         <p className="text-sm text-muted">Nincs elérhető gyorsművelet.</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {availableActions.map((action) => (
-            <Button
-              key={action.key}
-              icon={action.icon}
-              onClick={() => navigate(action.path)}
-              className="w-full justify-start"
-            >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
+          {actions.map((action) => (
+            <Button key={action.label} icon={action.icon} onClick={() => navigate(action.path)} className="w-full">
               {action.label}
             </Button>
           ))}

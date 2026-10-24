@@ -23,6 +23,7 @@ import SegmentedControl from '../components/ui/SegmentedControl'
 import MonthView from './calendar/MonthView'
 import WeekView from './calendar/WeekView'
 import DayView from './calendar/DayView'
+import SessionActions from './calendar/SessionActions'
 import useCalendarData, { getWeekDays } from './calendar/useCalendarData'
 
 export default function Calendar() {
@@ -32,6 +33,7 @@ export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showSessionModal, setShowSessionModal] = useState(false)
   const [editingSession, setEditingSession] = useState(null)
+  const [actionSession, setActionSession] = useState(null)
   const [selectedDateForSession, setSelectedDateForSession] = useState(null)
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
   const [confirmState, setConfirmState] = useState(null)
@@ -103,6 +105,12 @@ export default function Calendar() {
     const day = String(date.getDate()).padStart(2, '0')
     const dateString = `${year}-${month}-${day}`
     return matches.filter(match => match.date === dateString)
+  }
+
+  const openCreate = (date) => {
+    setEditingSession(null)
+    setSelectedDateForSession(date)
+    setShowSessionModal(true)
   }
 
   const deleteTrainingSession = (id) => {
@@ -271,6 +279,8 @@ export default function Calendar() {
               isCurrentMonth={isCurrentMonth}
               setCurrentDate={setCurrentDate}
               setView={setView}
+              onCreate={canEdit ? openCreate : undefined}
+              onSessionClick={setActionSession}
             />
           )}
 
@@ -293,6 +303,8 @@ export default function Calendar() {
               getLoadFactor={getLoadFactor}
               getTacticsTechnique={getTacticsTechnique}
               updateTacticsTechnique={updateTacticsTechnique}
+              onCreate={canEdit ? openCreate : undefined}
+              onSessionClick={setActionSession}
             />
           )}
 
@@ -327,6 +339,21 @@ export default function Calendar() {
           </div>
         </Panel>
       </div>
+
+      <SessionActions
+        session={actionSession}
+        canEdit={canEdit}
+        onClose={() => setActionSession(null)}
+        onEdit={(session) => {
+          setActionSession(null)
+          setEditingSession(session)
+          setShowSessionModal(true)
+        }}
+        onDelete={(session) => {
+          setActionSession(null)
+          deleteTrainingSession(session.id)
+        }}
+      />
 
       {/* Training Session Modal */}
       {showSessionModal && (

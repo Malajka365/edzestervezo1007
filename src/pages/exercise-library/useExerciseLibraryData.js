@@ -2,6 +2,44 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
+const EM_PAGE = 1000
+
+function reportLoadError(error) {
+  console.error('Error fetching exercises:', error)
+  toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
+}
+
+// Izom-index az egész könyvtárra. A PostgREST alapból max 1000 sort ad vissza,
+// ezért előbb a sorok számát kérjük le, majd az összes lapot egyszerre (~4000+
+// sor); a stabil rendezés miatt a lapok nem fednek át.
+async function fetchMuscleIndex() {
+  const { count, error } = await supabase.from('exercise_muscles').select('exercise_id', { count: 'exact', head: true })
+  if (error) throw error
+  const pages = []
+  for (let from = 0; from < (count || 0); from += EM_PAGE) {
+    pages.push(
+      supabase
+        .from('exercise_muscles')
+        .select('exercise_id, role, muscles(code, name_latin, name_hu, name_en, muscle_group)')
+        .order('exercise_id')
+        .order('muscle_code')
+        .range(from, from + EM_PAGE - 1)
+    )
+  }
+  const byEx = {}
+  const searchByEx = {}
+  for (const { data, error: pageError } of await Promise.all(pages)) {
+    if (pageError) throw pageError
+    for (const row of data || []) {
+      const m = row.muscles
+      if (!m) continue
+      ;(byEx[row.exercise_id] ||= []).push({ code: m.code, role: row.role, name_hu: m.name_hu, name_latin: m.name_latin, muscle_group: m.muscle_group })
+      searchByEx[row.exercise_id] = ((searchByEx[row.exercise_id] || '') + ' ' + m.name_hu + ' ' + m.name_latin).toLowerCase()
+    }
+  }
+  return { byEx, searchByEx }
+}
+
 /**
  * useExerciseLibraryData — owns the DATA layer for the Exercise Library page.
  *
@@ -9,7 +47,8 @@ import toast from 'react-hot-toast'
  * `user_exercise_favorites`. This is UNRELATED to the `exercises` table / the
  * `useExercises` React Query hook used by the Measurements page.
  *
- * Owns state: exercises, favorites, loading.
+ * Owns state: exercises, favorites, loading (the list), musclesLoading (the
+ * muscle index, muscle and equipment lookups).
  *
  * The exercise rows now also carry the GIF-catalog fields (name_en, modality,
  * gif_path, ...) and a detailed muscle layer via the `exercise_muscles` join
@@ -21,70 +60,55 @@ export default function useExerciseLibraryData() {
   const [exercises, setExercises] = useState([])
   const [favorites, setFavorites] = useState([])
   const [loading, setLoading] = useState(false)
+  const [musclesLoading, setMusclesLoading] = useState(false)
   const [muscles, setMuscles] = useState([])
   const [equipmentTypes, setEquipmentTypes] = useState([])
   const [musclesByExercise, setMusclesByExercise] = useState({})
   const [muscleSearchByExercise, setMuscleSearchByExercise] = useState({})
 
-  // Data fetch: loads training_exercises + the current user's favorites.
+  // Adatbetöltés. Minden kérés egyszerre indul; a kártyák már a gyakorlatlista
+  // megérkezése után renderelődnek (loading=false), a kedvencek, az izom-index
+  // és a szűrő-listák a háttérben érkeznek (musclesLoading).
   const fetchExercises = async () => {
     setLoading(true)
-    try {
-      // Fetch exercises (slim: only the columns the list view needs)
-      const { data, error } = await supabase
+    setMusclesLoading(true)
+
+    const listRequest = Promise.resolve(
+      supabase
         .from('training_exercises')
         .select('id, slug, name, name_en, muscle_group, secondary_muscles, equipment, difficulty, modality, gif_path, description')
         .order('name', { ascending: true })
-
-      if (error) throw error
-
-      // Fetch user's favorites
+    )
+    const favoritesRequest = (async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: favData } = await supabase
-          .from('user_exercise_favorites')
-          .select('exercise_id')
-          .eq('user_id', user.id)
+      if (!user) return []
+      const { data } = await supabase.from('user_exercise_favorites').select('exercise_id').eq('user_id', user.id)
+      return data?.map((f) => f.exercise_id) || []
+    })()
+    const lookupsRequest = Promise.all([
+      supabase.from('muscles').select('code, name_hu, name_latin, name_en, muscle_group').order('muscle_group'),
+      supabase.from('equipment_types').select('code, name_hu').order('name_hu'),
+    ])
+    const indexRequest = fetchMuscleIndex()
 
-        setFavorites(favData?.map(f => f.exercise_id) || [])
-      }
+    favoritesRequest.then(setFavorites).catch((error) => console.error('Error fetching favorites:', error))
 
+    Promise.all([indexRequest, lookupsRequest])
+      .then(([{ byEx, searchByEx }, [{ data: mus }, { data: eq }]]) => {
+        setMusclesByExercise(byEx)
+        setMuscleSearchByExercise(searchByEx)
+        setMuscles(mus || [])
+        setEquipmentTypes(eq || [])
+      })
+      .catch(reportLoadError)
+      .finally(() => setMusclesLoading(false))
+
+    try {
+      const { data, error } = await listRequest
+      if (error) throw error
       setExercises(data || [])
-
-      // Izom-index az egész könyvtárra. A PostgREST alapból max 1000 sort ad
-      // vissza, ezért lapozva húzzuk be az összes exercise_muscles sort (~4000+),
-      // különben a legtöbb gyakorlat izmai kimaradnának (és az izom-keresés is).
-      const emData = []
-      const EM_PAGE = 1000
-      for (let from = 0; ; from += EM_PAGE) {
-        const { data: chunk, error: emErr } = await supabase
-          .from('exercise_muscles')
-          .select('exercise_id, role, muscles(code, name_latin, name_hu, name_en, muscle_group)')
-          .range(from, from + EM_PAGE - 1)
-        if (emErr) throw emErr
-        emData.push(...(chunk || []))
-        if (!chunk || chunk.length < EM_PAGE) break
-      }
-      const byEx = {}
-      const searchByEx = {}
-      for (const row of emData || []) {
-        const m = row.muscles
-        if (!m) continue
-        ;(byEx[row.exercise_id] ||= []).push({ code: m.code, role: row.role, name_hu: m.name_hu, name_latin: m.name_latin, muscle_group: m.muscle_group })
-        searchByEx[row.exercise_id] = ((searchByEx[row.exercise_id] || '') + ' ' + m.name_hu + ' ' + m.name_latin).toLowerCase()
-      }
-      setMusclesByExercise(byEx)
-      setMuscleSearchByExercise(searchByEx)
-
-      const [{ data: mus }, { data: eq }] = await Promise.all([
-        supabase.from('muscles').select('code, name_hu, name_latin, name_en, muscle_group').order('muscle_group'),
-        supabase.from('equipment_types').select('code, name_hu').order('name_hu'),
-      ])
-      setMuscles(mus || [])
-      setEquipmentTypes(eq || [])
     } catch (error) {
-      console.error('Error fetching exercises:', error)
-      toast.error('Nem sikerült betölteni az adatokat. Ellenőrizd az internetkapcsolatot és frissítsd az oldalt.', { id: 'adat-betoltes' })
+      reportLoadError(error)
     } finally {
       setLoading(false)
     }
@@ -256,6 +280,7 @@ export default function useExerciseLibraryData() {
     exercises,
     favorites,
     loading,
+    musclesLoading,
     muscles,
     equipmentTypes,
     musclesByExercise,

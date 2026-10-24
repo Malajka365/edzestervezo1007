@@ -1,42 +1,34 @@
 // src/pages/dashboard-home/widgets/RecentMeasurementsWidget.jsx
 //
-// Widget: "Friss mérések" — utolsó 5 measurement (játékos + gyakorlat + érték).
-//
-// `measurements` táblának nincs saját team_id-alapú "könnyű" lekérdezése a
-// widget számára külön hook formájában — a select-alakot
-// `src/pages/measurements/useMeasurementsData.js` fetchMeasurements-jéből
-// tükrözzük (player + exercise embedded select), csak limit(5) + team_id szűréssel.
+// Widget: "Friss mérések" — a legutóbbi n mérés, egyéni csúccsal jelölve.
+// Beállítás: n ('3' | '5' | '8'). A csúcs a betöltött utolsó 200 mérésből számolt.
 import { useQuery } from '@tanstack/react-query'
 import { BarChart3 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useTeams } from '../../../context/TeamContext'
+import { markPersonalBests } from '../../../lib/widgetData'
 import LoadingSpinner from '../../../components/LoadingSpinner'
+import StatusPill from '../../../components/ui/StatusPill'
 import WidgetCard from '../WidgetCard'
 
-export default function RecentMeasurementsWidget() {
+export default function RecentMeasurementsWidget({ settings = {} }) {
   const { selectedTeam } = useTeams()
-
-  const { data: measurements = [], isLoading, isError } = useQuery({
+  const n = parseInt(settings.n || '5', 10)
+  const { data: rows = [], isLoading, isError } = useQuery({
     queryKey: ['widget', 'recent_measurements', selectedTeam?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('measurements')
-        .select(`
-          id,
-          value,
-          measured_at,
-          player:players(id, name),
-          exercise:exercises(id, name, unit)
-        `)
+        .select('id, value, reps, measured_at, player:players(id, name), exercise:exercises(id, name, unit)')
         .eq('team_id', selectedTeam.id)
         .order('measured_at', { ascending: false })
-        .limit(5)
-
+        .limit(200)
       if (error) throw error
       return data || []
     },
     enabled: !!selectedTeam?.id,
   })
+  const measurements = markPersonalBests(rows, n)
 
   return (
     <WidgetCard icon={BarChart3} title="Friss mérések">
@@ -51,15 +43,16 @@ export default function RecentMeasurementsWidget() {
           {measurements.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-2 text-fg">
               <span className="min-w-0 truncate">
-                <span className="text-fg font-medium">{m.player?.name || '—'}</span>
+                <span className="font-medium text-fg">{m.player?.name || '—'}</span>
                 {' · '}
                 <span className="text-muted">{m.exercise?.name || '—'}</span>
               </span>
-              <span className="flex-shrink-0 text-muted flex items-center gap-2">
-                <span className="text-fg font-semibold">
+              <span className="flex flex-shrink-0 items-center gap-2 text-muted">
+                <span className="font-semibold text-fg">
                   {m.value} {m.exercise?.unit}
                 </span>
-                <span>{new Date(m.measured_at).toLocaleDateString('hu-HU')}</span>
+                {m.isBest && <StatusPill status="ok">csúcs</StatusPill>}
+                <span className="hidden sm:inline">{new Date(m.measured_at).toLocaleDateString('hu-HU')}</span>
               </span>
             </li>
           ))}

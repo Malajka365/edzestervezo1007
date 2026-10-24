@@ -1,4 +1,4 @@
-import { Home, Plane } from 'lucide-react'
+import { Home, Plane, Plus } from 'lucide-react'
 import { MATCH_STYLE, getSessionType } from './sessionTypes'
 
 export default function MonthView({
@@ -14,7 +14,10 @@ export default function MonthView({
   isCurrentMonth,
   setCurrentDate,
   setView,
+  onCreate,
+  onSessionClick,
 }) {
+  const dayLabel = (d) => d.toLocaleDateString('hu-HU', { month: 'long', day: 'numeric' })
   return (
     <div>
       {/* Day headers */}
@@ -42,7 +45,7 @@ export default function MonthView({
           return (
             <div
               key={date.toISOString()}
-              className={`aspect-square cursor-pointer overflow-hidden rounded-lg border p-1 transition-all sm:p-2 ${
+              className={`group relative aspect-square cursor-pointer overflow-hidden rounded-lg border p-1 transition-all sm:p-2 ${
                 isToday(date)
                   ? 'border-accent bg-accent-soft'
                   : isCurrentMonth(date)
@@ -50,10 +53,28 @@ export default function MonthView({
                   : 'border-line bg-bg/50 opacity-50'
               }`}
               onClick={() => {
+                if (onCreate && daySessions.length === 0 && dayMatches.length === 0) {
+                  onCreate(date)
+                  return
+                }
                 setCurrentDate(date)
                 setView('day')
               }}
             >
+              {onCreate && (
+                <button
+                  type="button"
+                  aria-label={`Edzés hozzáadása: ${dayLabel(date)}`}
+                  title="Edzés hozzáadása"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCreate(date)
+                  }}
+                  className="absolute right-0.5 top-0.5 hidden h-5 w-5 items-center justify-center rounded text-muted hover:bg-accent-soft hover:text-accent focus-visible:flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent group-hover:flex sm:flex"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
               <div className="flex h-full flex-col">
                 <div className={`mb-1 text-xs font-medium sm:text-sm ${
                   isToday(date) ? 'text-accent' : 'text-fg'
@@ -94,7 +115,16 @@ export default function MonthView({
                       const TypeIcon = sessionType.icon
 
                       return (
-                        <div key={idx} className={`flex items-center gap-1 rounded px-1 py-0.5 text-[10px] ${sessionType.solid}`}>
+                        <button
+                          type="button"
+                          key={idx}
+                          aria-label={`Edzés ${session.start_time ? session.start_time.substring(0, 5) : ''} ${sessionType.label}`.trim()}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onSessionClick?.(session)
+                          }}
+                          className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${sessionType.solid}`}
+                        >
                           <TypeIcon className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                           {session.start_time && (
                             <span className="flex-shrink-0">{session.start_time.substring(0, 5)}</span>
@@ -104,7 +134,7 @@ export default function MonthView({
                               {session.location}
                             </span>
                           )}
-                        </div>
+                        </button>
                       )
                     })}
                   </div>
