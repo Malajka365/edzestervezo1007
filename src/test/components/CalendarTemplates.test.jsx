@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import TeamTestProvider from '@/test/TeamTestProvider'
+import { MemoryRouter } from 'react-router-dom'
 
 // Láncolható, "thenable" Supabase-mock: táblánként adott adatot ad, a műveleteket rögzíti.
 const { db, calls } = vi.hoisted(() => ({
@@ -231,7 +232,11 @@ describe('Naptár nézetek', () => {
   it('Nap nézet: új edzés, szerkesztés és törlés a megfelelő kezelőket hívja', async () => {
     const user = userEvent.setup()
     const props = dayViewProps()
-    render(<DayView {...props} />)
+    render(
+      <MemoryRouter>
+        <DayView {...props} />
+      </MemoryRouter>
+    )
 
     await user.click(screen.getByRole('button', { name: 'Edzés hozzáadása' }))
     expect(props.setSelectedDateForSession).toHaveBeenCalledWith(props.currentDate)

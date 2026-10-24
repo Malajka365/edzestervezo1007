@@ -4,7 +4,6 @@ import { useTeams } from '../context/TeamContext'
 import { usePlayers } from '../hooks/usePlayers'
 import { canEditModule } from '../lib/permissions'
 import PlayerProfileRehab from './PlayerProfileRehab'
-import TeamAttendanceCalendar from '../components/TeamAttendanceCalendar'
 import AvailabilityPill from '../components/availability/AvailabilityPill'
 import AvailabilityEditor from '../components/availability/AvailabilityEditor'
 import { useAvailability } from '../hooks/useAvailability'
@@ -16,7 +15,6 @@ import {
   Calendar as CalendarIcon,
   Plus,
   ClipboardList,
-  LayoutGrid,
   ArrowLeft,
   User,
 } from 'lucide-react'
@@ -37,7 +35,6 @@ export default function Rehabilitation() {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [statusPlayer, setStatusPlayer] = useState(null)
   const { byPlayer } = useAvailability(selectedTeam?.id)
-  const [activeTab, setActiveTab] = useState('overview')
   const [playerActiveTab, setPlayerActiveTab] = useState('overview')
   const [stats, setStats] = useState({
     totalPlayers: 0,
@@ -92,11 +89,6 @@ export default function Rehabilitation() {
     setPlayerActiveTab('overview')
   }
 
-  const mainTabs = [
-    { id: 'overview', label: 'Áttekintés', icon: LayoutGrid },
-    { id: 'attendance', label: 'Csapat jelenlét', icon: CalendarIcon },
-  ]
-
   const playerTabs = [
     { id: 'overview', label: 'Áttekintés', icon: User },
     { id: 'anamnesis', label: 'Anamnézis', icon: ClipboardList },
@@ -117,7 +109,7 @@ export default function Rehabilitation() {
       ]
         .filter(Boolean)
         .join(' · ')
-    : 'Sérülések, anamnézis és jelenlét'
+    : 'Sérülések, anamnézis, dokumentumok és elérhetőség'
 
   return (
     <div className="px-4 py-4 sm:px-6 sm:py-6">
@@ -135,9 +127,7 @@ export default function Rehabilitation() {
         tabs={
           selectedPlayer ? (
             <Tabs items={playerTabs} value={playerActiveTab} onChange={setPlayerActiveTab} />
-          ) : (
-            <Tabs items={mainTabs} value={activeTab} onChange={setActiveTab} />
-          )
+          ) : null
         }
       />
 
@@ -147,7 +137,7 @@ export default function Rehabilitation() {
           activeTab={playerActiveTab}
           setActiveTab={setPlayerActiveTab}
         />
-      ) : activeTab === 'overview' ? (
+      ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {statCards.map(({ label, value, icon: Icon, tile }) => (
@@ -239,9 +229,7 @@ export default function Rehabilitation() {
             )}
           </Panel>
         </div>
-      ) : activeTab === 'attendance' ? (
-        <TeamAttendanceCalendar teamId={selectedTeam.id} canEdit={canEdit} />
-      ) : null}
+      )}
 
       <AvailabilityEditor
         open={!!statusPlayer}

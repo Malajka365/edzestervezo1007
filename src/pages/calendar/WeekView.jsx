@@ -99,8 +99,11 @@ export default function WeekView({
   getLoadFactor,
   getTacticsTechnique,
   updateTacticsTechnique,
+  onCreate,
+  onSessionClick,
 }) {
   const weekDays = getWeekDays(currentDate)
+  const dayLabel = (d) => d.toLocaleDateString('hu-HU', { month: 'long', day: 'numeric' })
 
   return (
     <div className="grid grid-cols-1 gap-y-6 sm:grid-cols-7 sm:gap-x-2 sm:gap-y-3">
@@ -157,7 +160,16 @@ export default function WeekView({
                       const TypeIcon = sessionType.icon
 
                       return (
-                        <div key={idx} className={`rounded px-2 py-2 text-xs ${sessionType.solid}`}>
+                        <button
+                          type="button"
+                          key={idx}
+                          aria-label={`Edzés ${session.start_time ? session.start_time.substring(0, 5) : ''} ${sessionType.label}`.trim()}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onSessionClick?.(session)
+                          }}
+                          className={`block w-full rounded px-2 py-2 text-left text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${sessionType.solid}`}
+                        >
                           <div className="mb-1 flex items-center gap-1 font-semibold">
                             <TypeIcon className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
                             {session.start_time ? session.start_time.substring(0, 5) : ''}
@@ -168,7 +180,7 @@ export default function WeekView({
                               <span className="truncate">{session.location}</span>
                             </div>
                           )}
-                        </div>
+                        </button>
                       )
                     })}
                   </div>
@@ -209,8 +221,22 @@ export default function WeekView({
                   </div>
                 )}
 
+                {onCreate && (
+                  <button
+                    type="button"
+                    aria-label={`Edzés hozzáadása: ${dayLabel(date)}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCreate(date)
+                    }}
+                    className="w-full rounded-[9px] border border-dashed border-line py-1.5 text-xs font-semibold text-muted hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    + edzés
+                  </button>
+                )}
+
                 {/* Empty state */}
-                {daySessions.length === 0 && dayMatches.length === 0 && (
+                {daySessions.length === 0 && dayMatches.length === 0 && !onCreate && (
                   <div className="py-8 text-center text-subtle">
                     <CalendarDays className="mx-auto mb-2 h-6 w-6" aria-hidden="true" />
                     <div className="text-xs">Nincs esemény</div>

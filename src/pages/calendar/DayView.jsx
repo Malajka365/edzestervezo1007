@@ -11,6 +11,7 @@ import {
   Plane,
   Clock,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
 import Panel from '../../components/ui/Panel'
@@ -112,8 +113,15 @@ export default function DayView({
                               </div>
                             )}
                           </div>
+                          <div className="flex items-center gap-1">
+                            <Link
+                              to={`/dashboard/mai-edzes?session=${session.id}`}
+                              className="rounded-[7px] px-2 py-1 text-[12px] font-semibold text-accent hover:bg-accent-soft"
+                            >
+                              Mai edzés oldal
+                            </Link>
                           {canEdit && (
-                            <div className="flex items-center gap-1">
+                            <>
                               <IconButton
                                 icon={Pencil}
                                 label="Szerkesztés"
@@ -128,8 +136,9 @@ export default function DayView({
                                 onClick={() => deleteTrainingSession(session.id)}
                                 className="hover:!bg-bad-soft hover:!text-bad"
                               />
-                            </div>
+                            </>
                           )}
+                          </div>
                         </div>
                         {session.notes && (
                           <p className="mt-2 text-sm text-fg">{session.notes}</p>
