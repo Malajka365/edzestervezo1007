@@ -12,7 +12,7 @@ export function useAvailability(teamId, onDate) {
   const queryClient = useQueryClient()
   const key = ['availability', teamId]
 
-  const { data: entries = [], isLoading } = useQuery({
+  const { data: entries = [], isLoading, error } = useQuery({
     queryKey: key,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -65,6 +65,9 @@ export function useAvailability(teamId, onDate) {
   return {
     entries,
     byPlayer,
+    // Betöltési hibánál a byPlayer üres (mindenki "bevethető" lenne): a hívó
+    // ezt jelezze, ne állítsa, hogy mindenki bevethető.
+    error,
     loading: isLoading,
     setStatus: insertMutation.mutateAsync,
     updateEntry: (id, patch) => updateMutation.mutateAsync({ id, patch }),

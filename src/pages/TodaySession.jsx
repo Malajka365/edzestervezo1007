@@ -31,7 +31,7 @@ export default function TodaySession() {
   const [params, setParams] = useSearchParams()
   const queryClient = useQueryClient()
   const sessionParam = params.get('session')
-  const { today, pick, session, templateName, byPlayer, roster, loading, saveAttendance, saveNotes } = useTodaySession(
+  const { today, pick, session, templateName, byPlayer, availabilityError, roster, loading, saveAttendance, saveNotes } = useTodaySession(
     selectedTeam?.id,
     sessionParam
   )
@@ -88,7 +88,7 @@ export default function TodaySession() {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['today_sessions', selectedTeam?.id] })
-    queryClient.invalidateQueries({ queryKey: ['training_session', session.id] })
+    queryClient.invalidateQueries({ queryKey: ['training_session', selectedTeam?.id, session.id] })
   }
 
   return (
@@ -166,6 +166,11 @@ export default function TodaySession() {
 
         <div className="space-y-4">
           <Panel title="Elérhetőség" icon={ShieldCheck}>
+            {availabilityError && (
+              <p role="alert" className="mb-2 rounded-[9px] bg-bad-soft px-2.5 py-1.5 text-[12.5px] font-semibold text-bad">
+                Az elérhetőség nem tölthető be, a sérültek nincsenek jelölve. Frissítsd az oldalt.
+              </p>
+            )}
             <div className="mb-2 grid grid-cols-3 gap-2">
               {Object.entries(AVAILABILITY).map(([status, meta]) => (
                 <div key={status} className="rounded-[9px] bg-surface-2 px-2.5 py-2">

@@ -55,7 +55,7 @@ export function useTodaySession(teamId, sessionIdParam) {
 
   const session = pick.session
   const { data: players = [], isLoading: playersLoading } = usePlayers(teamId)
-  const { byPlayer, loading: availabilityLoading } = useAvailability(teamId, session?.date)
+  const { byPlayer, loading: availabilityLoading, error: availabilityError } = useAvailability(teamId, session?.date)
 
   const day = useQuery({
     queryKey: ['session_day', teamId, session?.id, session?.date],
@@ -130,6 +130,7 @@ export function useTodaySession(teamId, sessionIdParam) {
     session,
     templateName: template.data?.name ?? null,
     byPlayer,
+    availabilityError: !!availabilityError,
     roster,
     loading,
     saveAttendance,

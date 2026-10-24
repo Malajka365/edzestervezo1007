@@ -63,7 +63,7 @@ export default function WidgetFrame({
             type="button"
             aria-label={`${def.name} áthelyezése`}
             title="Húzd az áthelyezéshez"
-            className="inline-flex h-7 w-7 cursor-grab items-center justify-center rounded-[7px] text-muted hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing"
+            className="inline-flex h-7 w-7 cursor-grab touch-none items-center justify-center rounded-[7px] text-muted hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >

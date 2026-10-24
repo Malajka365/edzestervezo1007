@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import TeamTestProvider from '@/test/TeamTestProvider'
 
-const db = vi.hoisted(() => ({ tables: {} }))
+const db = vi.hoisted(() => ({ tables: {}, errors: {} }))
 vi.mock('@/lib/supabase', () => {
   function query(table) {
     const filters = []
@@ -12,7 +12,8 @@ vi.mock('@/lib/supabase', () => {
     for (const m of ['select', 'order', 'limit', 'lte', 'lt', 'in', 'is']) q[m] = () => q
     q.eq = (c, v) => (filters.push((r) => r[c] === undefined || r[c] === v), q)
     q.gte = (c, v) => (filters.push((r) => r[c] === undefined || r[c] >= v), q)
-    q.then = (res) => res({ data: (db.tables[table] || []).filter((r) => filters.every((f) => f(r))), error: null })
+    q.then = (res) =>
+      res(db.errors[table] ? { data: null, error: db.errors[table] } : { data: (db.tables[table] || []).filter((r) => filters.every((f) => f(r))), error: null })
     return q
   }
   return { supabase: { from: query, auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) } } }
@@ -42,6 +43,7 @@ function wrap(ui, perms = ALL) {
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['Date', 'setTimeout', 'clearTimeout'] })
   vi.setSystemTime(new Date('2026-10-24T10:00:00'))
+  db.errors = {}
   db.tables = {
     player_availability: [
       { id: 'a1', team_id: 't1', player_id: 'p2', status: 'injured', started_on: '2026-10-20', created_at: 'x' },
@@ -80,6 +82,14 @@ describe('Új Kezdőlap-widgetek', () => {
     expect(screen.getByText('Tóth Bence')).toBeInTheDocument()
     expect(screen.queryByText('Kiss Péter')).not.toBeInTheDocument()
     expect(screen.getByText('1', { selector: '[data-count="available"]' })).toBeInTheDocument()
+  })
+
+  it('Ki bevethető: betöltési hibánál nem állítja, hogy mindenki bevethető', async () => {
+    db.errors.player_availability = { message: 'permission denied' }
+    const Widget = WIDGET_COMPONENTS.availability
+    wrap(<Widget settings={{ show: 'issues' }} size={{ w: 1, h: 2 }} />)
+    expect(await screen.findByText(/elérhetőség nem tölthető be/i)).toBeInTheDocument()
+    expect(screen.queryByText('Mindenki bevethető.')).not.toBeInTheDocument()
   })
 
   it('Mai edzés widget: ha ma nincs, a következőt mutatja', async () => {

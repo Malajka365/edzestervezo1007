@@ -100,6 +100,8 @@ describe('Kezdőlap rács', () => {
     renderHome()
     fireEvent.click(screen.getByRole('button', { name: 'Szerkesztés' }))
     expect(screen.getAllByRole('button', { name: /áthelyezése/ }).length).toBe(8)
+    // telefonon a fogantyún húzás ne görgesse az oldalt
+    expect(screen.getByRole('button', { name: 'Mai edzés áthelyezése' })).toHaveClass('touch-none')
     fireEvent.click(screen.getByRole('button', { name: 'Szezon eltávolítása' }))
     expect(widgetTitles()).not.toContain('Szezon')
     await flushSave()

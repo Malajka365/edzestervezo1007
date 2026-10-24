@@ -15,7 +15,7 @@ const ORDER = { injured: 0, limited: 1, available: 2 }
 export default function AvailabilityWidget({ settings = {} }) {
   const { selectedTeam } = useTeams()
   const { data: players = [], isLoading } = usePlayers(selectedTeam?.id)
-  const { byPlayer, loading } = useAvailability(selectedTeam?.id)
+  const { byPlayer, loading, error } = useAvailability(selectedTeam?.id)
 
   const rows = players.map((p) => ({ player: p, status: availabilityOf(byPlayer, p.id).status }))
   const counts = { available: 0, limited: 0, injured: 0 }
@@ -28,6 +28,8 @@ export default function AvailabilityWidget({ settings = {} }) {
     <WidgetCard icon={ShieldCheck} title="Ki bevethető?">
       {isLoading || loading ? (
         <LoadingSpinner size="xs" />
+      ) : error ? (
+        <p className="text-sm text-bad">Az elérhetőség nem tölthető be. Frissítsd az oldalt.</p>
       ) : (
         <div className="space-y-2">
           <div className="grid grid-cols-3 gap-1.5">

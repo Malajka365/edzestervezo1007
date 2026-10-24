@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import TeamTestProvider from '@/test/TeamTestProvider'
 
 // Táblánként válaszoló Supabase-mock; az insert/update hívásokat rögzítjük.
-const db = vi.hoisted(() => ({ tables: {}, inserts: [], updates: [], failUpdate: false, nextId: 1 }))
+const db = vi.hoisted(() => ({ tables: {}, errors: {}, inserts: [], updates: [], failUpdate: false, nextId: 1 }))
 vi.mock('@/lib/supabase', () => {
   function query(table) {
     const filters = []
@@ -30,7 +30,8 @@ vi.mock('@/lib/supabase', () => {
         const error = db.failUpdate ? { message: 'network' } : null
         return { eq: (_c, id) => ((u.id = id), { then: (res) => res({ data: null, error }) }) }
       },
-      then: (res) => res({ data: (db.tables[table] || []).filter((r) => filters.every((f) => f(r))), error: null }),
+      then: (res) =>
+        res(db.errors[table] ? { data: null, error: db.errors[table] } : { data: (db.tables[table] || []).filter((r) => filters.every((f) => f(r))), error: null }),
     }
     return q
   }
@@ -78,6 +79,7 @@ beforeEach(() => {
   db.inserts = []
   db.updates = []
   db.failUpdate = false
+  db.errors = {}
   db.tables = {
     training_sessions: [GYM],
     player_attendance: [],
@@ -161,6 +163,13 @@ describe('Mai edzés oldal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Jelenlét mentése' }))
     await waitFor(() => expect(db.updates).toHaveLength(2))
     expect(db.inserts).toHaveLength(1)
+  })
+
+  it('ha az elérhetőség nem töltődik be, figyelmeztet', async () => {
+    db.errors.player_availability = { message: 'permission denied' }
+    renderPage()
+    expect(await screen.findByText('Guggolás')).toBeInTheDocument()
+    expect(await screen.findByText(/elérhetőség nem tölthető be/i)).toBeInTheDocument()
   })
 
   it('jelenlét-szerkesztési jog nélkül nincs mentés', async () => {
