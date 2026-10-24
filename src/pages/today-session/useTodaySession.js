@@ -121,6 +121,19 @@ export function useTodaySession(teamId, sessionIdParam) {
     await queryClient.invalidateQueries({ queryKey: ['training_session', teamId, session.id] })
   }
 
+  // Sablon betöltése az üres tervű edzésbe (mint a szerkesztő "Sablon" gombja).
+  const applyTemplate = async (template) => {
+    const { error } = await supabase
+      .from('training_sessions')
+      .update({ template_id: template.id, type: template.type, session_data: template.template_data })
+      .eq('id', session.id)
+    if (error) throw error
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['today_sessions', teamId] }),
+      queryClient.invalidateQueries({ queryKey: ['training_session', teamId, session.id] }),
+    ])
+  }
+
   const loading =
     upcoming.isLoading || (sessionIdParam && explicit.isLoading) || playersLoading || availabilityLoading || (!!session && day.isLoading)
 
@@ -135,5 +148,6 @@ export function useTodaySession(teamId, sessionIdParam) {
     loading,
     saveAttendance,
     saveNotes,
+    applyTemplate,
   }
 }

@@ -1,8 +1,66 @@
-import Panel from '../../components/ui/Panel'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { ClipboardList } from 'lucide-react'
+import Panel from '../../components/ui/Panel'
+import Button from '../../components/ui/Button'
+import { Field, Select } from '../../components/ui/Field'
+import { supabase } from '../../lib/supabase'
+
+// Üres tervnél (szerkesztési joggal) a csapat egyik sablonja tölthető be.
+function TemplatePicker({ teamId, onApply }) {
+  const [templateId, setTemplateId] = useState('')
+  const [applying, setApplying] = useState(false)
+  const { data: templates = [] } = useQuery({
+    queryKey: ['training_templates', teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('training_templates').select('*').eq('team_id', teamId).order('name', { ascending: true })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!teamId,
+  })
+
+  if (templates.length === 0) return null
+
+  const apply = async () => {
+    const template = templates.find((t) => t.id === templateId)
+    if (!template) return
+    setApplying(true)
+    try {
+      await onApply(template)
+      toast.success('Sablon alkalmazva')
+    } catch (error) {
+      console.error('Sablon alkalmazása sikertelen:', error)
+      toast.error('Nem sikerült alkalmazni a sablont')
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-end gap-2">
+      <div className="min-w-[200px] flex-1">
+        <Field label="Sablon" htmlFor="session-template">
+          <Select id="session-template" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+            <option value="">Válassz sablont…</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+      <Button variant="primary" disabled={!templateId} loading={applying} onClick={apply}>
+        Sablon alkalmazása
+      </Button>
+    </div>
+  )
+}
 
 // Az edzésterv a session_data alapján, típus szerint.
-export default function SessionPlan({ session }) {
+export default function SessionPlan({ session, canEdit = false, teamId, onApplyTemplate }) {
   const data = session?.session_data || {}
   const exercises = Array.isArray(data.exercises) ? data.exercises : []
   const ball = data.training_types || data.drills
@@ -75,7 +133,12 @@ export default function SessionPlan({ session }) {
       </dl>
     )
   } else {
-    body = <p className="text-sm text-muted">Ehhez az edzéshez nincs terv.</p>
+    body = (
+      <>
+        <p className="text-sm text-muted">Ehhez az edzéshez nincs terv.</p>
+        {canEdit && onApplyTemplate && <TemplatePicker teamId={teamId} onApply={onApplyTemplate} />}
+      </>
+    )
   }
 
   return (

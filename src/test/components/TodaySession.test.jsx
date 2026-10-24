@@ -172,6 +172,29 @@ describe('Mai edzés oldal', () => {
     expect(await screen.findByText(/elérhetőség nem tölthető be/i)).toBeInTheDocument()
   })
 
+  it('üres tervnél naptár-szerkesztési joggal sablon választható és alkalmazható', async () => {
+    const TPL = { id: 'tpl1', team_id: 't1', name: 'Erő A', type: 'gym', template_data: { exercises: [{ id: 'x', name: 'Felhúzás', sets: 3, reps: 5 }] } }
+    db.tables.training_sessions = [{ ...GYM, session_data: {} }]
+    db.tables.training_templates = [TPL, { ...TPL, id: 'tpl9', team_id: 't2', name: 'Idegen sablon' }]
+    renderPage()
+    expect(await screen.findByText('Ehhez az edzéshez nincs terv.')).toBeInTheDocument()
+    const select = await screen.findByLabelText('Sablon')
+    expect(within(select).queryByText('Idegen sablon')).not.toBeInTheDocument()
+    fireEvent.change(select, { target: { value: 'tpl1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sablon alkalmazása' }))
+    await waitFor(() => expect(db.updates.filter((u) => u.table === 'training_sessions')).toHaveLength(1))
+    const u = db.updates.find((x) => x.table === 'training_sessions')
+    expect(u.id).toBe('s1')
+    expect(u.patch).toEqual({ template_id: 'tpl1', type: 'gym', session_data: TPL.template_data })
+  })
+
+  it('naptár-szerkesztési jog nélkül az üres tervnél nincs sablon-választó', async () => {
+    db.tables.training_sessions = [{ ...GYM, session_data: {} }]
+    renderPage({ perms: { calendar: 'view', attendance: 'edit' } })
+    expect(await screen.findByText('Ehhez az edzéshez nincs terv.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Sablon')).not.toBeInTheDocument()
+  })
+
   it('jelenlét-szerkesztési jog nélkül nincs mentés', async () => {
     renderPage({ perms: { calendar: 'view', attendance: 'view' } })
     expect(await screen.findByText('Guggolás')).toBeInTheDocument()

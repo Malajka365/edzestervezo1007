@@ -31,7 +31,7 @@ export default function TodaySession() {
   const [params, setParams] = useSearchParams()
   const queryClient = useQueryClient()
   const sessionParam = params.get('session')
-  const { today, pick, session, templateName, byPlayer, availabilityError, roster, loading, saveAttendance, saveNotes } = useTodaySession(
+  const { today, pick, session, templateName, byPlayer, availabilityError, roster, loading, saveAttendance, saveNotes, applyTemplate } = useTodaySession(
     selectedTeam?.id,
     sessionParam
   )
@@ -133,7 +133,7 @@ export default function TodaySession() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="space-y-4">
-          <SessionPlan session={session} />
+          <SessionPlan session={session} canEdit={canEditCalendar} teamId={selectedTeam?.id} onApplyTemplate={applyTemplate} />
           <Panel
             title="Edzés jegyzet"
             icon={StickyNote}
