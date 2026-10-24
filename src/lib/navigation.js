@@ -15,6 +15,8 @@ import {
   Calculator,
   Users,
   HeartPulse,
+  Timer,
+  CheckSquare,
 } from 'lucide-react'
 import { isModuleVisible } from './permissions'
 
@@ -25,6 +27,7 @@ export const NAV_GROUPS = [
     label: 'Áttekintés',
     items: [
       { id: 'home', label: 'Kezdőlap', path: '/dashboard', icon: Sun, permissionKey: null, end: true },
+      { id: 'today', label: 'Mai edzés', path: '/dashboard/mai-edzes', icon: Timer, permissionKey: 'calendar' },
       { id: 'matches', label: 'Mérkőzések', path: '/dashboard/merkozesek', icon: Trophy, permissionKey: 'matches' },
     ],
   },
@@ -59,6 +62,7 @@ export const NAV_GROUPS = [
     label: 'Csapat',
     items: [
       { id: 'teams', label: 'Játékosok', path: '/dashboard/csapatok', icon: Users, permissionKey: 'players' },
+      { id: 'attendance', label: 'Jelenlét', path: '/dashboard/jelenlet', icon: CheckSquare, permissionKey: 'attendance' },
       { id: 'rehab', label: 'Egészség', path: '/dashboard/rehabilitacio', icon: HeartPulse, permissionKey: 'rehab' },
     ],
   },

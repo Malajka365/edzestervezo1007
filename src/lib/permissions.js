@@ -10,6 +10,7 @@ export const MODULES = [
   { key: 'measurement', name: 'Mérési modul' },
   { key: 'stats', name: 'Ranglista / Progresszió' },
   { key: 'rehab', name: 'Rehabilitáció' },
+  { key: 'attendance', name: 'Jelenlét' },
 ]
 
 export const ROLES = [

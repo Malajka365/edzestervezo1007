@@ -56,8 +56,8 @@ describe('Parancspaletta', () => {
     expect(screen.getAllByRole('option')[1]).toHaveAttribute('aria-selected', 'true')
     await userEvent.keyboard('{Enter}')
 
-    expect(secondLabel).toContain('Mérkőzések')
-    expect(screen.getByTestId('where')).toHaveTextContent('/dashboard/merkozesek')
+    expect(secondLabel).toContain('Mai edzés')
+    expect(screen.getByTestId('where')).toHaveTextContent('/dashboard/mai-edzes')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 

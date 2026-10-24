@@ -14,8 +14,8 @@ const allItemIds = (groups) => groups.flatMap((g) => g.items.map((i) => i.id))
 const groupIds = (groups) => groups.map((g) => g.id)
 
 describe('NAV_GROUPS', () => {
-  it('has 12 items in 5 groups with the expected labels', () => {
-    expect(allItemIds(NAV_GROUPS)).toHaveLength(12)
+  it('has 14 items in 5 groups with the expected labels', () => {
+    expect(allItemIds(NAV_GROUPS)).toHaveLength(14)
     expect(NAV_GROUPS.map((g) => [g.id, g.label])).toEqual([
       ['overview', 'Áttekintés'],
       ['planning', 'Tervezés'],
@@ -53,6 +53,24 @@ describe('NAV_GROUPS', () => {
   })
 })
 
+describe('phase 2 nav items', () => {
+  it('finds the Mai edzés and Jelenlét pages by path', () => {
+    expect(findNavItemByPath('/dashboard/mai-edzes').id).toBe('today')
+    expect(findNavItemByPath('/dashboard/jelenlet').id).toBe('attendance')
+  })
+
+  it('shows Mai edzés right after Kezdőlap with calendar view', () => {
+    const result = filterNav(NAV_GROUPS, { calendar: 'view' }, false)
+    expect(result[0].items.map((i) => i.id)).toEqual(['home', 'today'])
+  })
+
+  it('hides Jelenlét without the attendance permission', () => {
+    const result = filterNav(NAV_GROUPS, { players: 'view' }, false)
+    expect(allItemIds(result)).not.toContain('attendance')
+    expect(allItemIds(filterNav(NAV_GROUPS, { attendance: 'view' }, false))).toContain('attendance')
+  })
+})
+
 describe('getNavForRole', () => {
   it.each(['coach', 'fitness_coach', 'physiotherapist', null])('returns the full nav for role %s', (role) => {
     expect(getNavForRole(role)).toEqual(NAV_GROUPS)
@@ -60,9 +78,9 @@ describe('getNavForRole', () => {
 })
 
 describe('filterNav', () => {
-  it('returns all 12 items while permissions are loading', () => {
+  it('returns all 14 items while permissions are loading', () => {
     const result = filterNav(NAV_GROUPS, {}, true)
-    expect(allItemIds(result)).toHaveLength(12)
+    expect(allItemIds(result)).toHaveLength(14)
     expect(groupIds(result)).toEqual(groupIds(NAV_GROUPS))
   })
 
