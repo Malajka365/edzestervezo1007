@@ -8,6 +8,26 @@ import { useTeams } from '../../../context/TeamContext'
 import { supabase } from '../../../lib/supabase'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 
+function useLastMatch(teamId, enabled) {
+  return useQuery({
+    queryKey: ['widget', 'last_match', teamId],
+    queryFn: async () => {
+      const now = new Date()
+      const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const { data, error } = await supabase
+        .from('matches')
+        .select('id, date, opponent, our_score, opponent_score')
+        .eq('team_id', teamId)
+        .lt('date', todayKey)
+        .order('date', { ascending: false })
+        .limit(1)
+      if (error) throw error
+      return data?.[0] || null
+    },
+    enabled: !!teamId && enabled,
+  })
+}
+
 function useNextMatch(teamId) {
   return useQuery({
     queryKey: ['widget', 'next_match', teamId],
@@ -40,9 +60,12 @@ const daysUntil = (dateStr) => {
   return Math.round((target - today) / (1000 * 60 * 60 * 24))
 }
 
-export default function NextMatchWidget() {
+export default function NextMatchWidget({ settings = {} }) {
   const { selectedTeam } = useTeams()
   const { data: match, isLoading, error } = useNextMatch(selectedTeam?.id)
+  const showLast = settings.last === 'yes'
+  const { data: last } = useLastMatch(selectedTeam?.id, showLast)
+  const hasScore = last && last.our_score != null && last.opponent_score != null
 
   return (
     <WidgetCard icon={Medal} title="Következő mérkőzés">
@@ -74,6 +97,11 @@ export default function NextMatchWidget() {
             {daysUntil(match.date) === 0 ? 'Ma!' : `${daysUntil(match.date)} nap múlva`}
           </p>
         </div>
+      )}
+      {showLast && hasScore && (
+        <p className="mt-2 truncate border-t border-line pt-2 text-[12.5px] text-muted">
+          Előző: <span className="font-semibold text-fg">{last.our_score}–{last.opponent_score}</span> vs {last.opponent}
+        </p>
       )}
     </WidgetCard>
   )

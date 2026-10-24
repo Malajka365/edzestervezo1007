@@ -1,11 +1,14 @@
 // src/pages/dashboard-home/widgets/UpcomingWeekWidget.jsx
 //
-// Widget: "Következő 7 nap" — training_sessions + matches (ma + 7 nap), időrendben.
+// Widget: "Következő napok" — edzések és mérkőzések időrendben.
+// Beállítás: days ('7' | '14'), types ('all' | 'match' | 'train').
 import { useQuery } from '@tanstack/react-query'
 import { CalendarDays, Dumbbell, Medal } from 'lucide-react'
 import WidgetCard from '../WidgetCard'
 import { useTeams } from '../../../context/TeamContext'
 import { supabase } from '../../../lib/supabase'
+import { todayIso } from '../../../lib/availability'
+import { filterAgendaByType } from '../../../lib/widgetData'
 import LoadingSpinner from '../../../components/LoadingSpinner'
 
 const TRAINING_TYPE_LABELS = {
@@ -16,40 +19,33 @@ const TRAINING_TYPE_LABELS = {
 }
 
 const formatShortDate = (dateStr) =>
-  new Date(dateStr).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric', weekday: 'short' })
+  new Date(`${dateStr}T12:00:00`).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric', weekday: 'short' })
 
-function useUpcomingWeek(teamId) {
+function useUpcoming(teamId, days) {
   return useQuery({
-    queryKey: ['widget', 'upcoming_week', teamId],
+    queryKey: ['widget', 'upcoming_week', teamId, days],
     queryFn: async () => {
-      // Lokális dátum-részekből képezzük a kulcsot — a toISOString() UTC-re vált,
-      // ami UTC+ zónában (Magyarország) az előző napra csúsztatná az ablakot.
-      const toKey = (d) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      const today = new Date()
-      const end = new Date(today)
-      end.setDate(end.getDate() + 7)
-
-      const startKey = toKey(today)
-      const endKey = toKey(end)
+      const start = todayIso()
+      const endDate = new Date()
+      endDate.setDate(endDate.getDate() + days)
+      const end = todayIso(endDate)
 
       const [sessionsRes, matchesRes] = await Promise.all([
         supabase
           .from('training_sessions')
           .select('id, date, start_time, type, location')
           .eq('team_id', teamId)
-          .gte('date', startKey)
-          .lt('date', endKey)
+          .gte('date', start)
+          .lt('date', end)
           .order('date', { ascending: true }),
         supabase
           .from('matches')
           .select('id, date, time, opponent')
           .eq('team_id', teamId)
-          .gte('date', startKey)
-          .lt('date', endKey)
+          .gte('date', start)
+          .lt('date', end)
           .order('date', { ascending: true }),
       ])
-
       if (sessionsRes.error) throw sessionsRes.error
       if (matchesRes.error) throw matchesRes.error
 
@@ -60,7 +56,6 @@ function useUpcomingWeek(teamId) {
         kind: 'session',
         title: TRAINING_TYPE_LABELS[s.type] || 'Edzés',
       }))
-
       const matchItems = (matchesRes.data || []).map((m) => ({
         id: `match-${m.id}`,
         date: m.date,
@@ -68,40 +63,38 @@ function useUpcomingWeek(teamId) {
         kind: 'match',
         title: `vs ${m.opponent || '(Ellenfél nincs megadva)'}`,
       }))
-
-      return [...sessionItems, ...matchItems]
-        .sort((a, b) => {
-          const dateCmp = a.date.localeCompare(b.date)
-          if (dateCmp !== 0) return dateCmp
-          return (a.time || '').localeCompare(b.time || '')
-        })
-        .slice(0, 6)
+      return [...sessionItems, ...matchItems].sort(
+        (a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || '')
+      )
     },
     enabled: !!teamId,
   })
 }
 
-export default function UpcomingWeekWidget() {
+export default function UpcomingWeekWidget({ settings = {}, size = { w: 2, h: 2 } }) {
   const { selectedTeam } = useTeams()
-  const { data: items, isLoading, error } = useUpcomingWeek(selectedTeam?.id)
+  const days = parseInt(settings.days || '7', 10)
+  const { data: items, isLoading, error } = useUpcoming(selectedTeam?.id, days)
+  const shown = filterAgendaByType(items || [], settings.types || 'all').slice(0, size.h >= 2 ? 12 : 5)
 
   return (
-    <WidgetCard icon={CalendarDays} title="Következő 7 nap">
+    <WidgetCard icon={CalendarDays} title="Következő napok">
       {isLoading ? (
         <LoadingSpinner size="xs" />
       ) : error ? (
         <p className="text-sm text-bad">Nem sikerült betölteni</p>
-      ) : !items || items.length === 0 ? (
-        <p className="text-sm text-muted">Nincs esemény a következő 7 napban.</p>
+      ) : shown.length === 0 ? (
+        <p className="text-sm text-muted">Nincs esemény a következő {days} napban.</p>
       ) : (
         <ul className="space-y-2">
-          {items.map((item) => {
+          {shown.map((item) => {
             const Icon = item.kind === 'match' ? Medal : Dumbbell
             return (
               <li key={item.id} className="flex items-center gap-2 text-sm">
-                <Icon className="w-4 h-4 text-muted flex-shrink-0" />
-                <span className="text-muted flex-shrink-0">{formatShortDate(item.date)}</span>
-                <span className="text-fg truncate">{item.title}</span>
+                <Icon className="h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />
+                <span className="flex-shrink-0 text-muted">{formatShortDate(item.date)}</span>
+                {item.time && <span className="flex-shrink-0 font-mono text-[12px] text-muted">{item.time.slice(0, 5)}</span>}
+                <span className="truncate text-fg">{item.title}</span>
               </li>
             )
           })}

@@ -109,7 +109,7 @@ export const WIDGET_CATALOG = {
     description: 'A csapat legjobbjai egy választott mutatóban.',
     defaultSize: [1, 2], minSize: [1, 1], allowMultiple: true,
     settings: [
-      { key: 'metric', label: 'Mutató', options: [['rel', 'Relatív erő (guggolás)'], ['sq', 'Guggolás 1RM'], ['att', 'Jelenlét']] },
+      { key: 'metric', label: 'Mutató', options: [['rel', 'Relatív erő (1RM / testsúly)'], ['orm', 'Legjobb 1RM'], ['att', 'Jelenlét (szezon)']] },
       { key: 'n', label: 'Hány fő', options: [['3', 'Top 3'], ['5', 'Top 5'], ['all', 'Mindenki']] },
     ],
     defaultSettings: { metric: 'rel', n: '3' },
