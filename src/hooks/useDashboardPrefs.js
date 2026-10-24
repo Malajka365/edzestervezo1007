@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { toStored } from '../lib/dashboardLayout'
 
 /**
  * A bejelentkezett felhasználó dashboard widget-beállításai az adott csapatra.
@@ -7,7 +8,7 @@ import { supabase } from '../lib/supabase'
  * A `user_dashboard_prefs` táblából (PK: user_id, team_id) tölti be a sort
  * `maybeSingle`-lel (nincs sor => null). A `prefs` a `widgets` tömb
  * (`[{key, visible}, ...]`) vagy null, ha még nincs mentett beállítás — ilyenkor
- * a hívó szerepkör-alapú defaultra esik vissza (getDefaultWidgets).
+ * a Kezdőlap a szerepkör alap-elrendezésére esik vissza (dashboardLayout.normalizeLayout).
  *
  * A `savePrefs(widgets)` upsert-el ment (onConflict 'user_id,team_id'), majd
  * invalidálja a lekérdezést, hogy a friss sor újratöltődjön.
@@ -41,7 +42,7 @@ export function useDashboardPrefs(userId, teamId) {
       const { error } = await supabase
         .from('user_dashboard_prefs')
         .upsert(
-          { user_id: userId, team_id: teamId, widgets, updated_at: new Date().toISOString() },
+          { user_id: userId, team_id: teamId, widgets: toStored(widgets), updated_at: new Date().toISOString() },
           { onConflict: 'user_id,team_id' }
         )
 
