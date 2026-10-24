@@ -15,7 +15,7 @@ import { toStored } from '../lib/dashboardLayout'
  *
  * @param {string|undefined} userId - a bejelentkezett felhasználó id-ja.
  * @param {string|undefined} teamId - a kiválasztott csapat id-ja.
- * @returns {{ prefs: Array|null, loading: boolean, savePrefs: (widgets:Array)=>Promise }}
+ * @returns {{ prefs: Array|null, loading: boolean, savePrefs: (widgets:Array, teamId?:string)=>Promise }}
  */
 export function useDashboardPrefs(userId, teamId) {
   const queryClient = useQueryClient()
@@ -38,24 +38,26 @@ export function useDashboardPrefs(userId, teamId) {
   })
 
   const mutation = useMutation({
-    mutationFn: async (widgets) => {
+    mutationFn: async ({ widgets, teamId: targetTeamId }) => {
       const { error } = await supabase
         .from('user_dashboard_prefs')
         .upsert(
-          { user_id: userId, team_id: teamId, widgets: toStored(widgets), updated_at: new Date().toISOString() },
+          { user_id: userId, team_id: targetTeamId, widgets: toStored(widgets), updated_at: new Date().toISOString() },
           { onConflict: 'user_id,team_id' }
         )
 
       if (error) throw error
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard_prefs', userId, teamId] })
+    onSuccess: (_data, { teamId: targetTeamId }) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard_prefs', userId, targetTeamId] })
     },
   })
 
   return {
     prefs: data ?? null,
     loading: isLoading,
-    savePrefs: mutation.mutateAsync,
+    // A csapat a mentés ütemezésekor rögzül: egy késleltetett mentés csapatváltás
+    // után is a régi csapathoz kerül.
+    savePrefs: (widgets, targetTeamId = teamId) => mutation.mutateAsync({ widgets, teamId: targetTeamId }),
   }
 }

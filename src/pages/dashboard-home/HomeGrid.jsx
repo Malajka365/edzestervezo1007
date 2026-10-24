@@ -5,7 +5,7 @@ import WidgetFrame from './WidgetFrame'
 
 // A Kezdőlap rácsa: 1 oszlop telefonon, 2 tableten, 4 asztalon. A sorrend a
 // tárolt tömb sorrendje; asztalon a "sűrű" kitöltés pakolja be a réseket.
-export default function HomeGrid({ items, components, editing, onChange, onOpenSettings, onResizeEnd }) {
+export default function HomeGrid({ items, components, editing, onChange, onItemSettings, onOpenSettings, onResizeEnd }) {
   const gridRef = useRef(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -50,6 +50,7 @@ export default function HomeGrid({ items, components, editing, onChange, onOpenS
               onResize={(id, w, h) => update(id, { w, h })}
               onResizeEnd={onResizeEnd}
               onSettingsChange={(id, patch) => {
+                if (onItemSettings) return onItemSettings(id, patch)
                 const current = items.find((i) => i.id === id)
                 update(id, { settings: { ...current.settings, ...patch } })
               }}

@@ -55,6 +55,17 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
+describe('Jegyzet widget mentése', () => {
+  it('az oldal elhagyásakor a még nem mentett szöveget elmenti', () => {
+    const onSettingsChange = vi.fn()
+    const Note = WIDGET_COMPONENTS.note
+    const { unmount } = wrap(<Note settings={{}} onSettingsChange={onSettingsChange} />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Jegyzet' }), { target: { value: 'holnap videó' } })
+    unmount()
+    expect(onSettingsChange).toHaveBeenCalledWith({ text: 'holnap videó' })
+  })
+})
+
 describe('Új Kezdőlap-widgetek', () => {
   it('minden új típusnak van komponense', () => {
     for (const t of ['today_session', 'availability', 'todos', 'measurement_trend', 'measurement_coverage', 'weekly_load', 'favorite_exercises', 'note']) {

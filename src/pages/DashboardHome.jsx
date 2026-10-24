@@ -28,28 +28,70 @@ export default function DashboardHome() {
   const [editing, setEditing] = useState(false)
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [settingsId, setSettingsId] = useState(null)
+  const teamId = selectedTeam?.id
+  const itemsRef = useRef(null)
   const saveTimer = useRef(null)
+  const pendingSave = useRef(null) // { items, teamId } — még ki nem írt változás
+  const mounted = useRef(false)
   const loading = permissionsLoading || prefsLoading
 
   // Csapatváltáskor / betöltéskor a mentett (vagy alap) elrendezés.
   useEffect(() => {
     if (loading) return
-    setItems(normalizeLayout(prefs, currentUserRole, currentUserPermissions))
+    const next = normalizeLayout(prefs, currentUserRole, currentUserPermissions)
+    itemsRef.current = next
+    setItems(next)
     // A prefs a csapattal együtt változik; a szerkesztés közbeni mentések nem írják felül.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, selectedTeam?.id])
+  }, [loading, teamId])
 
-  useEffect(() => () => clearTimeout(saveTimer.current), [])
+  // A függő mentést nem dobjuk el: csapatváltáskor, az oldal elhagyásakor és
+  // böngészőzáráskor azonnal kiírjuk (a mentés csapata az ütemezéskori).
+  const flushSave = () => {
+    clearTimeout(saveTimer.current)
+    const pending = pendingSave.current
+    pendingSave.current = null
+    if (pending) savePrefs(pending.items, pending.teamId)
+  }
+  const flushRef = useRef(flushSave)
+  flushRef.current = flushSave
+
+  useEffect(() => () => flushRef.current(), [teamId])
+  useEffect(() => {
+    mounted.current = true
+    const onUnload = () => flushRef.current()
+    window.addEventListener('beforeunload', onUnload)
+    return () => {
+      mounted.current = false
+      window.removeEventListener('beforeunload', onUnload)
+      flushRef.current()
+    }
+  }, [])
 
   const persist = (next) => {
+    pendingSave.current = { items: next, teamId }
     clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => savePrefs(next), SAVE_DELAY_MS)
+    if (mounted.current) saveTimer.current = setTimeout(() => flushRef.current(), SAVE_DELAY_MS)
+    else flushSave()
   }
 
-  const change = (next) => {
+  // A változás mindig a legfrissebb elrendezésből számol (a widgetek késleltetett
+  // mentései régebbi renderből hívhatnak), így nem írják felül egymást.
+  const change = (nextOrUpdater) => {
+    const prev = itemsRef.current || []
+    const next = typeof nextOrUpdater === 'function' ? nextOrUpdater(prev) : nextOrUpdater
+    if (next === prev) return
+    itemsRef.current = next
     setItems(next)
     persist(next)
   }
+
+  const changeItemSettings = (id, patch) =>
+    change((prev) =>
+      prev.some((i) => i.id === id)
+        ? prev.map((i) => (i.id === id ? { ...i, settings: { ...i.settings, ...patch } } : i))
+        : prev
+    )
 
   const shown = useMemo(() => visibleItems(items || [], currentUserPermissions), [items, currentUserPermissions])
 
@@ -115,6 +157,7 @@ export default function DashboardHome() {
           components={WIDGET_COMPONENTS}
           editing={editing}
           onChange={changeShown}
+          onItemSettings={changeItemSettings}
           onOpenSettings={setSettingsId}
         />
       )}
@@ -124,13 +167,13 @@ export default function DashboardHome() {
         onClose={() => setCatalogOpen(false)}
         items={items || []}
         permissions={currentUserPermissions}
-        onAdd={(type) => change(addItem(items || [], type))}
+        onAdd={(type) => change((prev) => addItem(prev, type))}
       />
       <WidgetSettings
         item={settingsItem}
         teamId={selectedTeam?.id}
         onClose={() => setSettingsId(null)}
-        onChange={(patch) => change(items.map((i) => (i.id === settingsId ? { ...i, ...patch } : i)))}
+        onChange={(patch) => change((prev) => prev.map((i) => (i.id === settingsId ? { ...i, ...patch } : i)))}
       />
     </div>
   )

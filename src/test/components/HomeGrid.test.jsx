@@ -5,22 +5,34 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import TeamTestProvider from '@/test/TeamTestProvider'
 
 // A widget-komponenseket egyszerű dobozokra cseréljük (nincs Supabase).
-vi.mock('@/lib/dashboardWidgets', () => {
+// A Jegyzet-mock az első renderkori onSettingsChange-et hívja (mint egy
+// késleltetett mentés), így látszik, ha egy elavult callback felülírna.
+vi.mock('@/lib/dashboardWidgets', async () => {
+  const { useRef } = await import('react')
   const make = (type) => {
     const C = ({ settings }) => <div data-testid={`body-${type}`}>{JSON.stringify(settings)}</div>
     return C
   }
-  const types = ['today_session', 'availability', 'next_match', 'todos', 'upcoming_week', 'weekly_attendance', 'season_progress', 'quick_actions', 'note', 'rehab_status']
-  return { WIDGET_COMPONENTS: Object.fromEntries(types.map((t) => [t, make(t)])) }
+  const Note = ({ settings, onSettingsChange }) => {
+    const first = useRef(onSettingsChange)
+    return (
+      <button type="button" onClick={() => first.current({ text: `${settings.label}!` })}>
+        {`jegyzet ${settings.label}`}
+      </button>
+    )
+  }
+  const types = ['today_session', 'availability', 'next_match', 'todos', 'upcoming_week', 'weekly_attendance', 'season_progress', 'quick_actions', 'rehab_status']
+  return { WIDGET_COMPONENTS: { ...Object.fromEntries(types.map((t) => [t, make(t)])), note: Note } }
 })
 
-const prefsState = vi.hoisted(() => ({ prefs: null, saved: [] }))
+const prefsState = vi.hoisted(() => ({ prefs: null, saved: [], savedTeams: [] }))
 vi.mock('@/hooks/useDashboardPrefs', () => ({
   useDashboardPrefs: () => ({
     prefs: prefsState.prefs,
     loading: false,
-    savePrefs: async (items) => {
+    savePrefs: async (items, teamId) => {
       prefsState.saved.push(items)
+      prefsState.savedTeams.push(teamId)
     },
   }),
 }))
@@ -34,12 +46,12 @@ const ALL = {
   matches: 'edit', measurement: 'edit', stats: 'view', rehab: 'edit', attendance: 'edit',
 }
 const TEAM = { id: 't1', name: 'Felnőtt' }
+const TEAM2 = { id: 't2', name: 'U19' }
 
-function renderHome(perms = ALL) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+function homeTree(perms, team, client) {
+  return (
     <QueryClientProvider client={client}>
-      <TeamTestProvider value={{ teams: [TEAM], selectedTeam: TEAM, currentUserRole: 'coach', currentUserPermissions: perms }}>
+      <TeamTestProvider value={{ teams: [TEAM, TEAM2], selectedTeam: team, currentUserRole: 'coach', currentUserPermissions: perms }}>
         <MemoryRouter>
           <Routes>
             <Route element={<Outlet context={{ session: { user: { id: 'u1' } } }} />}>
@@ -50,6 +62,12 @@ function renderHome(perms = ALL) {
       </TeamTestProvider>
     </QueryClientProvider>
   )
+}
+
+function renderHome(perms = ALL, team = TEAM) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const result = render(homeTree(perms, team, client))
+  return { ...result, switchTeam: (next) => result.rerender(homeTree(perms, next, client)) }
 }
 
 const widgetTitles = () => screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))
@@ -63,6 +81,7 @@ const flushSave = async () => {
 beforeEach(() => {
   prefsState.prefs = null
   prefsState.saved = []
+  prefsState.savedTeams = []
   vi.useFakeTimers({ shouldAdvanceTime: true })
 })
 afterEach(() => vi.useRealTimers())
@@ -86,6 +105,38 @@ describe('Kezdőlap rács', () => {
     await flushSave()
     expect(lastSaved().map((i) => i.type)).not.toContain('season_progress')
     expect(lastSaved()[0]).toMatchObject({ id: 'today_session', type: 'today_session', w: 2, h: 2 })
+  })
+
+  it('a mentés nem vész el, ha a késleltetés alatt elhagyják az oldalt', () => {
+    const { unmount } = renderHome()
+    fireEvent.click(screen.getByRole('button', { name: 'Szerkesztés' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Szezon eltávolítása' }))
+    unmount()
+    expect(lastSaved().map((i) => i.type)).not.toContain('season_progress')
+    expect(prefsState.savedTeams.at(-1)).toBe('t1')
+  })
+
+  it('csapatváltáskor a függő mentés a régi csapathoz kerül', async () => {
+    const { switchTeam } = renderHome()
+    fireEvent.click(screen.getByRole('button', { name: 'Szerkesztés' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Szezon eltávolítása' }))
+    switchTeam(TEAM2)
+    await flushSave()
+    expect(prefsState.saved).toHaveLength(1)
+    expect(prefsState.savedTeams).toEqual(['t1'])
+    expect(lastSaved().map((i) => i.type)).not.toContain('season_progress')
+  })
+
+  it('két widget egymás utáni beállítás-mentése nem írja felül egymást', async () => {
+    prefsState.prefs = [
+      { id: 'a', type: 'note', w: 1, h: 1, settings: { label: 'A' } },
+      { id: 'b', type: 'note', w: 1, h: 1, settings: { label: 'B' } },
+    ]
+    renderHome()
+    fireEvent.click(screen.getByRole('button', { name: 'jegyzet A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'jegyzet B' }))
+    await flushSave()
+    expect(lastSaved().map((i) => i.settings.text)).toEqual(['A!', 'B!'])
   })
 
   it('a Lejjebb gomb eggyel hátrébb viszi a widgetet', async () => {
