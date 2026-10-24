@@ -39,7 +39,7 @@ import QuickActionsWidget from '../pages/dashboard-home/widgets/QuickActionsWidg
 export const DASHBOARD_WIDGETS = [
   { key: 'upcoming_week', name: 'Következő 7 nap', icon: CalendarDays, module_key: 'calendar', component: UpcomingWeekWidget },
   { key: 'next_match', name: 'Következő mérkőzés', icon: Medal, module_key: 'matches', component: NextMatchWidget },
-  { key: 'weekly_attendance', name: 'Heti jelenlét', icon: UserCheck, module_key: 'rehab', component: WeeklyAttendanceWidget },
+  { key: 'weekly_attendance', name: 'Heti jelenlét', icon: UserCheck, module_key: 'attendance', component: WeeklyAttendanceWidget },
   { key: 'rehab_status', name: 'Rehab-státusz', icon: Heart, module_key: 'rehab', component: RehabStatusWidget },
   { key: 'recent_measurements', name: 'Friss mérések', icon: BarChart3, module_key: 'measurement', component: RecentMeasurementsWidget },
   { key: 'leaderboard_top3', name: 'Ranglista top 3', icon: Trophy, module_key: 'stats', component: LeaderboardTop3Widget },
@@ -93,3 +93,8 @@ export function getDefaultWidgets(role, permissions) {
 export function filterAllowedWidgets(permissions) {
   return DASHBOARD_WIDGETS.filter((w) => isModuleVisible(permissions, w.module_key))
 }
+
+// Típus -> React-komponens (az új, widgetCatalog-alapú Kezdőlaphoz). Az új
+// widget-típusok komponensei a 2. szakasz későbbi lépéseiben kerülnek ide;
+// amelyiknek még nincs, azt a Kezdőlap "Hamarosan" helyőrzővel mutatja.
+export const WIDGET_COMPONENTS = Object.fromEntries(DASHBOARD_WIDGETS.map((w) => [w.key, w.component]))
