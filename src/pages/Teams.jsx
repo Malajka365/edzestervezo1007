@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import AvailabilityPill from '../components/availability/AvailabilityPill'
+import { useAvailability } from '../hooks/useAvailability'
+import { availabilityOf } from '../lib/availability'
 import { useTeams } from '../context/TeamContext'
 import { supabase } from '../lib/supabase'
 import { usePlayers } from '../hooks/usePlayers'
@@ -97,6 +100,7 @@ function TeamMenu({ isOwner, onEdit, onDelete }) {
 
 export default function Teams() {
   const { teams, selectedTeam, updateTeam, deleteTeam, isTeamOwner, currentUserPermissions } = useTeams()
+  const { byPlayer } = useAvailability(selectedTeam?.id)
   const canEditPlayers = canEditModule(currentUserPermissions, 'players')
   const queryClient = useQueryClient()
   // Players now come from the shared, cached usePlayers query. Mutations below
@@ -268,6 +272,7 @@ export default function Teams() {
       <PlayerProfile
         player={selectedPlayer}
         onBack={() => setSelectedPlayer(null)}
+        availabilityStatus={availabilityOf(byPlayer, selectedPlayer.id).status}
       />
     )
   }
@@ -375,6 +380,9 @@ export default function Teams() {
                         {player.position && (
                           <p className="truncate text-sm text-muted">{player.position}</p>
                         )}
+                        <div className="mt-1.5">
+                          <AvailabilityPill status={availabilityOf(byPlayer, player.id).status} />
+                        </div>
                       </div>
                       {player.jersey_number && (
                         <span className="ml-2 font-mono text-2xl font-medium text-accent">

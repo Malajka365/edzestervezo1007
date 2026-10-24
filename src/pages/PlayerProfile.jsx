@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useExercises } from '../hooks/useExercises'
 import { useThemeColors } from '../hooks/useThemeColors'
+import AvailabilityPill from '../components/availability/AvailabilityPill'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
@@ -32,7 +33,8 @@ import {
   ReferenceDot,
 } from 'recharts'
 
-export default function PlayerProfile({ player, onBack }) {
+// `availabilityStatus`: a játékos aktuális elérhetősége (a Játékosok oldal adja át).
+export default function PlayerProfile({ player, onBack, availabilityStatus }) {
   // Recharts-ban nem használható Tailwind osztály: a témaszíneket a tokenekből olvassuk.
   // A tartalék értékek csak olyan környezetben számítanak, ahol nincs betöltött téma (pl. jsdom).
   const themeColors = useThemeColors()
@@ -294,9 +296,12 @@ export default function PlayerProfile({ player, onBack }) {
       title={player.name}
       description={player.position || undefined}
       actions={
+        <>
+        {availabilityStatus && <AvailabilityPill status={availabilityStatus} />}
         <Button variant="ghost" icon={ArrowLeft} onClick={onBack}>
           Vissza a játékosokhoz
         </Button>
+        </>
       }
     />
   )

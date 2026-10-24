@@ -5,6 +5,10 @@ import { usePlayers } from '../hooks/usePlayers'
 import { canEditModule } from '../lib/permissions'
 import PlayerProfileRehab from './PlayerProfileRehab'
 import TeamAttendanceCalendar from '../components/TeamAttendanceCalendar'
+import AvailabilityPill from '../components/availability/AvailabilityPill'
+import AvailabilityEditor from '../components/availability/AvailabilityEditor'
+import { useAvailability } from '../hooks/useAvailability'
+import { availabilityOf } from '../lib/availability'
 import {
   Users,
   Search,
@@ -31,6 +35,8 @@ export default function Rehabilitation() {
   const { data: players = [], isLoading: loading } = usePlayers(selectedTeam?.id)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPlayer, setSelectedPlayer] = useState(null)
+  const [statusPlayer, setStatusPlayer] = useState(null)
+  const { byPlayer } = useAvailability(selectedTeam?.id)
   const [activeTab, setActiveTab] = useState('overview')
   const [playerActiveTab, setPlayerActiveTab] = useState('overview')
   const [stats, setStats] = useState({
@@ -193,13 +199,15 @@ export default function Rehabilitation() {
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredPlayers.map((player) => (
-                  <button
+                  <div
                     key={player.id}
-                    type="button"
-                    onClick={() => setSelectedPlayer(player)}
-                    className="rounded-[12px] border border-line bg-surface-2 p-4 text-left transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="rounded-[12px] border border-line bg-surface-2 p-4 transition-colors hover:border-accent"
                   >
-                    <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlayer(player)}
+                      className="flex w-full items-center gap-4 rounded-[10px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
                       <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-accent-soft text-xl font-bold text-accent">
                         {player.name.charAt(0)}
                       </div>
@@ -210,8 +218,22 @@ export default function Rehabilitation() {
                           {player.position && <span>{player.position}</span>}
                         </div>
                       </div>
+                    </button>
+                    <div className="mt-3 flex items-center gap-2">
+                      <AvailabilityPill status={availabilityOf(byPlayer, player.id).status} />
+                      {canEdit && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="ml-auto"
+                          aria-label={`${player.name} státusza`}
+                          onClick={() => setStatusPlayer(player)}
+                        >
+                          Státusz
+                        </Button>
+                      )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -220,6 +242,13 @@ export default function Rehabilitation() {
       ) : activeTab === 'attendance' ? (
         <TeamAttendanceCalendar teamId={selectedTeam.id} canEdit={canEdit} />
       ) : null}
+
+      <AvailabilityEditor
+        open={!!statusPlayer}
+        onClose={() => setStatusPlayer(null)}
+        player={statusPlayer}
+        teamId={selectedTeam?.id}
+      />
     </div>
   )
 }
