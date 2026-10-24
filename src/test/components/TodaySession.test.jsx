@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import TeamTestProvider from '@/test/TeamTestProvider'
 
 // Táblánként válaszoló Supabase-mock; az insert/update hívásokat rögzítjük.
-const db = vi.hoisted(() => ({ tables: {}, inserts: [], updates: [] }))
+const db = vi.hoisted(() => ({ tables: {}, inserts: [], updates: [], failUpdate: false, nextId: 1 }))
 vi.mock('@/lib/supabase', () => {
   function query(table) {
     const filters = []
@@ -21,12 +21,14 @@ vi.mock('@/lib/supabase', () => {
       single: () => q.maybeSingle(),
       insert: (payload) => {
         db.inserts.push({ table, payload })
+        for (const r of payload) (db.tables[table] ||= []).push({ id: `new${db.nextId++}`, ...r })
         return { then: (res) => res({ data: null, error: null }) }
       },
       update: (patch) => {
         const u = { table, patch, id: null }
         db.updates.push(u)
-        return { eq: (_c, id) => ((u.id = id), { then: (res) => res({ data: null, error: null }) }) }
+        const error = db.failUpdate ? { message: 'network' } : null
+        return { eq: (_c, id) => ((u.id = id), { then: (res) => res({ data: null, error }) }) }
       },
       then: (res) => res({ data: (db.tables[table] || []).filter((r) => filters.every((f) => f(r))), error: null }),
     }
@@ -75,6 +77,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-10-24T10:00:00'))
   db.inserts = []
   db.updates = []
+  db.failUpdate = false
   db.tables = {
     training_sessions: [GYM],
     player_attendance: [],
@@ -120,6 +123,44 @@ describe('Mai edzés oldal', () => {
     renderPage({ path: '/dashboard/mai-edzes?session=s9' })
     expect(await screen.findByText(/Műfüves pálya/)).toBeInTheDocument()
     expect(screen.getByText('Ehhez az edzéshez nincs terv.')).toBeInTheDocument()
+  })
+
+  it('?session= mellett is látszanak a mai edzések fülei, és fülváltás után is megmaradnak', async () => {
+    const BALL = { ...GYM, id: 's3', start_time: '09:00:00', location: 'Kézilabda-csarnok', type: 'ball', session_data: {} }
+    db.tables.training_sessions = [GYM, BALL]
+    renderPage({ path: '/dashboard/mai-edzes?session=s1' })
+    expect(await screen.findByText(/Sportcsarnok B/)).toBeInTheDocument()
+    const tab = await screen.findByRole('tab', { name: /09:00/ })
+    fireEvent.click(tab)
+    expect(await screen.findByText(/Kézilabda-csarnok/)).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /17:30/ })).toBeInTheDocument()
+  })
+
+  it('más csapat edzését a ?session= nem nyitja meg', async () => {
+    db.tables.training_sessions = [GYM, { ...GYM, id: 'x1', team_id: 't2', location: 'Idegen csarnok' }]
+    renderPage({ path: '/dashboard/mai-edzes?session=x1' })
+    expect(await screen.findByText(/Sportcsarnok B/)).toBeInTheDocument()
+    expect(screen.queryByText(/Idegen csarnok/)).not.toBeInTheDocument()
+  })
+
+  it('részleges hiba után az újramentés nem szúrja be újra a már mentett sorokat', async () => {
+    db.tables.player_attendance = [
+      { id: 'r2', team_id: 't1', player_id: 'p2', date: '2026-10-24', status: 'sérült', notes: null, training_session_id: 's1' },
+    ]
+    db.failUpdate = true
+    renderPage()
+    await screen.findByText('Guggolás')
+    fireEvent.click(within(statusGroup('Nagy Ádám')).getByRole('button', { name: 'Jelen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Jelenlét mentése' }))
+    await waitFor(() => expect(db.updates).toHaveLength(1))
+    expect(db.inserts).toHaveLength(1)
+
+    db.failUpdate = false
+    await waitFor(() => expect(within(statusGroup('Nagy Ádám')).getByRole('button', { name: 'Sérült' })).toHaveAttribute('aria-pressed', 'true'))
+    fireEvent.click(within(statusGroup('Nagy Ádám')).getByRole('button', { name: 'Jelen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Jelenlét mentése' }))
+    await waitFor(() => expect(db.updates).toHaveLength(2))
+    expect(db.inserts).toHaveLength(1)
   })
 
   it('jelenlét-szerkesztési jog nélkül nincs mentés', async () => {

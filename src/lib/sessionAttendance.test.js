@@ -80,6 +80,25 @@ describe('resolveRoster', () => {
     expect(rows[0]).toMatchObject({ rowId: 'match', adopt: true, status: 'hiányzik' })
     expect(rows[1]).toMatchObject({ rowId: null, adopt: false, status: 'jelen' })
   })
+
+  it('does not adopt unlinked rows of other event types (match, medical, recovery)', () => {
+    const day = [
+      { id: 'm', player_id: 'p1', status: 'jelen', training_type: 'mérkőzés', event_time: null, training_session_id: null },
+      { id: 'o', player_id: 'p2', status: 'beteg', training_type: 'orvosi', event_time: null, training_session_id: null },
+    ]
+    const { rows, recorded } = resolveRoster({ session, players: PLAYERS, linkedRows: [], dayRows: day, sessionsThatDay: [session], availabilityByPlayer: new Map() })
+    expect(recorded).toBe(false)
+    expect(rows.map((r) => r.rowId)).toEqual([null, null])
+  })
+
+  it('adopts unlinked rows whose type is edzés or unset', () => {
+    const day = [
+      { id: 'e', player_id: 'p1', status: 'hiányzik', training_type: 'edzés', event_time: null, training_session_id: null },
+      { id: 'n', player_id: 'p2', status: 'beteg', training_type: null, event_time: null, training_session_id: null },
+    ]
+    const { rows } = resolveRoster({ session, players: PLAYERS, linkedRows: [], dayRows: day, sessionsThatDay: [session], availabilityByPlayer: new Map() })
+    expect(rows.map((r) => r.rowId)).toEqual(['e', 'n'])
+  })
 })
 
 describe('buildAttendanceWrites', () => {
@@ -103,6 +122,26 @@ describe('buildAttendanceWrites', () => {
       },
     ])
     expect(updates).toEqual([{ id: 'old', patch: { status: 'beteg', notes: 'láz', training_session_id: 's1' } }])
+  })
+
+  it('skips linked rows the user did not change, so others\' edits are not overwritten', () => {
+    const session = S('s1', '2026-10-24', '17:30:00')
+    const linked = [
+      { id: 'r1', player_id: 'p1', status: 'hiányzik', notes: 'x', training_session_id: 's1' },
+      { id: 'r2', player_id: 'p2', status: 'jelen', notes: null, training_session_id: 's1' },
+    ]
+    const { rows } = resolveRoster({ session, players: PLAYERS, linkedRows: linked, dayRows: [], sessionsThatDay: [session], availabilityByPlayer: new Map() })
+    const edited = rows.map((r) => (r.player.id === 'p2' ? { ...r, status: 'késett' } : r))
+    const { inserts, updates } = buildAttendanceWrites(session, edited, 't1')
+    expect(inserts).toEqual([])
+    expect(updates).toEqual([{ id: 'r2', patch: { status: 'késett', notes: null, training_session_id: 's1' } }])
+  })
+
+  it('still updates an adopted row even when unchanged, to link it to the session', () => {
+    const session = S('s1', '2026-10-24', '17:30:00')
+    const day = [{ id: 'old', player_id: 'p1', status: 'jelen', notes: null, event_time: null, training_session_id: null }]
+    const { rows } = resolveRoster({ session, players: [PLAYERS[0]], linkedRows: [], dayRows: day, sessionsThatDay: [session], availabilityByPlayer: new Map() })
+    expect(buildAttendanceWrites(session, rows, 't1').updates).toEqual([{ id: 'old', patch: { status: 'jelen', notes: null, training_session_id: 's1' } }])
   })
 })
 

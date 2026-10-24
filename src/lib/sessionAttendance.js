@@ -25,8 +25,10 @@ export function pickSession(sessions, today) {
 }
 
 // linkedRows: az edzéshez kötött sorok; dayRows: a csapat aznapi kötetlen sorai.
-// Kötetlen sort akkor veszünk át, ha aznap ez az egyetlen edzés, vagy a sor
-// időpontja egyezik az edzés kezdésével.
+// Kötetlen edzés-sort (típusa 'edzés' vagy üres; meccs, orvosi stb. soha) akkor
+// veszünk át, ha aznap ez az egyetlen edzés, vagy a sor időpontja egyezik az
+// edzés kezdésével. A mentett sorok `saved` mezője a betöltött állapot: mentéskor
+// csak a megváltozott sorok íródnak vissza.
 export function resolveRoster({ session, players, linkedRows = [], dayRows = [], sessionsThatDay = [], availabilityByPlayer }) {
   const linked = new Map(linkedRows.map((r) => [r.player_id, r]))
   const onlySession = sessionsThatDay.length <= 1
@@ -34,6 +36,7 @@ export function resolveRoster({ session, players, linkedRows = [], dayRows = [],
   const adoptable = new Map()
   for (const r of dayRows) {
     if (r.training_session_id) continue
+    if (r.training_type && r.training_type !== 'edzés') continue
     if (onlySession || (start && hhmm(r.event_time) === start)) {
       if (!adoptable.has(r.player_id)) adoptable.set(r.player_id, r)
     }
@@ -44,7 +47,7 @@ export function resolveRoster({ session, players, linkedRows = [], dayRows = [],
     const own = linked.get(player.id)
     if (own) {
       recorded = true
-      return { player, status: own.status, notes: own.notes ?? '', rowId: own.id, adopt: false }
+      return { player, status: own.status, notes: own.notes ?? '', rowId: own.id, adopt: false, saved: { status: own.status, notes: own.notes ?? null } }
     }
     const old = adoptable.get(player.id)
     if (old) {
@@ -63,6 +66,7 @@ export function buildAttendanceWrites(session, rows, teamId) {
   for (const r of rows) {
     const notes = r.notes?.trim() ? r.notes.trim() : null
     if (r.rowId) {
+      if (!r.adopt && r.saved && r.saved.status === r.status && r.saved.notes === notes) continue
       updates.push({ id: r.rowId, patch: { status: r.status, notes, training_session_id: session.id } })
     } else {
       inserts.push({

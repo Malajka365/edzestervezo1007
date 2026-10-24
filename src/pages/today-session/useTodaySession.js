@@ -28,22 +28,29 @@ export function useTodaySession(teamId, sessionIdParam) {
     enabled: !!teamId,
   })
 
+  // A ?session= csak a kiválasztott csapat edzését nyithatja meg; idegen vagy
+  // nem létező azonosítónál az automatikus választás marad.
   const explicit = useQuery({
-    queryKey: ['training_session', sessionIdParam],
+    queryKey: ['training_session', teamId, sessionIdParam],
     queryFn: async () => {
-      const { data, error } = await supabase.from('training_sessions').select('*').eq('id', sessionIdParam).maybeSingle()
+      const { data, error } = await supabase
+        .from('training_sessions')
+        .select('*')
+        .eq('id', sessionIdParam)
+        .eq('team_id', teamId)
+        .maybeSingle()
       if (error) throw error
       return data
     },
-    enabled: !!sessionIdParam,
+    enabled: !!teamId && !!sessionIdParam,
   })
 
   const pick = useMemo(() => {
-    if (sessionIdParam) {
-      const s = explicit.data
-      return { mode: s ? (s.date === today ? 'today' : s.date > today ? 'next' : 'past') : 'none', session: s ?? null, todays: [] }
-    }
-    return pickSession(upcoming.data || [], today)
+    const auto = pickSession(upcoming.data || [], today)
+    const s = sessionIdParam ? explicit.data : null
+    if (!s) return auto
+    const mode = s.date === today ? 'today' : s.date > today ? 'next' : 'past'
+    return { mode, session: s, todays: mode === 'today' ? auto.todays : [] }
   }, [sessionIdParam, explicit.data, upcoming.data, today])
 
   const session = pick.session
@@ -86,24 +93,32 @@ export function useTodaySession(teamId, sessionIdParam) {
     })
   }, [session, players, day.data, byPlayer])
 
+  // Részleges hiba (pl. a beszúrás sikerült, egy frissítés nem) után is
+  // újratöltjük a napot, hogy a következő mentés ne szúrja be újra a sorokat.
   const saveAttendance = async (rows) => {
     const { inserts, updates } = buildAttendanceWrites(session, rows, teamId)
-    if (inserts.length) {
-      const { error } = await supabase.from('player_attendance').insert(inserts)
-      if (error) throw error
+    try {
+      if (inserts.length) {
+        const { error } = await supabase.from('player_attendance').insert(inserts)
+        if (error) throw error
+      }
+      for (const { id, patch } of updates) {
+        const { error } = await supabase.from('player_attendance').update(patch).eq('id', id)
+        if (error) throw error
+      }
+    } finally {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['session_day', teamId] }),
+        queryClient.invalidateQueries({ queryKey: ['widget'] }),
+      ])
     }
-    for (const { id, patch } of updates) {
-      const { error } = await supabase.from('player_attendance').update(patch).eq('id', id)
-      if (error) throw error
-    }
-    await queryClient.invalidateQueries({ queryKey: ['session_day', teamId] })
   }
 
   const saveNotes = async (notes) => {
     const { error } = await supabase.from('training_sessions').update({ notes }).eq('id', session.id)
     if (error) throw error
     await queryClient.invalidateQueries({ queryKey: ['today_sessions', teamId] })
-    await queryClient.invalidateQueries({ queryKey: ['training_session', session.id] })
+    await queryClient.invalidateQueries({ queryKey: ['training_session', teamId, session.id] })
   }
 
   const loading =
