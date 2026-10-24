@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 import { useTeams } from '../context/TeamContext'
 import { canEditModule } from '../lib/permissions'
 import {
@@ -82,6 +83,7 @@ export default function ExerciseLibrary() {
     exercises,
     favorites,
     loading,
+    musclesLoading,
     muscles,
     equipmentTypes,
     musclesByExercise,
@@ -102,7 +104,7 @@ export default function ExerciseLibrary() {
   const [visibleCount, setVisibleCount] = useState(60)
   const [detailMuscles, setDetailMuscles] = useState([]) // a modal részletes izmai
   const [selectedExercise, setSelectedExercise] = useState(null)
-  const [selectedExerciseMuscles, setSelectedExerciseMuscles] = useState([])
+  const [brokenThumbs, setBrokenThumbs] = useState(() => new Set())
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingExercise, setEditingExercise] = useState(null)
@@ -146,13 +148,33 @@ export default function ExerciseLibrary() {
   // B részletnézetet, ezért csak a legutobbi kérés eredményét engedjük be.
   const detailRequestRef = useRef(0)
 
+  // A részletnézet azonnal nyílik a lista-sorral; a teljes sor (utasítások,
+  // tippek) beérkezéskor egészíti ki, ha közben nem zárták be / nem váltottak.
   const openDetail = async (ex) => {
     const requestId = ++detailRequestRef.current
+    setSelectedExercise(ex)
     const full = await fetchExerciseDetail(ex.id)
-    if (requestId !== detailRequestRef.current) return
-    setSelectedExercise(full || ex)
-    setSelectedExerciseMuscles(musclesByExercise[ex.id] || [])
+    if (requestId !== detailRequestRef.current || !full) return
+    setSelectedExercise((current) => (current?.id === ex.id ? { ...ex, ...full } : current))
   }
+
+  // Mély link (pl. a Kezdőlap "Kedvenc gyakorlatok" widgetjéből): ?exercise=<id>
+  // a lista betöltése után megnyitja a gyakorlatot, majd a paraméter törlődik.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const linkedExerciseId = searchParams.get('exercise')
+  useEffect(() => {
+    if (!linkedExerciseId || exercises.length === 0) return
+    const ex = exercises.find((e) => e.id === linkedExerciseId)
+    if (ex) openDetail(ex)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('exercise')
+      return next
+    }, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedExerciseId, exercises])
+
+  const markThumbBroken = (id) => setBrokenThumbs((prev) => new Set(prev).add(id))
 
   const createExercise = async () => {
     const id = await createExerciseOp(newExercise)
@@ -249,7 +271,7 @@ export default function ExerciseLibrary() {
 
   // A részletes izmok szerep szerint csoportosítva (fő mozgató / segéd / stabilizáló).
   const musclesByRole = ROLE_ORDER
-    .map(role => ({ role, items: selectedExerciseMuscles.filter(x => x.role === role) }))
+    .map(role => ({ role, items: (musclesByExercise[selectedExercise?.id] || []).filter(x => x.role === role) }))
     .filter(g => g.items.length > 0)
 
   const groupedExercises = groupExercisesByMuscleGroup()
@@ -288,6 +310,11 @@ export default function ExerciseLibrary() {
               className="pl-10"
             />
           </div>
+          {musclesLoading && (
+            <p role="status" aria-label="Izomadatok betöltése" className="text-[12px] text-muted">
+              Izomadatok betöltése… az izomnév szerinti keresés hamarosan elérhető.
+            </p>
+          )}
 
           {/* Muscle Groups (12) */}
           <div className="flex flex-wrap gap-2">
@@ -388,8 +415,7 @@ export default function ExerciseLibrary() {
                   {isExpanded && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0">
                       {groupExercises.map(exercise => {
-                        const gifUrl = exerciseGifUrl(exercise.gif_path)
-                        const thumbUrl = exerciseThumbUrl(exercise.gif_path)
+                        const thumbUrl = brokenThumbs.has(exercise.id) ? null : exerciseThumbUrl(exercise.gif_path)
                         const isFavorite = favorites.includes(exercise.id)
                         return (
                           <div
@@ -397,19 +423,21 @@ export default function ExerciseLibrary() {
                             className="bg-surface-2 rounded-[10px] overflow-hidden transition-colors cursor-pointer border border-line hover:border-accent"
                             onClick={() => openDetail(exercise)}
                           >
-                            {/* Kártya-kép: kis statikus thumbnail (gyors); ha nincs thumb,
-                                a nagy GIF-re esik vissza. */}
-                            {gifUrl && (
-                              <div className="w-full aspect-video bg-bg overflow-hidden">
+                            {/* Kártya-kép: csak a kis statikus thumbnail; ha nincs, semleges
+                                ikon. A nagy GIF csak a részletnézetben töltődik. */}
+                            <div className="flex w-full aspect-video items-center justify-center overflow-hidden bg-bg">
+                              {thumbUrl ? (
                                 <img
-                                  src={thumbUrl || gifUrl}
+                                  src={thumbUrl}
                                   alt={exercise.name}
                                   loading="lazy"
-                                  onError={(e) => { if (gifUrl && e.currentTarget.src !== gifUrl) e.currentTarget.src = gifUrl }}
+                                  onError={() => markThumbBroken(exercise.id)}
                                   className="w-full h-full object-contain"
                                 />
-                              </div>
-                            )}
+                              ) : (
+                                <Dumbbell className="h-10 w-10 text-subtle" aria-hidden="true" />
+                              )}
+                            </div>
 
                             <div className="p-4">
                               <div className="flex items-start justify-between gap-2 mb-3">
