@@ -15,6 +15,14 @@ import LeaderboardTop3Widget from '../pages/dashboard-home/widgets/LeaderboardTo
 import SeasonProgressWidget from '../pages/dashboard-home/widgets/SeasonProgressWidget'
 import TeamOverviewWidget from '../pages/dashboard-home/widgets/TeamOverviewWidget'
 import QuickActionsWidget from '../pages/dashboard-home/widgets/QuickActionsWidget'
+import TodaySessionWidget from '../pages/dashboard-home/widgets/TodaySessionWidget'
+import AvailabilityWidget from '../pages/dashboard-home/widgets/AvailabilityWidget'
+import TodosWidget from '../pages/dashboard-home/widgets/TodosWidget'
+import MeasurementTrendWidget from '../pages/dashboard-home/widgets/MeasurementTrendWidget'
+import MeasurementCoverageWidget from '../pages/dashboard-home/widgets/MeasurementCoverageWidget'
+import WeeklyLoadWidget from '../pages/dashboard-home/widgets/WeeklyLoadWidget'
+import FavoriteExercisesWidget from '../pages/dashboard-home/widgets/FavoriteExercisesWidget'
+import NoteWidget from '../pages/dashboard-home/widgets/NoteWidget'
 
 export const WIDGET_COMPONENTS = {
   upcoming_week: UpcomingWeekWidget,
@@ -26,4 +34,12 @@ export const WIDGET_COMPONENTS = {
   season_progress: SeasonProgressWidget,
   team_overview: TeamOverviewWidget,
   quick_actions: QuickActionsWidget,
+  today_session: TodaySessionWidget,
+  availability: AvailabilityWidget,
+  todos: TodosWidget,
+  measurement_trend: MeasurementTrendWidget,
+  measurement_coverage: MeasurementCoverageWidget,
+  weekly_load: WeeklyLoadWidget,
+  favorite_exercises: FavoriteExercisesWidget,
+  note: NoteWidget,
 }
